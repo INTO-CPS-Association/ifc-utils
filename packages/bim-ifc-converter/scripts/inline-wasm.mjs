@@ -14,9 +14,17 @@
  * consumer that installs the package and nothing else.
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { createRequire } from 'node:module';
 
-const wasm = readFileSync(fileURLToPath(new URL('../node_modules/web-ifc/web-ifc.wasm', import.meta.url)));
+// Ask Node where web-ifc actually is instead of assuming it sits in this
+// package's own node_modules. In a workspace the install is hoisted to the
+// root, so a hand-built relative path finds nothing and the build stops with
+// an ENOENT that says nothing about the cause.
+const require = createRequire(import.meta.url);
+const wasmPath = join(dirname(require.resolve('web-ifc')), 'web-ifc.wasm');
+
+const wasm = readFileSync(wasmPath);
 const base64 = wasm.toString('base64');
 
 mkdirSync('src/generated', { recursive: true });
