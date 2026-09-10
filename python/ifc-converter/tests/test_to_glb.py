@@ -359,16 +359,32 @@ class TestMaterials:
         names = [material["name"] for material in gltf["materials"]]
         assert sorted(names) == ["IfcPump", "IfcSensor"]
 
-    def test_the_colour_is_the_one_the_json_exporter_uses(self, exported):
+    def test_the_fallback_colour_is_written_as_linear(self, exported):
         gltf, _ = exported
-        # #e03131 for a sensor, converted from sRGB to the linear values
-        # glTF asks for. Red 0xe0 is 0.878 of full scale in sRGB, and 0.745
-        # once the transfer function is undone.
+        # glTF asks for a linear base colour and the table is written in sRGB,
+        # so the transfer function has to be applied on the way out. Derived
+        # from the table rather than restated: writing the numbers here made
+        # this test fail the day the sensor colour changed, which told nobody
+        # anything about the conversion, which is the part that can break.
+        expected = to_glb._to_linear(
+            [int(to_glb.COLOURS["IfcSensor"].lstrip("#")[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        )
+
         sensor = next(m for m in gltf["materials"] if m["name"] == "IfcSensor")
         red, green, blue, alpha = sensor["pbrMetallicRoughness"]["baseColorFactor"]
-        assert round(red, 3) == 0.745
-        assert green == blue
+
+        assert [round(v, 6) for v in (red, green, blue)] == [round(v, 6) for v in expected]
         assert alpha == 1.0
+
+    def test_the_fallback_is_not_the_raw_srgb_value(self, exported):
+        # The guard on the test above. Deriving the expected value from the
+        # same table would also pass if the conversion were dropped from both
+        # sides, so this states the one thing that must not be true.
+        gltf, _ = exported
+        sensor = next(m for m in gltf["materials"] if m["name"] == "IfcSensor")
+        raw = int(to_glb.COLOURS["IfcSensor"].lstrip("#")[0:2], 16) / 255
+
+        assert round(sensor["pbrMetallicRoughness"]["baseColorFactor"][0], 3) != round(raw, 3)
 
     def test_surfaces_are_drawn_from_both_sides(self, exported):
         gltf, _ = exported

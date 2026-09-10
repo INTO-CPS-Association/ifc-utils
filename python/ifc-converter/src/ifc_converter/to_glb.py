@@ -139,7 +139,10 @@ def _to_linear(channels):
 # IfcSurfaceStyle at all, so without this a plant room draws as one grey mass.
 # Every building model here does declare its own styles and never reaches this.
 COLOURS = {
-    "IfcSensor": "#e03131",
+    # Light blue, not red. Red is what a viewer uses for a fault, and a sensor
+    # that is merely present is not one. It also has to stay clear of the
+    # heatmap ramp it sits on top of, which runs cold blue to warm red.
+    "IfcSensor": "#74c0fc",
     "IfcHeatExchanger": "#1971c2",
     "IfcPump": "#f08c00",
     "IfcValve": "#2f9e44",
