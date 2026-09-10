@@ -39,12 +39,16 @@ import { idOf } from '../binding.js';
 import { resolveBindings } from '../resolver.js';
 import type { Binding } from '../binding.js';
 import { objectsOf } from './scene.js';
-import { SceneView, createGizmo, type PropertyTree } from '../viewer/index.js';
+import { SceneView, addOutlines, createGizmo, type PropertyTree } from '../viewer/index.js';
 
-const BACKGROUND = 0xf5f6f8;
+// The same near-white the viewer this was taken from uses. A lighter one
+// washes into the pale surfaces of a model and the silhouette disappears.
+const BACKGROUND = 0xe9edef;
 /** How strong the two lamps are. See where they are added for why. */
 const AMBIENT_LIGHT = 0.75;
 const SUN_LIGHT = 0.9;
+
+const FIELD_OF_VIEW = 45;
 
 const NEAR_PLANE = 0.1;
 const FAR_PLANE = 5000;
@@ -221,7 +225,9 @@ function BimCanvas({
     sun.position.set(5, 10, 7);
     scene.add(sun);
 
-    const camera = new PerspectiveCamera(50, 1, NEAR_PLANE, FAR_PLANE);
+    // 45 degrees, matching the viewer this was taken from. A wider lens bends
+    // the walls of a room outwards and a building stops looking square.
+    const camera = new PerspectiveCamera(FIELD_OF_VIEW, 1, NEAR_PLANE, FAR_PLANE);
     const renderer = new WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(globalThis.devicePixelRatio);
     // The canvas is sized by CSS and drawn at the size `setSize` is given.
@@ -283,6 +289,11 @@ function BimCanvas({
       // interface and this owns the scene, and this is the only line between
       // them.
       const view = new SceneView(model as never, tree);
+      // After the view has found the objects, so the outlines go on exactly
+      // what is drawn and nothing else. They are children of their meshes, so
+      // the teardown that walks the scene disposes them along with everything
+      // else.
+      addOutlines(view.meshes.values());
       view.refresh();
       onReady?.({
         view,

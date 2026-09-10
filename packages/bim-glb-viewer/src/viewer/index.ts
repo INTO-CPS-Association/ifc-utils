@@ -13,3 +13,4 @@ export {
   type ShortcutContext,
 } from './shortcuts.js';
 export { createGizmo, cornerViewport, GIZMO_SIZE_PX, GIZMO_MARGIN_PX, type Gizmo } from './gizmo.js';
+export { addOutlines } from './outline.js';

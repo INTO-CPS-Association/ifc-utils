@@ -4,6 +4,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.14.0]
+
+### Added
+
+- A thin line along the edges of every object. Without it a building is a field of grey boxes that touch, and where one wall ends and the next begins is invisible. It does more for legibility than any change of colour, because the colours come from the model and most models paint a whole discipline the same.
+
+### Changed
+
+- The background and the field of view match the viewer this package was taken from, `#e9edef` and 45 degrees. A lighter background washes into the pale surfaces of a model and the silhouette disappears, and a wider lens bends the walls of a room outwards.
+- The properties button reads Properties rather than counting them.
+
 ## [0.13.0]
 
 ### Changed

@@ -56,11 +56,6 @@ function metres(size: { x: number; y: number; z: number }): string {
   return `${parts.map((n) => n.toFixed(2)).join(' × ')} m`;
 }
 
-/** "1 property", "60 properties". Written out because "1 properties" reads as a bug. */
-function plural(word: string, count: number): string {
-  return count === 1 ? word : `${word.replace(/y$/, 'ie')}s`;
-}
-
 /** A row of the table, skipped when there is nothing to say. */
 function Row({ name, value }: Readonly<{ name: string; value: unknown }>) {
   if (value === undefined || value === null || value === '') return null;
@@ -81,9 +76,6 @@ export function ObjectPanel({
 }: Readonly<ObjectPanelProps>) {
   const [open, setOpen] = useState(false);
   const sets = Object.entries(properties ?? {});
-  // The count is of fields rather than of sets, because "12 sets" says nothing
-  // about how much is behind the button and "60 properties" does.
-  const fields = sets.reduce((total, [, values]) => total + Object.keys(values).length, 0);
 
   if (!globalId) {
     return (
@@ -120,10 +112,10 @@ export function ObjectPanel({
         </Table>
       </Paper>
 
-      {fields > 0 && (
+      {sets.length > 0 && (
         <Box>
           <Button size="small" variant="outlined" onClick={() => setOpen(true)}>
-            {`All ${fields} ${plural('property', fields)}`}
+            Properties
           </Button>
         </Box>
       )}
