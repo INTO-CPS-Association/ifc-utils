@@ -6,7 +6,7 @@
  * This owns no canvas, no camera and no renderer. It takes a group of meshes and answers what each should look like, so it can be driven by React, by plain JavaScript, or by a test.
  */
 
-import { Box3, type Group, Mesh, type Object3D } from 'three';
+import { Box3, type Group, Mesh, type Object3D, Vector3 } from 'three';
 
 import { displayOf, objectOf, type Binding } from '../binding.js';
 import {
@@ -16,11 +16,25 @@ import {
 import { bandOf, bandsFrom, type Band } from '../storeys.js';
 import { Palette, SHELL } from './appearance.js';
 
-/** What the property tree says about one object. */
+/**
+ * What the property tree says about one object.
+ *
+ * Every field here is written by `ifc_converter.to_metadata` for every object,
+ * so none of them is optional because the generator might skip it. They are
+ * optional because a tree may come from somewhere else, or not exist at all.
+ */
 export interface ObjectFacts {
+  /** The name the authoring tool gave it, usually family:type:instance. */
+  name?: string;
   ifcClass?: string;
+  /** IFC's own subtype, for instance a door that is a GATE or a REVOLVING. */
+  predefinedType?: string;
   storey?: string;
   room?: string;
+  /** What it is cut into: the wall a window sits in, for instance. */
+  host?: string;
+  /** The property sets the model carries, by set name. */
+  properties?: Record<string, Record<string, unknown>>;
 }
 
 /** The property tree, as `ifc_converter.to_metadata` writes it. */
@@ -124,6 +138,27 @@ export class SceneView {
 
   factsOf(globalId: string): ObjectFacts | undefined {
     return this.tree.objects?.[globalId];
+  }
+
+  /**
+   * How large an object is, in metres, along each world axis.
+   *
+   * Measured from the geometry rather than read from the tree, because the
+   * tree does not carry it and because the number a person wants when they
+   * click a wall is the wall in front of them. Y is the height, since the
+   * scene is Y up.
+   *
+   * The box is axis aligned, so a wall running at forty five degrees reports
+   * the box around it rather than its length. That is a real limitation and
+   * the reason this is labelled as a size rather than as dimensions.
+   */
+  sizeOf(globalId: string): { x: number; y: number; z: number } | undefined {
+    const mesh = this.meshes.get(globalId);
+    if (!mesh) return undefined;
+    const box = new Box3().setFromObject(mesh);
+    if (box.isEmpty()) return undefined;
+    const size = box.getSize(new Vector3());
+    return { x: size.x, y: size.y, z: size.z };
   }
 
   /**

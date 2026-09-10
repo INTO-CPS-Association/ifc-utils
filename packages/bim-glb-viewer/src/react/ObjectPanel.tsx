@@ -17,6 +17,23 @@ export interface ObjectPanelProps {
   binding: Binding | undefined;
   /** The property sets the model carries for it, when the tree has them. */
   properties?: Record<string, Record<string, unknown>>;
+  /** Its extent in metres along each world axis, measured from the geometry. */
+  size?: { x: number; y: number; z: number };
+}
+
+/**
+ * A size in metres, or in millimetres when metres would read as zero.
+ *
+ * A door handle 40 mm across is "0.0 m" at one decimal, which says nothing.
+ * Switching unit under a threshold keeps every object legible without giving
+ * a wall a precision the model does not have.
+ */
+function metres(size: { x: number; y: number; z: number }): string {
+  const parts = [size.x, size.y, size.z];
+  if (Math.max(...parts) < 0.5) {
+    return `${parts.map((n) => Math.round(n * 1000)).join(' × ')} mm`;
+  }
+  return `${parts.map((n) => n.toFixed(2)).join(' × ')} m`;
 }
 
 /** A row of the table, skipped when there is nothing to say. */
@@ -35,7 +52,7 @@ function Row({ name, value }: Readonly<{ name: string; value: unknown }>) {
 }
 
 export function ObjectPanel({
-  globalId, facts, binding, properties,
+  globalId, facts, binding, properties, size,
 }: Readonly<ObjectPanelProps>) {
   if (!globalId) {
     return (
@@ -50,10 +67,21 @@ export function ObjectPanel({
       <Paper variant="outlined" sx={{ p: 1.5 }}>
         <Table size="small">
           <TableBody>
+            <Row name="Name" value={facts?.name} />
             <Row name="IFC Class" value={facts?.ifcClass} />
-            <Row name="Global ID" value={globalId} />
+            {/* IFC writes NOTDEFINED when the exporter said nothing, which is
+                not a type and is worth no row. */}
+            <Row
+              name="Predefined Type"
+              value={facts?.predefinedType === 'NOTDEFINED' ? undefined : facts?.predefinedType}
+            />
             <Row name="Storey" value={facts?.storey} />
             <Row name="Room" value={facts?.room} />
+            <Row name="Hosted In" value={facts?.host} />
+            {/* Width by height by depth of the axis aligned box around it, so a
+                person can check a wall against the one in front of them. */}
+            <Row name="Size" value={size ? metres(size) : undefined} />
+            <Row name="Global ID" value={globalId} />
             {binding && <Row name="Sensor" value={idOf(binding)} />}
             {binding && <Row name="Unit" value={displayOf(binding).unit} />}
             {binding && <Row name="MQTT Topic" value={topicOf(binding)} />}

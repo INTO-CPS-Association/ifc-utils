@@ -4,6 +4,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.12.0]
+
+### Added
+
+- The object panel shows the object's name, its predefined type, what it is hosted in, and its size in metres measured from the geometry. It also shows the property sets the model carries, which it could always draw and was never given, so every object looked like it held four facts when the tree holds dozens.
+- `SceneView.sizeOf`, the extent of one object along each world axis.
+- The blue notes close. They are worth reading once, and after that they are two paragraphs between a person and the model. What was closed is remembered by its text, so another model's note still appears.
+
+### Changed
+
+- The two lamps were at 2 each, which clipped every pale surface to white: a window frame, a plastered wall and a ceiling all came out the same flat white and the model read as untextured rather than as lit. They now match the viewer this was taken from, 0.75 and 0.9, and the sun sits above and to one side so the faces of a box differ.
+
+### Removed
+
+- The paragraph explaining that a model binds no sensors. Most architectural models declare none, so it appeared almost always, and a person reads it once and then scrolls past it forever.
+
 ## [0.11.2]
 
 ### Changed

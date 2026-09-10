@@ -6,7 +6,7 @@
  * The two invariants under test were both bought with bugs: one place decides the material, one place writes `visible`. When several wrote either, the last to run won, and which ran last depended on the order readings arrived.
  */
 
-import { test } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
@@ -219,4 +219,22 @@ test('a scope the model cannot group by is not offered', () => {
   const view = building();
 
   assert.deepEqual(view.groupings, { rooms: true, storeys: true });
+});
+
+describe('sizeOf', () => {
+  test('measures the object from its geometry, in metres', () => {
+    // The tree does not carry a size, so this comes from the mesh. Y is the
+    // height, because the scene is Y up.
+    const size = building().sizeOf('w1');
+
+    assert.equal(size.x, 1);
+    assert.equal(size.y, 3);
+    assert.equal(size.z, 1);
+  });
+
+  test('says nothing about an object that is not in the model', () => {
+    // A manifest can name an object the geometry does not have, and a size of
+    // zero would read as a real measurement of a flat thing.
+    assert.equal(building().sizeOf('not-here'), undefined);
+  });
 });

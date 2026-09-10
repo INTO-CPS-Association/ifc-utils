@@ -164,6 +164,11 @@ export function BuildingModels({
   // that would be ruinous to copy on every frame.
   const [revision, bump] = useState(0);
   const hovered = useRef<string | null>(null);
+  // Notes a person has closed, held by their text rather than by a position.
+  // Choosing another model produces a different sentence, which then shows
+  // again, and choosing the same one back does not repeat what was dismissed.
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const dismiss = (text: string) => setDismissed((seen) => new Set(seen).add(text));
 
   useEffect(() => {
     if (!libraryUrl) return undefined;
@@ -317,11 +322,17 @@ export function BuildingModels({
         )}
       </Paper>
 
-      {chosen && !chosen.geometryPath && (
-        <Alert severity="info" sx={{ mb: 2 }}>{CONVERTS_HERE}</Alert>
+      {chosen && !chosen.geometryPath && !dismissed.has(CONVERTS_HERE) && (
+        <Alert severity="info" sx={{ mb: 2 }} onClose={() => dismiss(CONVERTS_HERE)}>
+          {CONVERTS_HERE}
+        </Alert>
       )}
 
-      {note && <Alert severity="info" sx={{ mb: 2 }}>{note}</Alert>}
+      {note && !dismissed.has(note) && (
+        <Alert severity="info" sx={{ mb: 2 }} onClose={() => dismiss(note)}>
+          {note}
+        </Alert>
+      )}
 
       {chosen && (
         <Paper sx={{ p: 1 }}>
@@ -367,6 +378,12 @@ export function BuildingModels({
                   globalId={selected}
                   facts={selected ? handle.view.factsOf(selected) : undefined}
                   binding={bindings.find((b) => b.selector?.globalId === selected)}
+                  // The property sets the model carries. The panel could always
+                  // draw them and was never given them, so every model looked
+                  // like it held four facts about an object when the tree holds
+                  // dozens.
+                  properties={selected ? handle.view.factsOf(selected)?.properties : undefined}
+                  size={selected ? handle.view.sizeOf(selected) : undefined}
                 />
               </Box>
               <Stack sx={{ flex: '1 1 260px', minWidth: 0, gap: 1 }}>

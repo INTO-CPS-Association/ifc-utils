@@ -43,6 +43,10 @@ import { objectsOf } from './scene.js';
 import { SceneView, createGizmo, type PropertyTree } from '../viewer/index.js';
 
 const BACKGROUND = 0xf5f6f8;
+/** How strong the two lamps are. See where they are added for why. */
+const AMBIENT_LIGHT = 0.75;
+const SUN_LIGHT = 0.9;
+
 const NEAR_PLANE = 0.1;
 const FAR_PLANE = 5000;
 
@@ -192,9 +196,16 @@ function BimCanvas({
 
     const scene = new Scene();
     scene.background = new Color(BACKGROUND);
-    scene.add(new AmbientLight(0xffffff, 2));
-    const sun = new DirectionalLight(0xffffff, 2);
-    sun.position.set(1, 2, 1);
+    // Two lamps, and their strengths matter more than they look. At 2 each the
+    // sum clips every pale surface to white: a window frame, a plastered wall
+    // and a ceiling all came out the same flat white, so the model read as
+    // untextured rather than as lit. These are the values the viewer this was
+    // taken from uses, and they leave the light ones distinguishable.
+    scene.add(new AmbientLight(0xffffff, AMBIENT_LIGHT));
+    const sun = new DirectionalLight(0xffffff, SUN_LIGHT);
+    // Above, to one side and in front, so the three faces of a box are lit
+    // differently and an edge is visible without an outline.
+    sun.position.set(5, 10, 7);
     scene.add(sun);
 
     const camera = new PerspectiveCamera(50, 1, NEAR_PLANE, FAR_PLANE);

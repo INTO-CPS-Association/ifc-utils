@@ -26,13 +26,10 @@ const DECIMALS = 1;
 export function SensorCards({
   bindings, readings, feed, selected, onSelect,
 }: Readonly<SensorCardsProps>) {
-  if (bindings.length === 0) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        This model binds no sensors. Most architectural models declare none at all, which is a fact about the model rather than a failure to load.
-      </Typography>
-    );
-  }
+  // Most architectural models declare no sensors, so this is the ordinary case
+  // and not a failure. An explanation of it on every such model is a paragraph
+  // a person reads once and then has to scroll past forever.
+  if (bindings.length === 0) return null;
 
   return (
     <Stack sx={{ gap: 0.75 }}>
