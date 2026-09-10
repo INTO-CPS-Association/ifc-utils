@@ -40,6 +40,10 @@ export function FloorPicker({ storeys, current, onChange }: Readonly<FloorPicker
         label="Floor"
         value={current ?? ALL}
         onChange={(event) => onChange(event.target.value === ALL ? null : event.target.value)}
+        // Without this the select renders nothing while All Floors is chosen,
+        // because its value is the empty string, and an empty control reads as
+        // broken rather than as a choice.
+        slotProps={{ select: { displayEmpty: true, renderValue: (value: unknown) => (value === ALL ? 'All Floors' : String(value)) } }}
         sx={{ minWidth: 180 }}
       >
         <MenuItem value={ALL}>All Floors</MenuItem>

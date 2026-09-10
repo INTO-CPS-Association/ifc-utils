@@ -31,13 +31,17 @@ import {
   ListItemButton,
   ListItemText,
   Paper,
+  Stack,
   Typography,
 } from '@mui/material';
-import type { Binding } from '../binding.js';
+import { displayOf, type Binding } from '../binding.js';
+import { zonesOf, type FeedState, type Reading } from '../readings.js';
 import { handleKey, type PropertyTree, type SceneView } from '../viewer/index.js';
 import FloorPicker from './FloorPicker.js';
 import HelpPanel from './HelpPanel.js';
 import ObjectPanel from './ObjectPanel.js';
+import SensorCards from './SensorCards.js';
+import { ClassLegend, HeatLegend } from './Legend.js';
 import Toolbar from './Toolbar.js';
 import type { ViewerHandle } from './BimCanvas.js';
 import {
@@ -97,11 +101,22 @@ export interface BuildingModelsProps {
   libraryUrl: string;
   /** Which directory under the library holds the models. */
   directory?: string;
+  /**
+   * The last value received for each object, keyed by GlobalId.
+   *
+   * Pushed in rather than fetched, because this knows nothing about where a
+   * reading came from: a broker, a database or a test all look the same here.
+   */
+  readings?: Map<string, Reading>;
+  /** Whether the transport is connected, which no age can tell on its own. */
+  feed?: FeedState;
 }
 
 export function BuildingModels({
   libraryUrl,
   directory = MODELS_DIRECTORY,
+  readings = new Map(),
+  feed = 'down',
 }: Readonly<BuildingModelsProps>) {
   const [models, setModels] = useState<BimModel[] | null>(null);
   const [chosen, setChosen] = useState<BimModel | null>(null);
@@ -197,6 +212,15 @@ export function BuildingModels({
       current = false;
     };
   }, [chosen, libraryUrl]);
+
+  // The readings reach the scene here rather than inside it, so a burst of
+  // messages is one repaint instead of one per message.
+  useEffect(() => {
+    if (!handle) return;
+    handle.view.applyReadings(bindings, readings, feed);
+    handle.view.refreshMaterials();
+    bump((n) => n + 1);
+  }, [handle, bindings, readings, feed]);
 
   const onReport = useCallback((message: string) => setNote(message), []);
   const onHover = useCallback((globalId: string | null) => { hovered.current = globalId; }, []);
@@ -302,12 +326,35 @@ export function BuildingModels({
             />
           </Suspense>
           {handle && (
-            <Box sx={{ mt: 1 }}>
-              <ObjectPanel
-                globalId={selected}
-                facts={selected ? handle.view.factsOf(selected) : undefined}
-                binding={bindings.find((b) => b.selector?.globalId === selected)}
-              />
+            <Box sx={{
+              display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap', alignItems: 'flex-start',
+            }}
+            >
+              <Box sx={{ flex: '1 1 320px', minWidth: 0 }}>
+                <ObjectPanel
+                  globalId={selected}
+                  facts={selected ? handle.view.factsOf(selected) : undefined}
+                  binding={bindings.find((b) => b.selector?.globalId === selected)}
+                />
+              </Box>
+              <Stack sx={{ flex: '1 1 260px', minWidth: 0, gap: 1 }}>
+                <SensorCards
+                  bindings={bindings}
+                  readings={readings}
+                  feed={feed}
+                  selected={selected}
+                  onSelect={setSelected}
+                />
+                {handle.view.state.heat !== 'off' && (
+                  <HeatLegend
+                    zones={zonesOf(bindings, readings, handle.view.state.heat,
+                      (id) => handle.view.factsOf(id), feed)}
+                    unit={displayOf(bindings[0] ?? { display: {} } as Binding).unit}
+                    coloured={handle.view.liveCount(bindings, readings, feed)}
+                  />
+                )}
+                <ClassLegend view={handle.view} />
+              </Stack>
             </Box>
           )}
         </Paper>

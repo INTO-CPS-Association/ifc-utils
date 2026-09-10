@@ -102,6 +102,26 @@ export class SceneView {
     return { rooms: (this.tree.rooms ?? []).length > 0, storeys: this.bands.length > 0 };
   }
 
+  /**
+   * The colour the model gives each class of object, for a legend to state.
+   *
+   * Read from the materials the model arrived with rather than from a table
+   * here, because an architect assigned those colours and a legend that
+   * invented its own would describe a different building.
+   */
+  classColours(): Map<string, string> {
+    const seen = new Map<string, string>();
+    for (const [globalId, mesh] of this.meshes) {
+      const ifcClass = mesh.userData.ifcClass as string | undefined;
+      if (!ifcClass || seen.has(ifcClass)) continue;
+      const material = this.palette.baseOf(globalId);
+      const colour = (Array.isArray(material) ? material[0] : material) as
+        { color?: { getHexString: () => string } } | undefined;
+      if (colour?.color) seen.set(ifcClass, `#${colour.color.getHexString()}`);
+    }
+    return new Map([...seen].sort(([a], [b]) => a.localeCompare(b)));
+  }
+
   factsOf(globalId: string): ObjectFacts | undefined {
     return this.tree.objects?.[globalId];
   }

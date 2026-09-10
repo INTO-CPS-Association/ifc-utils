@@ -4,6 +4,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.10.0]
+
+### Added
+
+- The three views the demo this came from had and this did not: a card per sensor, the heatmap legend, and the legend of what the model's own colours mean. The class legend reads the colours the model arrived with rather than a table written here, because an architect assigned them and a legend that invented its own would describe a different building.
+- `BuildingModels` takes the readings and the feed state as properties. Pushed in rather than fetched, so a broker, a database and a test all reach the viewer the same way, and a burst of messages is one repaint instead of one per message.
+- `SceneView.classColours`, which the class legend reads.
+
+### Fixed
+
+- The floor picker rendered nothing while All Floors was chosen, because its value is the empty string. An empty control reads as broken rather than as a choice.
+
 ## [0.9.0]
 
 ### Added
