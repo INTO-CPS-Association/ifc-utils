@@ -61,6 +61,13 @@ UNKNOWN = {"unit": "TODO", "ramp": [0, 100], "measurement": "TODO"}
 RECORDED_TOPIC = "MqttTopic"
 RECORDED_UNIT = "Unit"
 
+# The range a viewer draws its colours across, when the model states one. The
+# table below holds one default per sensor type, and a default cannot know
+# whether a temperature sensor is on a chilled water pipe or on an office wall.
+# Those two want ranges that do not overlap, and a room drawn on the plant's
+# scale reads as a plausible picture of nothing.
+RECORDED_RANGE = ("RangeLow", "RangeHigh")
+
 # A placement tool marks the sensors it invented, so a reader of the model
 # alone cannot take a proposal for a survey. When every sensor says so, the
 # manifest says so too: a viewer reads the model half, not each binding.
@@ -116,6 +123,19 @@ def topic_for(sensor, model, prefix=None):
     return "/".join(str(p) for p in parts)
 
 
+def ramp_of(sensor, fallback):
+    """The colour range the model states for a sensor, or the type's default.
+
+    Both ends or neither. Half a range is not a range, and silently keeping one
+    default end beside one stated end would draw a scale nobody chose.
+    """
+    low = recorded(sensor, RECORDED_RANGE[0])
+    high = recorded(sensor, RECORDED_RANGE[1])
+    if low is None or high is None or float(low) >= float(high):
+        return fallback
+    return [float(low), float(high)]
+
+
 def binding_for(sensor, model, bucket=None, prefix=None):
     """Build one manifest entry for one sensor."""
     kind = DISPLAY.get(sensor.PredefinedType or "", UNKNOWN)
@@ -135,7 +155,7 @@ def binding_for(sensor, model, bucket=None, prefix=None):
         "bucket": bucket,
         "measurement": kind["measurement"],
         "unit": kind["unit"],
-        "ramp": kind["ramp"],
+        "ramp": ramp_of(sensor, kind["ramp"]),
         # Recorded so a reader can see what the model itself claims, which may
         # differ from the display unit above.
         "model_unit": recorded_unit,
