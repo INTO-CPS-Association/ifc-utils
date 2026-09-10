@@ -39,7 +39,9 @@ import { idOf } from '../binding.js';
 import { resolveBindings } from '../resolver.js';
 import type { Binding } from '../binding.js';
 import { objectsOf } from './scene.js';
-import { SceneView, addOutlines, createGizmo, type PropertyTree } from '../viewer/index.js';
+import {
+  SceneView, addOutlines, createFieldSheet, createGizmo, type PropertyTree,
+} from '../viewer/index.js';
 
 // The same near-white the viewer this was taken from uses. A lighter one
 // washes into the pale surfaces of a model and the silhouette disappears.
@@ -196,6 +198,14 @@ export interface ViewerHandle {
   frame: () => void;
   /** Look from one of three axes, or from the default corner. */
   look: (from: 'top' | 'front' | 'side' | 'corner') => void;
+  /**
+   * Redraw the sheet the Per Sensor scope lays over the floor.
+   *
+   * Called by whatever changes a reading or a scope. It is separate from
+   * `view.refresh` because that repaints the model's own objects, and the
+   * sheet is beside the model and not one of them.
+   */
+  drawField: () => void;
 }
 
 function BimCanvas({
@@ -289,6 +299,10 @@ function BimCanvas({
       // interface and this owns the scene, and this is the only line between
       // them.
       const view = new SceneView(model as never, tree);
+      // The field's sheet lives beside the model, not in it: it is a reading
+      // laid over the floor and not part of the building.
+      const sheet = createFieldSheet(scene);
+      cleanUp.push(() => sheet.dispose());
       // After the view has found the objects, so the outlines go on exactly
       // what is drawn and nothing else. They are children of their meshes, so
       // the teardown that walks the scene disposes them along with everything
@@ -299,6 +313,7 @@ function BimCanvas({
         view,
         frame: () => frame(camera, controls, model),
         look: (from) => frame(camera, controls, model, from),
+        drawField: () => sheet.draw(view),
       });
 
       /** Which object is under the pointer, or null. */

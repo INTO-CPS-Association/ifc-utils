@@ -4,6 +4,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.18.0]
+
+### Added
+
+- A Per Sensor heat scope, drawn as a sheet over the floor. Each part of the floor takes the reading of the sensor whose walk reaches it, so a wall between two rooms is where one colour ends. It answers what the other three scopes cannot on a model that declares no `IfcSpace` and draws one storey, where every object is in the same zone.
+- `SceneView.zoneFor`, `SceneView.buildField`, `SceneView.zoneAtCell` and `SceneView.heatZones`, and `viewer/fieldSheet.ts` which draws it.
+- `ViewerHandle.drawField`, called by whatever changes a reading or a scope. It is separate from `view.refresh` because that repaints the model's own objects and the sheet is beside the model.
+
+### Changed
+
+- `zonesOf` and `availableScopes` take the zone from the caller instead of a place to look one up in. `readings.ts` no longer knows what a room or a storey is, which was IFC knowledge in a module about readings, and it is what lets a scope be a position on the plan.
+
 ## [0.17.0]
 
 ### Added

@@ -15,6 +15,7 @@ import {
 } from '../readings.js';
 import { bandOf, bandsFrom, type Band } from '../storeys.js';
 import { Palette, SHELL } from './appearance.js';
+import { buildField, sourceAt, type Field } from './field.js';
 
 /**
  * What the property tree says about one object.
@@ -82,6 +83,20 @@ export class SceneView {
 
   private zones: Zones | null = null;
 
+  /** The zone averages in force, for anything drawing the field beside the model. */
+  get heatZones(): Zones | null {
+    return this.zones;
+  }
+
+  /** The grid saying which sensor's walk reaches each point of the floor. */
+  field: Field | null = null;
+
+  /** The GlobalId behind each index in the field, in the order it was fed. */
+  private fieldSources: string[] = [];
+
+  /** The bindings the field was built from, so it is rebuilt only when they change. */
+  private fieldKey = '';
+
   state: ViewState = {
     storey: null,
     heat: 'off',
@@ -128,7 +143,8 @@ export class SceneView {
    * by storey and gains nothing from it.
    */
   scopesFor(bindings: Binding[]): HeatScope[] {
-    return availableScopes(bindings, (globalId) => this.factsOf(globalId));
+    this.buildField(bindings);
+    return availableScopes(bindings, (globalId, scope) => this.zoneFor(globalId, scope));
   }
 
   /**
@@ -200,16 +216,72 @@ export class SceneView {
     staleAfter = DEFAULT_STALE_AFTER_S,
     now = Date.now(),
   ): void {
+    this.buildField(bindings);
     this.zones = zonesOf(
       bindings, readings, this.state.heat,
-      (globalId) => this.factsOf(globalId), feed, staleAfter, now,
+      (globalId) => this.zoneFor(globalId), feed, staleAfter, now,
     );
+  }
+
+  /**
+   * Which zone an object is in, at a scope.
+   *
+   * The three groupings a model can answer ask it which room or storey the
+   * object is in. Per Sensor asks where the object is on the plan and which
+   * sensor's walk reaches that point, which is the only one of the four that
+   * says anything on a model with no rooms and one storey.
+   */
+  zoneFor(globalId: string, scope: HeatScope = this.state.heat): string | undefined {
+    if (scope !== 'sensor') return zoneOf(scope, this.factsOf(globalId));
+    if (this.field === null) return undefined;
+    const mesh = this.meshes.get(globalId);
+    if (!mesh) return undefined;
+    const at = new Box3().setFromObject(mesh).getCenter(new Vector3());
+    const index = sourceAt(this.field, at.x, at.z);
+    return index < 0 ? undefined : this.fieldSources[index];
+  }
+
+  /** The zone one cell of the field belongs to, or undefined where none reaches. */
+  zoneAtCell(index: number): string | undefined {
+    if (this.field === null) return undefined;
+    const source = this.field.owner[index];
+    return source < 0 ? undefined : this.fieldSources[source];
+  }
+
+  /**
+   * Rasterise the floor and flood it from the sensors.
+   *
+   * Rebuilt when the bindings change, which is when the sources move, and left
+   * alone otherwise: the objects do not move and neither do the sensors.
+   */
+  buildField(bindings: Binding[]): void {
+    const key = bindings.map((binding) => objectOf(binding) ?? '').join(',');
+    if (key === this.fieldKey) return;
+    this.fieldKey = key;
+    this.fieldSources = [];
+    this.field = null;
+    if (bindings.length === 0) return;
+
+    const box = new Box3();
+    const sources: Vector3[] = [];
+    for (const binding of bindings) {
+      const globalId = objectOf(binding);
+      const mesh = globalId === undefined ? undefined : this.meshes.get(globalId);
+      if (!mesh || globalId === undefined) continue;
+      sources.push(box.setFromObject(mesh).getCenter(new Vector3()));
+      this.fieldSources.push(globalId);
+    }
+    // The lowest band is the floor a single storey model has, and the chosen
+    // one otherwise. The cut has to be inside the storey being drawn.
+    const chosen = this.state.storey;
+    const band = this.bands.find((b) => b.names.includes(chosen ?? '')) ?? this.bands[0];
+    this.field = buildField(this.meshes.values(), sources, band ? band.from : 0);
   }
 
   /** The colour a heatmap gives one object, or null when it gives none. Null covers three cases that must all leave the object in its own colour: the heatmap is off, no sensor covers the object's zone, and the readings have gone stale. A heatmap of stale values is a confident wrong answer. */
   private heatOf(globalId: string) {
     if (!this.zones) return undefined;
-    const zone = zoneOf(this.state.heat, this.factsOf(globalId));
+    const zone = this.zoneFor(globalId);
     if (zone === undefined) return undefined;
     const mean = this.zones.meanByZone.get(zone);
     if (mean === undefined) return undefined;

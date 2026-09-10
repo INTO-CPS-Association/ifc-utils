@@ -254,6 +254,7 @@ export function BuildingModels({
   useEffect(() => {
     if (!handle) return;
     handle.view.applyReadings(bindings, readings, feed);
+    handle.drawField();
     handle.view.refreshMaterials();
     bump((n) => n + 1);
   }, [handle, bindings, readings, feed]);
@@ -271,7 +272,7 @@ export function BuildingModels({
   const shortcutContext = useCallback((view: SceneView) => ({
     view,
     bindings,
-    refresh: () => { view.refresh(); bump((n) => n + 1); },
+    refresh: () => { view.refresh(); handle?.drawField(); bump((n) => n + 1); },
     frame: () => handle?.frame(),
     look: (from: 'top' | 'front' | 'side' | 'corner') => handle?.look(from),
     hovered: () => hovered.current,
@@ -398,7 +399,7 @@ export function BuildingModels({
                 {handle.view.state.heat !== 'off' && (
                   <HeatLegend
                     zones={zonesOf(bindings, readings, handle.view.state.heat,
-                      (id) => handle.view.factsOf(id), feed)}
+                      (id) => handle.view.zoneFor(id), feed)}
                     unit={displayOf(bindings[0] ?? { display: {} } as Binding).unit}
                     coloured={handle.view.liveCount(bindings, readings, feed)}
                   />

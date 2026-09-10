@@ -71,10 +71,10 @@ export function ageText(
 }
 
 /** What a heatmap averages over. */
-export type HeatScope = 'off' | 'room' | 'storey' | 'building';
+export type HeatScope = 'off' | 'sensor' | 'room' | 'storey' | 'building';
 
 /** The order the scopes are offered in, coarsest last. */
-export const ALL_SCOPES: HeatScope[] = ['off', 'room', 'storey', 'building'];
+export const ALL_SCOPES: HeatScope[] = ['off', 'sensor', 'room', 'storey', 'building'];
 
 /** Which zone an object belongs to, at one scope. */
 export function zoneOf(
@@ -102,14 +102,14 @@ export function zoneOf(
  */
 export function availableScopes(
   bindings: Binding[],
-  placeOf: (globalId: string) => { room?: string; storey?: string } | undefined,
+  zoneAt: (globalId: string, scope: HeatScope) => string | undefined,
 ): HeatScope[] {
   return ALL_SCOPES.filter((scope) => {
     if (scope === 'off' || scope === 'building') return true;
     const groups = new Set<string>();
     for (const binding of bindings) {
       const globalId = objectOf(binding);
-      const zone = globalId === undefined ? undefined : zoneOf(scope, placeOf(globalId));
+      const zone = globalId === undefined ? undefined : zoneAt(globalId, scope);
       if (zone !== undefined) groups.add(zone);
     }
     return groups.size > 1;
@@ -140,7 +140,7 @@ export function zonesOf(
   bindings: Binding[],
   readings: Map<string, Reading>,
   scope: HeatScope,
-  placeOf: (globalId: string) => { room?: string; storey?: string } | undefined,
+  zoneAt: (globalId: string) => string | undefined,
   feed: FeedState,
   staleAfter = DEFAULT_STALE_AFTER_S,
   now = Date.now(),
@@ -157,7 +157,7 @@ export function zonesOf(
     const reading = readings.get(globalId);
     if (!isLive(reading, feed, staleAfter, now) || reading === undefined) continue;
 
-    const zone = zoneOf(scope, placeOf(globalId));
+    const zone = zoneAt(globalId);
     if (zone === undefined) continue;
 
     range ??= displayOf(binding).ramp;

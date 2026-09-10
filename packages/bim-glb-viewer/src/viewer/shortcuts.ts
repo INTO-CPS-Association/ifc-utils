@@ -40,7 +40,11 @@ export interface Shortcut {
 }
 
 const SCOPE_LABELS: Record<HeatScope, string> = {
-  off: 'Off', room: 'Per Room', storey: 'Per Floor', building: 'Building Mean',
+  off: 'Off',
+  sensor: 'Per Sensor',
+  room: 'Per Room',
+  storey: 'Per Floor',
+  building: 'Building Mean',
 };
 
 /** Move to the next scope the model can actually answer, so cycling never lands on one that colours nothing. */

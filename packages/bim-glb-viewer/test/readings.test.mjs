@@ -66,7 +66,12 @@ describe('the scopes worth offering', () => {
     b: { room: 'R2', storey: 'L2' },
     c: { room: 'R1', storey: 'L1' },
   };
-  const at = (id) => where[id];
+  const at = (id, scope) => {
+    if (scope === 'room') return where[id]?.room;
+    if (scope === 'storey') return where[id]?.storey;
+    if (scope === 'sensor') return where[id] === undefined ? undefined : id;
+    return undefined;
+  };
   const bind = (id) => ({
     selector: { globalId: id },
     label: id,
@@ -75,14 +80,19 @@ describe('the scopes worth offering', () => {
   });
 
   test('offers a scope that puts the sensors in more than one group', () => {
+    // Per Sensor divides whenever there is more than one, since every sensor
+    // is its own group.
     assert.deepEqual(availableScopes([bind('a'), bind('b')], at),
-      ['off', 'room', 'storey', 'building']);
+      ['off', 'sensor', 'room', 'storey', 'building']);
   });
 
   test('skips a scope that puts every sensor in the same group', () => {
     // The case this got wrong: a model declaring ten storeys with all ten of
     // its sensors on one of them can be grouped by storey and gains nothing.
-    assert.deepEqual(availableScopes([bind('a'), bind('c')], at), ['off', 'building']);
+    // Two sensors in one room on one storey. Neither of those divides them,
+    // and Per Sensor still does.
+    assert.deepEqual(availableScopes([bind('a'), bind('c')], at),
+      ['off', 'sensor', 'building']);
   });
 
   test('offers off and building whatever the readings look like', () => {
@@ -92,6 +102,10 @@ describe('the scopes worth offering', () => {
 
   test('ignores a sensor the model knows nothing about', () => {
     assert.deepEqual(availableScopes([bind('a'), bind('unknown')], at), ['off', 'building']);
+  });
+
+  test('one sensor is not enough for Per Sensor, since one group is the whole model', () => {
+    assert.deepEqual(availableScopes([bind('a')], at), ['off', 'building']);
   });
 });
 
@@ -106,7 +120,7 @@ test('several sensors in one zone average', () => {
   const readings = new Map([['a', { value: 10, receivedAt: NOW }],
     ['b', { value: 20, receivedAt: NOW }]]);
   const zones = zonesOf([binding('a'), binding('b')], readings, 'storey',
-    () => ({ storey: 'L1' }), 'live', DEFAULT_STALE_AFTER_S, NOW);
+    () => 'L1', 'live', DEFAULT_STALE_AFTER_S, NOW);
 
   assert.equal(zones.meanByZone.get('L1'), 15);
   assert.equal(zones.counted, 2);
@@ -117,7 +131,7 @@ test('the range comes from the manifest, not from the readings', () => {
   // changing one.
   const readings = new Map([['a', { value: 100, receivedAt: NOW }]]);
   const zones = zonesOf([binding('a', [4, 16])], readings, 'building',
-    () => ({}), 'live', DEFAULT_STALE_AFTER_S, NOW);
+    () => 'building', 'live', DEFAULT_STALE_AFTER_S, NOW);
 
   assert.equal(zones.low, 4);
   assert.equal(zones.high, 16);
@@ -128,10 +142,10 @@ test('nothing current means no zones at all', () => {
   // of freeze on its last values.
   const readings = new Map([['a', seconds(600)]]);
 
-  assert.equal(zonesOf([binding('a')], readings, 'building', () => ({}),
+  assert.equal(zonesOf([binding('a')], readings, 'building', () => 'building',
     'live', DEFAULT_STALE_AFTER_S, NOW), null);
   assert.equal(zonesOf([binding('a')], new Map([['a', seconds(1)]]), 'building',
-    () => ({}), 'down', DEFAULT_STALE_AFTER_S, NOW), null);
+    () => 'building', 'down', DEFAULT_STALE_AFTER_S, NOW), null);
 });
 
 test('the off scope produces nothing without looking at any reading', () => {
@@ -143,7 +157,7 @@ test('a sensor whose object is in no zone is left out instead of guessed', () =>
   const readings = new Map([['a', { value: 10, receivedAt: NOW }],
     ['b', { value: 30, receivedAt: NOW }]]);
   const zones = zonesOf([binding('a'), binding('b')], readings, 'room',
-    (id) => (id === 'a' ? { room: 'R1' } : {}), 'live', DEFAULT_STALE_AFTER_S, NOW);
+    (id) => (id === 'a' ? 'R1' : undefined), 'live', DEFAULT_STALE_AFTER_S, NOW);
 
   assert.equal(zones.counted, 1);
   assert.equal(zones.meanByZone.get('R1'), 10);

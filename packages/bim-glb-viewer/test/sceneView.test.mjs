@@ -281,3 +281,57 @@ describe('highlightedClass', () => {
     assert.equal(view.meshes.get('w1').material, before);
   });
 });
+
+describe('the Per Sensor scope', () => {
+  /** Two walls three metres apart, with a sensor beside each. */
+  function twoZones() {
+    const model = new Group();
+    for (const [id, x] of [['s1', -3], ['s2', 3]]) {
+      const mesh = new Mesh(new BoxGeometry(0.1, 0.1, 0.1), new MeshStandardMaterial());
+      mesh.position.set(x, 1.2, 0);
+      mesh.userData.globalId = id;
+      mesh.userData.ifcClass = 'IfcSensor';
+      model.add(mesh);
+    }
+    const floor = new Mesh(new BoxGeometry(12, 0.2, 6), new MeshStandardMaterial());
+    floor.position.set(0, -0.1, 0);
+    floor.userData.globalId = 'floor';
+    floor.userData.ifcClass = 'IfcSlab';
+    model.add(floor);
+    model.updateMatrixWorld(true);
+    return new SceneView(model, { objects: { s1: {}, s2: {}, floor: {} } });
+  }
+
+  const bind = (globalId) => ({
+    selector: { globalId },
+    label: globalId,
+    source: { live: { transport: 'mqtt', topic: `t/${globalId}` } },
+    display: { unit: 'C', ramp: [0, 40] },
+  });
+
+  test('each sensor is its own zone', () => {
+    const view = twoZones();
+    view.state.heat = 'sensor';
+    view.buildField([bind('s1'), bind('s2')]);
+
+    assert.equal(view.zoneFor('s1'), 's1');
+    assert.equal(view.zoneFor('s2'), 's2');
+  });
+
+  test('an object between them takes the nearer one', () => {
+    // Nothing blocks here, so nearest by walking is nearest by line, which is
+    // what makes this the check that the plumbing is connected at all.
+    const view = twoZones();
+    view.state.heat = 'sensor';
+    view.buildField([bind('s1'), bind('s2')]);
+
+    assert.equal(view.zoneFor('floor'), 's1');
+  });
+
+  test('it is offered when there is more than one sensor and not before', () => {
+    const view = twoZones();
+
+    assert.ok(view.scopesFor([bind('s1'), bind('s2')]).includes('sensor'));
+    assert.equal(view.scopesFor([bind('s1')]).includes('sensor'), false);
+  });
+});

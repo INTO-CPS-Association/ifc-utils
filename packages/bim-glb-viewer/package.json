@@ -1,6 +1,6 @@
 {
   "name": "@into-cps-association/bim-glb-viewer",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "description": "Bind live sensor readings to the objects of a BIM model, by IFC GlobalId.",
   "keywords": [
     "ifc",
