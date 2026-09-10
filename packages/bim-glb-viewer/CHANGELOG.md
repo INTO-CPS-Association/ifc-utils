@@ -4,6 +4,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.9.0]
+
+### Added
+
+- The interface: a toolbar generated from the shortcut table, a floor picker, a panel saying what the selected object is, and the shortcut list. The table binds the keys, builds the toolbar and writes the help, so a button and a key cannot disagree.
+- `BimCanvas` hands the page a `SceneView` and the camera commands, and reports what the cursor is over and what was clicked. Picking only considers visible objects, so a floor filter that hides a wall also stops that wall being clicked through the floor above it.
+- The property tree is loaded beside the model, which is what gives the floor filter and the heatmap something to group by. A model without one still draws.
+- `@mui/icons-material` as an optional peer, so the toolbar uses the host's own icon set rather than introducing a second design language.
+
+## [0.8.0]
+
+### Added
+
+- The `./viewer` entry point: the three.js layer with no React, so a consumer that draws its own interface never pulls React and MUI in behind it.
+- `SceneView`, which holds the state of one loaded model. One place decides what an object is painted with and one place writes `visible`, which is what stops the floor filter bringing back a slab the lid toggle just removed.
+- `bandsFrom`, which measures where the floors are from the objects rather than reading the elevations a header declares. Two models declare millimetres and carry metres, one lists its storeys out of order, and one names four floors that sit within twenty centimetres of each other.
+- The reading helpers: how old a value is, whether it counts as current, and what the current ones average to per zone.
+
 ## [0.5.0]
 
 ### Added

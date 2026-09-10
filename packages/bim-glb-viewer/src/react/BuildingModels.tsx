@@ -21,7 +21,7 @@
  * are its concerns and a plugin has no business owning them.
  */
 
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -34,6 +34,12 @@ import {
   Typography,
 } from '@mui/material';
 import type { Binding } from '../binding.js';
+import { handleKey, type PropertyTree, type SceneView } from '../viewer/index.js';
+import FloorPicker from './FloorPicker.js';
+import HelpPanel from './HelpPanel.js';
+import ObjectPanel from './ObjectPanel.js';
+import Toolbar from './Toolbar.js';
+import type { ViewerHandle } from './BimCanvas.js';
 import {
   MODELS_DIRECTORY,
   contentsUrl,
@@ -102,6 +108,15 @@ export function BuildingModels({
   const [problem, setProblem] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [bindings, setBindings] = useState<Binding[]>([]);
+  const [tree, setTree] = useState<PropertyTree | null>(null);
+  const [handle, setHandle] = useState<ViewerHandle | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  // Bumped after anything changes the scene, so the toolbar and the floor
+  // picker redraw. The scene itself is not React state: it is a three.js graph
+  // that would be ruinous to copy on every frame.
+  const [revision, bump] = useState(0);
+  const hovered = useRef<string | null>(null);
 
   useEffect(() => {
     if (!libraryUrl) return undefined;
@@ -125,6 +140,37 @@ export function BuildingModels({
       current = false;
     };
   }, [libraryUrl, directory]);
+
+  /**
+   * The property tree beside the model, when there is one.
+   *
+   * It is what says which storey and which room each object is in, so without
+   * it the floor filter and the heatmap have nothing to group by. A model with
+   * no tree still draws.
+   */
+  useEffect(() => {
+    setTree(null);
+    if (!chosen?.treePath || !libraryUrl) return undefined;
+    let current = true;
+
+    fetch(fileUrl(libraryUrl, chosen.treePath), { credentials: 'include' })
+      .then((response) => {
+        if (!response.ok) throw new Error(`the library returned HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((loaded: PropertyTree) => {
+        if (current) setTree(loaded);
+      })
+      .catch(() => {
+        // Not an error worth stopping for: the model draws without it, and the
+        // page says less rather than nothing.
+        if (current) setTree(null);
+      });
+
+    return () => {
+      current = false;
+    };
+  }, [chosen, libraryUrl]);
 
   // The manifest beside the model, when there is one. Most models declare no
   // sensors at all, and an empty list is the honest answer for those rather
@@ -153,6 +199,39 @@ export function BuildingModels({
   }, [chosen, libraryUrl]);
 
   const onReport = useCallback((message: string) => setNote(message), []);
+  const onHover = useCallback((globalId: string | null) => { hovered.current = globalId; }, []);
+  const onSelect = useCallback((globalId: string | null) => setSelected(globalId), []);
+  const onReady = useCallback((ready: ViewerHandle) => {
+    setHandle(ready);
+    setSelected(null);
+    bump((n) => n + 1);
+  }, []);
+
+  /** Everything a shortcut needs, gathered in one place so the keyboard and the toolbar drive the viewer through exactly the same path. */
+  const shortcutContext = useCallback((view: SceneView) => ({
+    view,
+    refresh: () => { view.refresh(); bump((n) => n + 1); },
+    frame: () => handle?.frame(),
+    look: (from: 'top' | 'front' | 'side' | 'corner') => handle?.look(from),
+    hovered: () => hovered.current,
+    toggleHelp: () => setHelpOpen((open) => !open),
+    toggleFullscreen: () => {
+      if (document.fullscreenElement) void document.exitFullscreen();
+      else void document.documentElement.requestFullscreen?.();
+    },
+  }), [handle]);
+
+  // The keyboard reaches the viewer only while a model is open, so a page with
+  // nothing loaded does not swallow keys that belong to the application.
+  useEffect(() => {
+    if (!handle) return undefined;
+    const context = shortcutContext(handle.view);
+    const onKey = (event: KeyboardEvent) => {
+      if (handleKey(event, context)) event.preventDefault();
+    };
+    globalThis.addEventListener('keydown', onKey);
+    return () => globalThis.removeEventListener('keydown', onKey);
+  }, [handle, shortcutContext]);
 
   return (
     <Box sx={{
@@ -191,17 +270,50 @@ export function BuildingModels({
 
       {chosen && (
         <Paper sx={{ p: 1 }}>
+          {handle && (
+            <>
+              <Toolbar
+                view={handle.view}
+                context={shortcutContext(handle.view)}
+                revision={revision}
+              />
+              <FloorPicker
+                storeys={handle.view.storeys}
+                current={handle.view.state.storey}
+                onChange={(storey) => {
+                  handle.view.state.storey = storey;
+                  handle.view.refresh();
+                  bump((n) => n + 1);
+                }}
+              />
+            </>
+          )}
           <Suspense fallback={<CircularProgress sx={{ m: 4 }} />}>
             <BimCanvas
               key={chosen.geometryPath ?? chosen.ifcPath}
               url={fileUrl(libraryUrl, chosen.geometryPath ?? chosen.ifcPath)}
               convert={!chosen.geometryPath}
               bindings={bindings}
+              tree={tree ?? undefined}
               onReport={onReport}
+              onReady={onReady}
+              onHover={onHover}
+              onSelect={onSelect}
             />
           </Suspense>
+          {handle && (
+            <Box sx={{ mt: 1 }}>
+              <ObjectPanel
+                globalId={selected}
+                facts={selected ? handle.view.factsOf(selected) : undefined}
+                binding={bindings.find((b) => b.selector?.globalId === selected)}
+              />
+            </Box>
+          )}
         </Paper>
       )}
+
+      <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
     </Box>
   );
 }

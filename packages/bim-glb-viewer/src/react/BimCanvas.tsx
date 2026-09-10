@@ -20,6 +20,8 @@ import { Alert, Box, CircularProgress, Typography } from '@mui/material';
 import {
   AmbientLight,
   Box3,
+  Raycaster,
+  Vector2,
   Color,
   DirectionalLight,
   Mesh,
@@ -38,6 +40,7 @@ import { rampColour } from '../ramp.js';
 import { resolveBindings } from '../resolver.js';
 import type { Binding } from '../binding.js';
 import { objectsOf } from './scene.js';
+import { SceneView, type PropertyTree } from '../viewer/index.js';
 
 const BACKGROUND = 0xf5f6f8;
 const NEAR_PLANE = 0.1;
@@ -48,13 +51,31 @@ const FAR_PLANE = 5000;
 const MARKER_SHARE_OF_MODEL = 0.006;
 
 /**
+ * Where the camera sits for each named view, as a direction from the centre.
+ *
+ * Named rather than written into each shortcut, so adding a fourth is a line
+ * here and not a change to the table of keys.
+ */
+const LOOK_FROM: Record<string, [number, number, number]> = {
+  top: [0, 1, 0.0001],
+  front: [0, 0, 1],
+  side: [1, 0, 0],
+  corner: [1, 0.6, 1],
+};
+
+/**
  * Put the whole model in shot.
  *
  * The distance is the radius of the bounding sphere over the sine of half the
  * field of view, which frames the model whatever its size. The metre is
  * clearance so the near face is not against the lens.
  */
-function frame(camera: PerspectiveCamera, controls: OrbitControls, model: Object3D) {
+function frame(
+  camera: PerspectiveCamera,
+  controls: OrbitControls,
+  model: Object3D,
+  from: keyof typeof LOOK_FROM = 'corner',
+) {
   const box = new Box3().setFromObject(model);
   if (box.isEmpty()) return 1;
 
@@ -63,7 +84,7 @@ function frame(camera: PerspectiveCamera, controls: OrbitControls, model: Object
   const distance = radius / Math.sin((camera.fov * Math.PI) / 360) + 1;
 
   camera.position.copy(centre)
-    .add(new Vector3(1, 0.6, 1).normalize().multiplyScalar(distance));
+    .add(new Vector3(...LOOK_FROM[from]).normalize().multiplyScalar(distance));
   camera.near = Math.max(distance / 1000, NEAR_PLANE);
   camera.far = Math.max(distance * 10, FAR_PLANE);
   camera.updateProjectionMatrix();
@@ -121,11 +142,33 @@ export interface BimCanvasProps {
   convert?: boolean;
   /** The bindings to draw on it. Empty when the model declares no sensors. */
   bindings?: Binding[];
+  /** What the model says each object is, so a floor filter and a heatmap have something to group by. */
+  tree?: PropertyTree;
   /** Reported so the page can say what it could not do. */
   onReport?: (message: string) => void;
+  /**
+   * Handed the loaded model and the camera commands, once it is ready.
+   *
+   * This is how a page drives the viewer: it holds the `SceneView`, changes its state, and calls `refresh`. Nothing here owns an interface.
+   */
+  onReady?: (handle: ViewerHandle) => void;
+  /** Told which object the cursor is over, and which is selected. */
+  onHover?: (globalId: string | null) => void;
+  onSelect?: (globalId: string | null) => void;
 }
 
-function BimCanvas({ url, convert = false, bindings = [], onReport }: Readonly<BimCanvasProps>) {
+/** What a page can do to the scene from outside. */
+export interface ViewerHandle {
+  view: SceneView;
+  /** Put the whole model back in shot. */
+  frame: () => void;
+  /** Look from one of three axes, or from the default corner. */
+  look: (from: 'top' | 'front' | 'side' | 'corner') => void;
+}
+
+function BimCanvas({
+  url, convert = false, bindings = [], tree, onReport, onReady, onHover, onSelect,
+}: Readonly<BimCanvasProps>) {
   const holder = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [problem, setProblem] = useState<string | null>(null);
@@ -170,6 +213,10 @@ function BimCanvas({ url, convert = false, bindings = [], onReport }: Readonly<B
     const observer = new ResizeObserver(resize);
     observer.observe(parent);
 
+    // Torn down in the order they were set up, whatever the model turned out
+    // to be, so a page that switches models does not leak a listener a visit.
+    const cleanUp: Array<() => void> = [];
+
     let running = true;
     const tick = () => {
       if (!running) return;
@@ -179,12 +226,63 @@ function BimCanvas({ url, convert = false, bindings = [], onReport }: Readonly<B
     };
     tick();
 
+    /** What the cursor is over, found by casting a ray through the pointer. */
+    const pointer = new Vector2();
+    const ray = new Raycaster();
+    let picked: string | null = null;
+
     /** Put a built model in the scene, whatever produced it. */
     const show = (model: Object3D, note?: string) => {
       if (!running) return;
       scene.add(model);
       const radius = frame(camera, controls, model);
       const { placed, missing } = addMarkers(model, bindings, radius);
+
+      // Everything the page drives the viewer through. The page owns the
+      // interface and this owns the scene, and this is the only line between
+      // them.
+      const view = new SceneView(model as never, tree);
+      view.refresh();
+      onReady?.({
+        view,
+        frame: () => frame(camera, controls, model),
+        look: (from) => frame(camera, controls, model, from),
+      });
+
+      /** Which object is under the pointer, or null. */
+      const at = (event: PointerEvent): string | null => {
+        const box = parent.getBoundingClientRect();
+        pointer.x = ((event.clientX - box.left) / box.width) * 2 - 1;
+        pointer.y = -((event.clientY - box.top) / box.height) * 2 + 1;
+        ray.setFromCamera(pointer, camera);
+        // Only what is visible: a floor filter that hides a wall must also
+        // stop that wall being clicked through the floor above it.
+        const hits = ray.intersectObjects([...view.meshes.values()].filter((m) => m.visible), false);
+        return (hits[0]?.object.userData.globalId as string | undefined) ?? null;
+      };
+
+      const move = (event: PointerEvent) => {
+        const globalId = at(event);
+        if (globalId === picked) return;
+        picked = globalId;
+        view.state.hovered = globalId;
+        view.refreshMaterials();
+        onHover?.(globalId);
+      };
+      const click = (event: PointerEvent) => {
+        const globalId = at(event);
+        view.state.selected = globalId;
+        view.refreshMaterials();
+        onSelect?.(globalId);
+      };
+      parent.addEventListener('pointermove', move);
+      parent.addEventListener('click', click as EventListener);
+      cleanUp.push(() => {
+        parent.removeEventListener('pointermove', move);
+        parent.removeEventListener('click', click as EventListener);
+        view.dispose();
+      });
+
       setLoading(false);
       setProgress(null);
       const sensors = bindings.length === 0 ? undefined
@@ -242,6 +340,7 @@ function BimCanvas({ url, convert = false, bindings = [], onReport }: Readonly<B
 
     return () => {
       running = false;
+      for (const undo of cleanUp) undo();
       observer.disconnect();
       controls.dispose();
       scene.traverse((object) => {
@@ -256,7 +355,7 @@ function BimCanvas({ url, convert = false, bindings = [], onReport }: Readonly<B
       renderer.forceContextLoss();
       parent.removeChild(renderer.domElement);
     };
-  }, [url, convert, bindings, onReport]);
+  }, [url, convert, bindings, tree, onReport, onReady, onHover, onSelect]);
 
   return (
     <Box sx={{
