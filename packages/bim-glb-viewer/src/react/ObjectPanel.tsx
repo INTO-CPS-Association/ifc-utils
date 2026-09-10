@@ -6,7 +6,12 @@
  * Everything drawn here comes from the model or from a manifest, and both are untrusted input as far as this is concerned. React escapes text by default and nothing here uses `dangerouslySetInnerHTML`.
  */
 
-import { Box, Chip, Paper, Stack, Table, TableBody, TableCell, TableRow, Typography } from '@mui/material';
+import { useState } from 'react';
+import {
+  Box, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton, Paper, Stack,
+  Table, TableBody, TableCell, TableRow, Typography,
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { displayOf, idOf, topicOf, type Binding } from '../binding.js';
 import type { ObjectFacts } from '../viewer/index.js';
 
@@ -15,7 +20,22 @@ export interface ObjectPanelProps {
   facts: ObjectFacts | undefined;
   /** The binding attached to this object, when one is. */
   binding: Binding | undefined;
-  /** The property sets the model carries for it, when the tree has them. */
+  /**
+   * The property sets the model carries for it, when the tree has them.
+   *
+   * These are everything the authoring tool exported, and there is a lot of
+   * it. One interior wall of the NTU model carries around sixty fields across
+   * twelve sets: its family and type, its construction and wrapping, its
+   * fire and acoustic marks, its thermal transmittance, absorptance, thermal
+   * mass and resistance, its area, length and volume, the level it starts at
+   * and the one it runs up to, its phase, its structural usage, and the
+   * standard IFC sets such as Pset_WallCommon.
+   *
+   * All of it is kept and none of it is thrown away, because a person asking
+   * about a wall's U-value has nowhere else to look. It is behind a button
+   * rather than on the panel because sixty rows under a click is not an
+   * answer, it is a haystack.
+   */
   properties?: Record<string, Record<string, unknown>>;
   /** Its extent in metres along each world axis, measured from the geometry. */
   size?: { x: number; y: number; z: number };
@@ -36,6 +56,11 @@ function metres(size: { x: number; y: number; z: number }): string {
   return `${parts.map((n) => n.toFixed(2)).join(' × ')} m`;
 }
 
+/** "1 property", "60 properties". Written out because "1 properties" reads as a bug. */
+function plural(word: string, count: number): string {
+  return count === 1 ? word : `${word.replace(/y$/, 'ie')}s`;
+}
+
 /** A row of the table, skipped when there is nothing to say. */
 function Row({ name, value }: Readonly<{ name: string; value: unknown }>) {
   if (value === undefined || value === null || value === '') return null;
@@ -54,6 +79,12 @@ function Row({ name, value }: Readonly<{ name: string; value: unknown }>) {
 export function ObjectPanel({
   globalId, facts, binding, properties, size,
 }: Readonly<ObjectPanelProps>) {
+  const [open, setOpen] = useState(false);
+  const sets = Object.entries(properties ?? {});
+  // The count is of fields rather than of sets, because "12 sets" says nothing
+  // about how much is behind the button and "60 properties" does.
+  const fields = sets.reduce((total, [, values]) => total + Object.keys(values).length, 0);
+
   if (!globalId) {
     return (
       <Typography variant="body2" color="text.secondary">
@@ -89,20 +120,44 @@ export function ObjectPanel({
         </Table>
       </Paper>
 
-      {properties && Object.entries(properties).map(([setName, values]) => (
-        <Paper key={setName} variant="outlined" sx={{ p: 1.5 }}>
-          <Box sx={{ mb: 0.5 }}>
-            <Chip size="small" label={setName} />
-          </Box>
-          <Table size="small">
-            <TableBody>
-              {Object.entries(values).map(([key, value]) => (
-                <Row key={key} name={key} value={value} />
-              ))}
-            </TableBody>
-          </Table>
-        </Paper>
-      ))}
+      {fields > 0 && (
+        <Box>
+          <Button size="small" variant="outlined" onClick={() => setOpen(true)}>
+            {`All ${fields} ${plural('property', fields)}`}
+          </Button>
+        </Box>
+      )}
+
+      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="md" scroll="paper">
+        <DialogTitle sx={{ pr: 6 }}>
+          {facts?.name ?? facts?.ifcClass ?? 'Properties'}
+          <IconButton
+            aria-label="Close"
+            onClick={() => setOpen(false)}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={1}>
+            {sets.map(([setName, values]) => (
+              <Paper key={setName} variant="outlined" sx={{ p: 1.5 }}>
+                <Box sx={{ mb: 0.5 }}>
+                  <Chip size="small" label={setName} />
+                </Box>
+                <Table size="small">
+                  <TableBody>
+                    {Object.entries(values).map(([key, value]) => (
+                      <Row key={key} name={key} value={value} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </Paper>
+            ))}
+          </Stack>
+        </DialogContent>
+      </Dialog>
     </Stack>
   );
 }

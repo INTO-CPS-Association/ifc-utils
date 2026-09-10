@@ -4,6 +4,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.13.0]
+
+### Changed
+
+- The property sets move behind a button that says how many fields it holds, and open in a dialog. One interior wall of a real model carries around sixty fields across twelve sets, which under a click is not an answer but a haystack. Nothing is dropped: a person asking about a wall's U-value has nowhere else to look.
+- A sensor that has not reported is drawn in a grey that is not on the ramp. It used to sit at the cold end of its own ramp, so a temperature marker read as four degrees while the card beside it said no message had ever arrived.
+
 ## [0.12.0]
 
 ### Added

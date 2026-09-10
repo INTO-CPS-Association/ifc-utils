@@ -35,8 +35,7 @@ import {
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { displayOf, idOf } from '../binding.js';
-import { rampColour } from '../ramp.js';
+import { idOf } from '../binding.js';
 import { resolveBindings } from '../resolver.js';
 import type { Binding } from '../binding.js';
 import { objectsOf } from './scene.js';
@@ -53,6 +52,14 @@ const FAR_PLANE = 5000;
 // A marker is a fraction of the model, so it is the same size on a substation
 // and on a sixty metre building.
 const MARKER_SHARE_OF_MODEL = 0.006;
+
+/**
+ * The colour of a sensor that has not reported.
+ *
+ * Deliberately off the ramp, so it cannot be mistaken for a value. Grey is the
+ * same thing the card beside it says when it greys a stale reading.
+ */
+const NO_READING_COLOUR = 0x9aa3ad;
 
 /**
  * Where the camera sits for each named view, as a direction from the centre.
@@ -118,11 +125,17 @@ function addMarkers(model: Object3D, bindings: Binding[], radius: number) {
   const at = new Vector3();
 
   for (const { binding, object } of resolved) {
-    const [low, high] = displayOf(binding).ramp ?? [0, 1];
-    // No reading has arrived, so the marker sits at the cold end of its own
-    // ramp rather than at a colour the legend never shows.
+    // A marker is drawn in a colour that is not on the ramp at all. It used to
+    // sit at the cold end of the binding's own ramp, which reads as a
+    // measurement: a blue dot on a temperature ramp says four degrees, while
+    // the card beside it said no message had ever arrived. One of the two was
+    // lying and it was the dot.
+    //
+    // It stays this colour, because nothing recolours a marker yet: the
+    // readings repaint the objects and not the spheres. When the transport
+    // exists, this is where a marker starts following its own value.
     const marker = new Mesh(shape, new MeshBasicMaterial({
-      color: rampColour(low, low, high),
+      color: NO_READING_COLOUR,
       // Drawn over the geometry it sits on, or a sensor inside a wall is
       // invisible from outside, which defeats the purpose of a marker.
       depthTest: false,
