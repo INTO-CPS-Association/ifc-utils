@@ -238,3 +238,37 @@ describe('sizeOf', () => {
     assert.equal(building().sizeOf('not-here'), undefined);
   });
 });
+
+describe('highlightedClass', () => {
+  test('lights every object of the class and nothing else', () => {
+    // The question in front of a grey building is "where are the columns",
+    // and a legend that only names colours does not answer it.
+    const view = building();
+    view.state.highlightedClass = 'IfcWall';
+    view.refreshMaterials();
+
+    const material = (id) => view.meshes.get(id).material;
+    assert.equal(material('w1'), material('w2'));
+    assert.notEqual(material('w1'), material('s1'));
+  });
+
+  test('the selection still wins, so pointing at one object says which', () => {
+    const view = building();
+    view.state.highlightedClass = 'IfcWall';
+    view.state.selected = 'w1';
+    view.refreshMaterials();
+
+    assert.notEqual(view.meshes.get('w1').material, view.meshes.get('w2').material);
+  });
+
+  test('clearing it puts every object back in its own colour', () => {
+    const view = building();
+    const before = view.meshes.get('w1').material;
+    view.state.highlightedClass = 'IfcWall';
+    view.refreshMaterials();
+    view.state.highlightedClass = null;
+    view.refreshMaterials();
+
+    assert.equal(view.meshes.get('w1').material, before);
+  });
+});

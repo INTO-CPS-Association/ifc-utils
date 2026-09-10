@@ -402,7 +402,7 @@ export function BuildingModels({
                     coloured={handle.view.liveCount(bindings, readings, feed)}
                   />
                 )}
-                <ClassLegend view={handle.view} />
+                <ClassLegend view={handle.view} onChange={() => bump((n) => n + 1)} />
               </Stack>
             </Box>
           )}

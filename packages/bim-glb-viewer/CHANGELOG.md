@@ -4,6 +4,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.15.0]
+
+### Added
+
+- Picking a class in the legend lights every object of that class. A legend that only names colours answers "what is this colour", and the question a person has in front of a grey building is "where are the columns". The selection still wins over it, so pointing at one object still says which one.
+
 ## [0.14.0]
 
 ### Added

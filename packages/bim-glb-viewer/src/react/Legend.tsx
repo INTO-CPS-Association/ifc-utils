@@ -6,7 +6,7 @@
  * The heatmap legend states its range, and the range comes from the manifest rather than from the readings. A scale that rescaled itself would make a steady building look like a changing one, and a person reading two screenshots an hour apart would be comparing different things without being told.
  */
 
-import { Box, Chip, Paper, Stack, Typography } from '@mui/material';
+import { Box, Chip, ListItemButton, Paper, Stack, Typography } from '@mui/material';
 import { RAMP_STOPS, type Zones } from '../index.js';
 import type { SceneView } from '../viewer/index.js';
 
@@ -20,19 +20,46 @@ function Swatch({ colour }: Readonly<{ colour: string }>) {
   );
 }
 
-export function ClassLegend({ view }: Readonly<{ view: SceneView }>) {
+export interface ClassLegendProps {
+  view: SceneView;
+  /** Called after a pick, so the page repaints. */
+  onChange: () => void;
+}
+
+/**
+ * What the colours in this model mean, and where each class is.
+ *
+ * Picking a row lights every object of that class. A legend that only names
+ * colours answers "what is this colour", and the question a person has in
+ * front of a grey building is "where are the columns". The same row again
+ * clears it, so nothing has to be found twice.
+ */
+export function ClassLegend({ view, onChange }: Readonly<ClassLegendProps>) {
   const colours = view.classColours();
   if (colours.size === 0) return null;
+
+  const pick = (ifcClass: string) => {
+    view.state.highlightedClass =
+      view.state.highlightedClass === ifcClass ? null : ifcClass;
+    view.refreshMaterials();
+    onChange();
+  };
 
   return (
     <Paper variant="outlined" sx={{ p: 1 }}>
       <Typography variant="caption" color="text.secondary">In This Model</Typography>
       <Stack sx={{ mt: 0.5, gap: 0.3 }}>
         {[...colours].map(([ifcClass, colour]) => (
-          <Box key={ifcClass} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          <ListItemButton
+            key={ifcClass}
+            dense
+            selected={view.state.highlightedClass === ifcClass}
+            onClick={() => pick(ifcClass)}
+            sx={{ gap: 0.75, py: 0.2, borderRadius: 1 }}
+          >
             <Swatch colour={colour} />
             <Typography variant="body2">{ifcClass.replace(/^Ifc/, '')}</Typography>
-          </Box>
+          </ListItemButton>
         ))}
       </Stack>
     </Paper>

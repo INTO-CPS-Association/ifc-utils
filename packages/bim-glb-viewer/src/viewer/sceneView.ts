@@ -53,6 +53,14 @@ export interface ViewState {
   selected: string | null;
   hovered: string | null;
   hoverHighlight: boolean;
+  /**
+   * An IFC class every member of which is highlighted, or null.
+   *
+   * A legend that only names colours answers "what is this colour" and not
+   * "where are the columns", which is the question a person actually has in
+   * front of a grey building. Picking the class in the legend answers it.
+   */
+  highlightedClass: string | null;
 }
 
 /** Roofs, slabs and ceilings: the lid that stops a floor being seen into. */
@@ -82,6 +90,7 @@ export class SceneView {
     selected: null,
     hovered: null,
     hoverHighlight: true,
+    highlightedClass: null,
   };
 
   constructor(model: Group, private readonly tree: PropertyTree = {}) {
@@ -197,6 +206,13 @@ export class SceneView {
     // Only while hover highlighting is on. Reading a heatmap with a colour
     // following the cursor is unreadable.
     if (this.state.hoverHighlight && globalId === this.state.hovered) return this.palette.hovered;
+    // Below the cursor and below the selection, so pointing at one object
+    // still says which one, and above the heatmap, since a person who asked
+    // where the walls are is asking that and not what temperature they are.
+    if (this.state.highlightedClass
+      && mesh.userData.ifcClass === this.state.highlightedClass) {
+      return this.palette.hovered;
+    }
 
     const heat = this.heatOf(globalId);
     const base = heat ?? this.palette.baseOf(globalId);
