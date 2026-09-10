@@ -112,6 +112,28 @@ export interface BuildingModelsProps {
   feed?: FeedState;
 }
 
+/**
+ * Read a response as JSON, or say what actually came back.
+ *
+ * The library URL a host supplies is built from parts, and one of those parts
+ * is usually the signed-in user. Ask for a listing before that part is known
+ * and the request lands on the application itself, which answers with its own
+ * HTML page and HTTP 200. `response.json()` then reports "Unexpected token
+ * '<'", which blames JSON for an address that was never the library.
+ *
+ * Checking the content type turns that into a sentence naming the address, so
+ * the next person reads it once instead of debugging a parser.
+ */
+async function readJson<T>(response: Response, url: string): Promise<T> {
+  if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}`);
+
+  const type = response.headers.get('content-type') ?? '';
+  if (!type.includes('json')) {
+    throw new Error(`${url} returned a web page rather than data, so it is not the library`);
+  }
+  return response.json() as Promise<T>;
+}
+
 export function BuildingModels({
   libraryUrl,
   directory = MODELS_DIRECTORY,
@@ -140,12 +162,10 @@ export function BuildingModels({
     if (!libraryUrl) return undefined;
     let current = true;
 
-    fetch(contentsUrl(libraryUrl, directory), { credentials: 'include' })
-      .then((response) => {
-        if (!response.ok) throw new Error(`the library returned HTTP ${response.status}`);
-        return response.json();
-      })
-      .then((listing: { content?: LibraryEntry[] }) => {
+    const url = contentsUrl(libraryUrl, directory);
+    fetch(url, { credentials: 'include' })
+      .then((response) => readJson<{ content?: LibraryEntry[] }>(response, url))
+      .then((listing) => {
         if (current) setModels(pairModels(listing.content ?? []));
       })
       .catch((error: Error) => {
@@ -171,12 +191,10 @@ export function BuildingModels({
     if (!chosen?.treePath || !libraryUrl) return undefined;
     let current = true;
 
-    fetch(fileUrl(libraryUrl, chosen.treePath), { credentials: 'include' })
-      .then((response) => {
-        if (!response.ok) throw new Error(`the library returned HTTP ${response.status}`);
-        return response.json();
-      })
-      .then((loaded: PropertyTree) => {
+    const url = fileUrl(libraryUrl, chosen.treePath);
+    fetch(url, { credentials: 'include' })
+      .then((response) => readJson<PropertyTree>(response, url))
+      .then((loaded) => {
         if (current) setTree(loaded);
       })
       .catch(() => {
@@ -202,12 +220,10 @@ export function BuildingModels({
     if (!chosen?.manifestPath || !libraryUrl) return undefined;
     let current = true;
 
-    fetch(fileUrl(libraryUrl, chosen.manifestPath), { credentials: 'include' })
-      .then((response) => {
-        if (!response.ok) throw new Error(`the library returned HTTP ${response.status}`);
-        return response.json();
-      })
-      .then((manifest: { bindings?: Binding[]; model?: { proposed?: boolean } }) => {
+    const url = fileUrl(libraryUrl, chosen.manifestPath);
+    fetch(url, { credentials: 'include' })
+      .then((response) => readJson<{ bindings?: Binding[]; model?: { proposed?: boolean } }>(response, url))
+      .then((manifest) => {
         if (!current) return;
         setBindings(manifest.bindings ?? []);
         setProposed(manifest.model?.proposed === true);

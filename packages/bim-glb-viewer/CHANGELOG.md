@@ -4,6 +4,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.11.1]
+
+### Fixed
+
+- A response that is not JSON now says so and names the address, instead of surfacing "Unexpected token '<'". A library URL is built by the host from parts, and asking before every part is known lands the request on the host application itself, which answers with its own page and HTTP 200. Blaming JSON for that sends the reader to the wrong place.
+
 ## [0.11.0]
 
 ### Added
