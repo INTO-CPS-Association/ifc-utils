@@ -61,6 +61,12 @@ UNKNOWN = {"unit": "TODO", "ramp": [0, 100], "measurement": "TODO"}
 RECORDED_TOPIC = "MqttTopic"
 RECORDED_UNIT = "Unit"
 
+# A placement tool marks the sensors it invented, so a reader of the model
+# alone cannot take a proposal for a survey. When every sensor says so, the
+# manifest says so too: a viewer reads the model half, not each binding.
+RECORDED_PROPOSED = "Proposed"
+RECORDED_BASIS = "Basis"
+
 
 def recorded(sensor, key):
     """A value the model itself records for a sensor, from any property set."""
@@ -138,6 +144,21 @@ def binding_for(sensor, model, bucket=None, prefix=None):
     }
 
 
+def proposal_of(sensors):
+    """Whether every sensor was proposed rather than surveyed, and on what basis.
+
+    All of them, not any: one proposed sensor among real ones does not make
+    the model a proposal, and marking it so would hide the real ones. That
+    case has no answer here and is left for the person who mixed them.
+    """
+    if not sensors:
+        return None, None
+    if not all(recorded(sensor, RECORDED_PROPOSED) for sensor in sensors):
+        return None, None
+    bases = {recorded(sensor, RECORDED_BASIS) for sensor in sensors}
+    return True, bases.pop() if len(bases) == 1 else None
+
+
 def manifest_from(model, source_path, bucket=None, prefix=None):
     """Build the whole manifest for a model.
 
@@ -148,7 +169,9 @@ def manifest_from(model, source_path, bucket=None, prefix=None):
     `prefix` is the first segment of a generated topic, defaulting to the
     project's own name.
     """
-    return {
+    sensors = list(sensors_in(model))
+    proposed, basis = proposal_of(sensors)
+    manifest = {
         # The file name, not the path it happened to sit at when this ran.
         # A manifest sits beside its model, and an absolute path from one
         # machine is noise on every other.
@@ -157,8 +180,13 @@ def manifest_from(model, source_path, bucket=None, prefix=None):
         "converter": f"{CONVERTER} {CONVERTER_VERSION}",
         "schema": explorer.summary(model)["schema"],
         "metre_scale": explorer.metre_scale(model),
-        "bindings": [binding_for(s, model, bucket, prefix) for s in sensors_in(model)],
+        "bindings": [binding_for(s, model, bucket, prefix) for s in sensors],
     }
+    if proposed:
+        manifest["proposed"] = True
+        if basis:
+            manifest["basis"] = basis
+    return manifest
 
 
 def as_yaml(manifest):
@@ -183,16 +211,18 @@ def as_yaml(manifest):
         "person. See the notes at the end.",
     ]
 
+    # Everything `manifest_from` produced except the bindings is the
+    # provenance, passed through rather than listed again here. Listing it
+    # twice is how `proposed` and `basis` were computed and then dropped on
+    # the way out, and how the next field added would be dropped too.
+    #
+    # Provenance is asked for in issue 1762. The hash is what says whether
+    # this manifest still describes the model beside it.
+    provenance = {key: value for key, value in manifest.items() if key != "bindings"}
+    provenance["source_sha256"] = provenance["source_sha256"] or "unknown"
+
     document = manifest_module.document(
-        {
-            "source": manifest["source"],
-            # Provenance, asked for in issue 1762. The hash is what says
-            # whether this manifest still describes the model beside it.
-            "source_sha256": manifest["source_sha256"] or "unknown",
-            "converter": manifest["converter"],
-            "schema": manifest["schema"],
-            "metre_scale": manifest["metre_scale"],
-        },
+        provenance,
         [
             manifest_module.binding(
                 global_id=b["globalId"],
