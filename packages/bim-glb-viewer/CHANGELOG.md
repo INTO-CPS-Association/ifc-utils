@@ -4,6 +4,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.16.0]
+
+### Changed
+
+- A heat scope is offered when the sensors divide into more than one group, rather than when the model declares the grouping. A model that declares ten storeys and carries all ten of its sensors on one of them could be grouped by storey and gained nothing from it: the whole building took one colour, which is the building mean under another name.
+- `availableScopes` takes the bindings and a lookup instead of a summary of what the model declares, and `SceneView.scopesFor` answers it for a set of bindings.
+
+### Added
+
+- Each legend row carries the number of objects of its class. On the row rather than behind a hover, because a count is what a person wants from a legend.
+- `SceneView.classCounts`.
+
 ## [0.15.0]
 
 ### Added

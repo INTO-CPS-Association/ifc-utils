@@ -6,12 +6,15 @@
  * The keys follow the ProBIM Explorer, so anyone moving between the two viewers keeps their hands.
  */
 
-import { availableScopes, type HeatScope } from '../readings.js';
+import { type HeatScope } from '../readings.js';
+import type { Binding } from '../binding.js';
 import type { SceneView } from './sceneView.js';
 
 /** What a shortcut needs from the page to do its work. */
 export interface ShortcutContext {
   view: SceneView;
+  /** The bindings in force, which is what decides the scopes worth cycling. */
+  bindings: Binding[];
   /** Repaint after the shortcut has changed something. */
   refresh: () => void;
   /** Put the whole model back in shot. */
@@ -41,8 +44,8 @@ const SCOPE_LABELS: Record<HeatScope, string> = {
 };
 
 /** Move to the next scope the model can actually answer, so cycling never lands on one that colours nothing. */
-function cycleHeat(view: SceneView): void {
-  const scopes = availableScopes(view.groupings);
+function cycleHeat(view: SceneView, bindings: Binding[]): void {
+  const scopes = view.scopesFor(bindings);
   const next = scopes.indexOf(view.state.heat) + 1;
   view.state.heat = scopes[next >= scopes.length ? 0 : next];
 }
@@ -52,7 +55,7 @@ export const SHORTCUTS: Shortcut[] = [
     key: 'm',
     label: 'Heatmap',
     icon: 'heatmap',
-    run: ({ view, refresh }) => { cycleHeat(view); refresh(); },
+    run: ({ view, bindings, refresh }) => { cycleHeat(view, bindings); refresh(); },
     on: (view) => view.state.heat !== 'off',
     badge: (view) => SCOPE_LABELS[view.state.heat],
   },

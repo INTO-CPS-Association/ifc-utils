@@ -215,10 +215,19 @@ test('resetting puts a model back to how it opened', () => {
   assert.equal([...view.meshes.values()].every((m) => m.visible), true);
 });
 
-test('a scope the model cannot group by is not offered', () => {
+test('a scope the readings do not divide is not offered', () => {
+  // Two sensors on two storeys and in one room. Grouping by storey separates
+  // them and grouping by room does not, so only one of the two is offered.
   const view = building();
+  const bind = (globalId) => ({
+    selector: { globalId },
+    label: globalId,
+    source: { live: { transport: 'mqtt', topic: `t/${globalId}` } },
+    display: { unit: 'C', ramp: [0, 1] },
+  });
 
-  assert.deepEqual(view.groupings, { rooms: true, storeys: true });
+  assert.deepEqual(view.scopesFor([bind('w1'), bind('w2')]), ['off', 'storey', 'building']);
+  assert.deepEqual(view.scopesFor([bind('w1')]), ['off', 'building']);
 });
 
 describe('sizeOf', () => {

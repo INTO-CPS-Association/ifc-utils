@@ -270,6 +270,7 @@ export function BuildingModels({
   /** Everything a shortcut needs, gathered in one place so the keyboard and the toolbar drive the viewer through exactly the same path. */
   const shortcutContext = useCallback((view: SceneView) => ({
     view,
+    bindings,
     refresh: () => { view.refresh(); bump((n) => n + 1); },
     frame: () => handle?.frame(),
     look: (from: 'top' | 'front' | 'side' | 'corner') => handle?.look(from),
@@ -279,7 +280,7 @@ export function BuildingModels({
       if (document.fullscreenElement) void document.exitFullscreen();
       else void document.documentElement.requestFullscreen?.();
     },
-  }), [handle]);
+  }), [handle, bindings]);
 
   // The keyboard reaches the viewer only while a model is open, so a page with
   // nothing loaded does not swallow keys that belong to the application.

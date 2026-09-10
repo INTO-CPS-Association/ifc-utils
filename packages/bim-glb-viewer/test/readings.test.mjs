@@ -9,7 +9,7 @@
  * waiting for one.
  */
 
-import { test } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -60,13 +60,39 @@ test('a stale reading says so rather than looking updated', () => {
   assert.match(ageText(seconds(120), 'live', DEFAULT_STALE_AFTER_S, NOW), /not live$/);
 });
 
-test('a scope the model cannot group by is not offered', () => {
-  // Cycling must never land on a scope that colours nothing. A bridge declares
-  // no storey and six of the eleven models declare no room.
-  assert.deepEqual(availableScopes({ rooms: false, storeys: false }), ['off', 'building']);
-  assert.deepEqual(availableScopes({ rooms: false, storeys: true }), ['off', 'storey', 'building']);
-  assert.deepEqual(availableScopes({ rooms: true, storeys: true }),
-    ['off', 'room', 'storey', 'building']);
+describe('the scopes worth offering', () => {
+  const where = {
+    a: { room: 'R1', storey: 'L1' },
+    b: { room: 'R2', storey: 'L2' },
+    c: { room: 'R1', storey: 'L1' },
+  };
+  const at = (id) => where[id];
+  const bind = (id) => ({
+    selector: { globalId: id },
+    label: id,
+    source: { live: { transport: 'mqtt', topic: `t/${id}` } },
+    display: { unit: 'C', ramp: [0, 1] },
+  });
+
+  test('offers a scope that puts the sensors in more than one group', () => {
+    assert.deepEqual(availableScopes([bind('a'), bind('b')], at),
+      ['off', 'room', 'storey', 'building']);
+  });
+
+  test('skips a scope that puts every sensor in the same group', () => {
+    // The case this got wrong: a model declaring ten storeys with all ten of
+    // its sensors on one of them can be grouped by storey and gains nothing.
+    assert.deepEqual(availableScopes([bind('a'), bind('c')], at), ['off', 'building']);
+  });
+
+  test('offers off and building whatever the readings look like', () => {
+    // One group is what Building means, rather than a failure of it.
+    assert.deepEqual(availableScopes([], at), ['off', 'building']);
+  });
+
+  test('ignores a sensor the model knows nothing about', () => {
+    assert.deepEqual(availableScopes([bind('a'), bind('unknown')], at), ['off', 'building']);
+  });
 });
 
 test('every object is in the building, whatever else it is in', () => {

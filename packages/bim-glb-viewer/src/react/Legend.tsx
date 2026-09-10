@@ -38,6 +38,11 @@ export function ClassLegend({ view, onChange }: Readonly<ClassLegendProps>) {
   const colours = view.classColours();
   if (colours.size === 0) return null;
 
+  // How many objects of each class, on the row rather than behind a hover. A
+  // count is what a person wants from a legend, and a tooltip shows it one row
+  // at a time in a box the browser styles.
+  const counts = view.classCounts();
+
   const pick = (ifcClass: string) => {
     view.state.highlightedClass =
       view.state.highlightedClass === ifcClass ? null : ifcClass;
@@ -59,6 +64,13 @@ export function ClassLegend({ view, onChange }: Readonly<ClassLegendProps>) {
           >
             <Swatch colour={colour} />
             <Typography variant="body2">{ifcClass.replace(/^Ifc/, '')}</Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ ml: 'auto', pl: 1.5, fontVariantNumeric: 'tabular-nums' }}
+            >
+              {counts.get(ifcClass) ?? 0}
+            </Typography>
           </ListItemButton>
         ))}
       </Stack>

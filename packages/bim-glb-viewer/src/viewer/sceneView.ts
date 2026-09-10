@@ -10,7 +10,7 @@ import { Box3, type Group, Mesh, type Object3D, Vector3 } from 'three';
 
 import { displayOf, objectOf, type Binding } from '../binding.js';
 import {
-  DEFAULT_STALE_AFTER_S, isLive, zoneOf, zonesOf,
+  DEFAULT_STALE_AFTER_S, availableScopes, isLive, zoneOf, zonesOf,
   type FeedState, type HeatScope, type Reading, type Zones,
 } from '../readings.js';
 import { bandOf, bandsFrom, type Band } from '../storeys.js';
@@ -120,9 +120,15 @@ export class SceneView {
     return this.bands.map((band) => band.names[0]);
   }
 
-  /** Whether the model can be grouped by room, and by storey. */
-  get groupings(): { rooms: boolean; storeys: boolean } {
-    return { rooms: (this.tree.rooms ?? []).length > 0, storeys: this.bands.length > 0 };
+  /**
+   * The heat scopes worth offering for a set of bindings.
+   *
+   * Asked of the readings rather than of the model, because a model that
+   * declares ten storeys and carries sensors on one of them can be grouped
+   * by storey and gains nothing from it.
+   */
+  scopesFor(bindings: Binding[]): HeatScope[] {
+    return availableScopes(bindings, (globalId) => this.factsOf(globalId));
   }
 
   /**
@@ -132,6 +138,16 @@ export class SceneView {
    * here, because an architect assigned those colours and a legend that
    * invented its own would describe a different building.
    */
+  /** How many objects of each class the model holds. */
+  classCounts(): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const mesh of this.meshes.values()) {
+      const ifcClass = mesh.userData.ifcClass as string | undefined;
+      if (ifcClass) counts.set(ifcClass, (counts.get(ifcClass) ?? 0) + 1);
+    }
+    return counts;
+  }
+
   classColours(): Map<string, string> {
     const seen = new Map<string, string>();
     for (const [globalId, mesh] of this.meshes) {

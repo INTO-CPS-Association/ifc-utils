@@ -27,6 +27,8 @@ function context(scene) {
   const calls = [];
   return [{
     view: scene,
+    // No bindings, which is the ordinary case: most models declare no sensors.
+    bindings: [],
     refresh: () => calls.push('refresh'),
     frame: () => calls.push('frame'),
     look: (from) => calls.push(`look:${from}`),
@@ -81,16 +83,17 @@ test('the transparency key turns transparency on and off', () => {
   assert.equal(scene.state.transparent, false);
 });
 
-test('the heatmap key cycles only through scopes the model can answer', () => {
-  // This model declares a storey and no room, so the room scope is skipped.
+test('the heatmap key cycles only through scopes the readings divide', () => {
+  // No bindings, so nothing divides by room or storey and only the two that
+  // are always offered remain.
   const scene = view();
   const seen = [];
-  for (let i = 0; i < 4; i += 1) {
+  for (let i = 0; i < 3; i += 1) {
     press('m', scene);
     seen.push(scene.state.heat);
   }
 
-  assert.deepEqual(seen, ['storey', 'building', 'off', 'storey']);
+  assert.deepEqual(seen, ['building', 'off', 'building']);
 });
 
 test('the reset key undoes the toggles and asks for the default view', () => {

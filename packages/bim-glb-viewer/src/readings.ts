@@ -88,17 +88,31 @@ export function zoneOf(
 }
 
 /**
- * The scopes a model can answer.
+ * The scopes worth offering, given where the sensors actually are.
  *
- * A scope the model cannot group by would colour nothing, so cycling never
- * lands on one. A bridge and a road declare no storey at all, and six of the
- * eleven models here declare no room.
+ * The question is not whether the model declares storeys. It is whether the
+ * sensors sit on more than one. A scope that puts every sensor in the same
+ * group paints the whole model one colour, which is the building mean under
+ * another name, and cycling should never land on it. One model here declares
+ * ten storeys and has all ten of its sensors on one of them, so asking the
+ * model rather than the readings offered a scope that showed nothing.
+ *
+ * Off and Building are always offered. Building is one group by definition,
+ * and that is its meaning rather than a failure of it.
  */
-export function availableScopes(has: { rooms: boolean; storeys: boolean }): HeatScope[] {
+export function availableScopes(
+  bindings: Binding[],
+  placeOf: (globalId: string) => { room?: string; storey?: string } | undefined,
+): HeatScope[] {
   return ALL_SCOPES.filter((scope) => {
-    if (scope === 'room') return has.rooms;
-    if (scope === 'storey') return has.storeys;
-    return true;
+    if (scope === 'off' || scope === 'building') return true;
+    const groups = new Set<string>();
+    for (const binding of bindings) {
+      const globalId = objectOf(binding);
+      const zone = globalId === undefined ? undefined : zoneOf(scope, placeOf(globalId));
+      if (zone !== undefined) groups.add(zone);
+    }
+    return groups.size > 1;
   });
 }
 
