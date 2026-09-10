@@ -66,6 +66,23 @@ describe('a column authored in inches', () => {
   });
 });
 
+describe('which way is up', () => {
+  const bytes = fixture('column_in_inches.ifc');
+
+  test('a column stands along Y, because glTF is Y up', { skip: !bytes }, async () => {
+    // The orientation trap, and the reason this test exists. web-ifc's flat
+    // transformation already returns a Y-up world, so a converter that turns
+    // it again for the Z-up to Y-up change lays the model on its side. Every
+    // other test here still passes, because a rotation changes no distance.
+    // Asking which axis a tall object is tall along is what catches it: with
+    // the extra turn this column measures 0.20 by 0.20 by 3.05 instead.
+    const { objects } = await convertIfc(bytes);
+    const [x, y, z] = extent(objects);
+
+    assert.ok(y > x && y > z, `a column should be tallest along Y, got x ${x}, y ${y}, z ${z}`);
+  });
+});
+
 describe('a basin, one object at the origin', () => {
   const bytes = fixture('basin_at_the_origin.ifc');
 
