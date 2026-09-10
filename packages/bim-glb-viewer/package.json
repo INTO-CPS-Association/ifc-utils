@@ -1,0 +1,110 @@
+{
+  "name": "@into-cps-association/bim-glb-viewer",
+  "version": "0.7.0",
+  "description": "Bind live sensor readings to the objects of a BIM model, by IFC GlobalId.",
+  "keywords": [
+    "ifc",
+    "bim",
+    "glb",
+    "gltf",
+    "digital-twin",
+    "dtaas"
+  ],
+  "license": "SEE LICENSE IN LICENSE.md",
+  "homepage": "https://github.com/INTO-CPS-Association/ifc-utils/tree/main/packages/bim-glb-viewer",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/INTO-CPS-Association/ifc-utils.git",
+    "directory": "packages/bim-glb-viewer"
+  },
+  "bugs": "https://github.com/INTO-CPS-Association/ifc-utils/issues",
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "default": "./dist/esm/index.js"
+    },
+    "./react": {
+      "types": "./dist/esm/react/index.d.ts",
+      "default": "./dist/esm/react/index.js"
+    },
+    "./schema": {
+      "types": "./dist/esm/schema.d.ts",
+      "default": "./dist/esm/schema.js"
+    },
+    "./react/canvas": {
+      "types": "./dist/esm/react/BimCanvas.d.ts",
+      "default": "./dist/esm/react/BimCanvas.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "react": [
+        "./dist/esm/react/index.d.ts"
+      ],
+      "schema": [
+        "./dist/esm/schema.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "react",
+    "schema",
+    "LICENSE.md"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.esm.json && node scripts/stubs.mjs",
+    "test": "tsc -p tsconfig.esm.json --noEmit && node --test 'test/*.test.mjs'",
+    "prepublishOnly": "npm run build",
+    "prepack": "node scripts/licence.mjs",
+    "audit": "npm audit --audit-level=high"
+  },
+  "peerDependencies": {
+    "@mui/material": ">=5",
+    "react": ">=18",
+    "react-dom": ">=18",
+    "three": ">=0.160.0",
+    "zod": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@mui/material": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "three": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@mui/material": "7.3.5",
+    "@types/react": "19.2.6",
+    "@types/three": "0.185.4",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "three": "0.185.0",
+    "typescript": "5.9.3",
+    "zod": "4.1.13"
+  },
+  "dependencies": {
+    "@into-cps-association/bim-ifc-converter": "^0.1.0"
+  }
+}

@@ -1,0 +1,40 @@
+# Reading an IFC file and answering questions about it.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ifc-explorer"
+version = "0.1.0"
+description = "Read an IFC model and answer simple questions about it."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "INTO-CPS Association Public License 1.0, with GPL-3.0. See LICENSE.md at the top of the repository." }
+keywords = ["ifc", "bim", "ifcopenshell", "dtaas"]
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+]
+# Pinned exactly. A geometry kernel changing under a converter is how a model
+# silently comes out a different size.
+dependencies = [
+  "ifcopenshell==0.8.5",
+  "numpy==2.5.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/INTO-CPS-Association/ifc-utils"
+Issues = "https://github.com/INTO-CPS-Association/ifc-utils/issues"
+
+[project.scripts]
+ifc-explorer = "ifc_explorer.__main__:main"
+
+[project.optional-dependencies]
+test = ["pytest==8.3.4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

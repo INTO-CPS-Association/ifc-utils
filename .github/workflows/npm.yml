@@ -1,0 +1,67 @@
+# Build, test and publish the npm packages in this repository.
+#
+# Publishing happens on a release and on nothing else. The sibling package in
+# this organisation, threed-glb-viewer, also triggers on `push` and
+# `pull_request`: that republishes on every commit and lets a pull request from
+# a fork start a publish, which is a supply chain surface for no benefit.
+#
+# The matrix is the list of packages, so adding one is a line here rather than
+# a second workflow.
+name: npm packages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [bim-glb-viewer]
+    defaults:
+      run:
+        working-directory: packages/${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      # Fails the build on a known high or critical advisory, rather than
+      # leaving it to whoever remembers to look.
+      - run: npm audit --audit-level=high
+      # The tests import from dist/, so building first is what makes them a
+      # check of the published artifact rather than of the source.
+      - run: npm run build
+      - run: npm test
+
+  publish:
+    if: github.event_name == 'release'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        package: [bim-glb-viewer]
+    defaults:
+      run:
+        working-directory: packages/${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://npm.pkg.github.com'
+      - run: npm ci
+      - run: npm run build
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

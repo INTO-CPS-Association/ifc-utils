@@ -1,0 +1,42 @@
+# Turning an IFC model into files a viewer can read.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ifc-converter"
+version = "0.1.0"
+description = "Convert an IFC model into GLB geometry, a property tree and a binding manifest."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "INTO-CPS Association Public License 1.0, with GPL-3.0. See LICENSE.md at the top of the repository." }
+keywords = ["ifc", "bim", "glb", "gltf", "ifcopenshell", "dtaas"]
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+]
+# A layer on the explorer rather than a peer: every converter here asks it
+# which units a model is in, what its storeys are and what its hash is.
+dependencies = [
+  "ifc-explorer==0.1.0",
+  "PyYAML==6.0.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/INTO-CPS-Association/ifc-utils"
+Issues = "https://github.com/INTO-CPS-Association/ifc-utils/issues"
+
+[project.scripts]
+ifc-to-glb = "ifc_converter.to_glb:main"
+ifc-to-metadata = "ifc_converter.to_metadata:main"
+ifc-to-manifest = "ifc_converter.to_manifest:main"
+
+[project.optional-dependencies]
+test = ["pytest==8.3.4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

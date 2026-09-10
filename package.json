@@ -1,0 +1,13 @@
+{
+  "name": "ifc-utils",
+  "private": true,
+  "description": "IFC and BIM software utilities for DTaaS. This file exists to make the packages under packages/ one npm workspace, so one of them can depend on another by version while both are still being written.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "engines": { "node": ">=20" },
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "audit": "npm audit --audit-level=high"
+  }
+}

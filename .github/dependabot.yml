@@ -1,0 +1,23 @@
+# Keep dependencies current, on the same weekly rhythm the DTaaS repository
+# uses, so a person reviews both on the same day.
+#
+# The ten day cooldown this repository applies to new releases is not something
+# Dependabot enforces, so a pull request that proposes a version published less
+# than ten days ago is left to age rather than merged.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/packages/bim-glb-viewer"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "bim-glb-viewer: "
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "actions: "
