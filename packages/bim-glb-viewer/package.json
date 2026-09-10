@@ -1,6 +1,6 @@
 {
   "name": "@into-cps-association/bim-glb-viewer",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Bind live sensor readings to the objects of a BIM model, by IFC GlobalId.",
   "keywords": [
     "ifc",
@@ -41,6 +41,10 @@
     "./react/canvas": {
       "types": "./dist/esm/react/BimCanvas.d.ts",
       "default": "./dist/esm/react/BimCanvas.js"
+    },
+    "./viewer": {
+      "types": "./dist/esm/viewer/index.d.ts",
+      "default": "./dist/esm/viewer/index.js"
     }
   },
   "typesVersions": {
@@ -50,6 +54,9 @@
       ],
       "schema": [
         "./dist/esm/schema.d.ts"
+      ],
+      "viewer": [
+        "./dist/esm/viewer/index.d.ts"
       ]
     }
   },

@@ -14,7 +14,7 @@
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 
-for (const [name, base] of [['react', 'react/index'], ['schema', 'schema']]) {
+for (const [name, base] of [['react', 'react/index'], ['viewer', 'viewer/index'], ['schema', 'schema']]) {
   mkdirSync(name, { recursive: true });
   writeFileSync(`${name}/package.json`, `${JSON.stringify({
     module: `../dist/esm/${base}.js`,
