@@ -116,20 +116,27 @@ export interface BuildingModelsProps {
  * Read a response as JSON, or say what actually came back.
  *
  * The library URL a host supplies is built from parts, and one of those parts
- * is usually the signed-in user. Ask for a listing before that part is known
- * and the request lands on the application itself, which answers with its own
- * HTML page and HTTP 200. `response.json()` then reports "Unexpected token
- * '<'", which blames JSON for an address that was never the library.
+ * is usually the signed-in user. Whenever that part is wrong, missing, or not
+ * known yet, the request still succeeds: it stops matching the workspace and
+ * lands on the host application, which answers with its own HTML page and
+ * HTTP 200. `response.json()` then reports "Unexpected token '<'", which
+ * blames JSON for an address that was never the library.
  *
- * Checking the content type turns that into a sentence naming the address, so
- * the next person reads it once instead of debugging a parser.
+ * Both failures seen so far were this: first a name that had not arrived yet,
+ * then a deployment serving a workspace under a different name than the one
+ * signed in. So the message names the address and states that cause, because
+ * the alternative is reading a parser error and looking in the wrong place.
  */
 async function readJson<T>(response: Response, url: string): Promise<T> {
   if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}`);
 
   const type = response.headers.get('content-type') ?? '';
   if (!type.includes('json')) {
-    throw new Error(`${url} returned a web page rather than data, so it is not the library`);
+    throw new Error(
+      `${url} returned a web page rather than data. That address is built from `
+      + 'the signed-in user name, so the workspace is probably served under a '
+      + 'different name than the one signed in.',
+    );
   }
   return response.json() as Promise<T>;
 }

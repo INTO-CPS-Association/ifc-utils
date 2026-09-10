@@ -4,6 +4,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.11.2]
+
+### Changed
+
+- When the library address answers with a web page, the message now states the likely cause rather than only the fact. Both times this happened the cause was the user name: once not known yet, once a deployment serving a workspace under a different name than the one signed in. Naming that turns a long search into a line of configuration.
+
 ## [0.11.1]
 
 ### Fixed
