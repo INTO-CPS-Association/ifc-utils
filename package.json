@@ -6,7 +6,8 @@
   "engines": { "node": ">=20" },
   "workspaces": ["packages/*"],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "_comment_build": "In dependency order, which npm does not work out for `run --workspaces`: it takes the workspaces alphabetically, so the viewer built before the converter it takes its types from. That order worked on a machine where dist already existed and failed on every clean checkout.",
+    "build": "npm run build --workspace packages/bim-ifc-converter && npm run build --workspace packages/bim-glb-viewer",
     "test": "npm run test --workspaces --if-present",
     "audit": "npm audit --audit-level=high"
   }

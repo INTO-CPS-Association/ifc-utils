@@ -5,8 +5,11 @@
 # `pull_request`: that republishes on every commit and lets a pull request from
 # a fork start a publish, which is a supply chain surface for no benefit.
 #
-# The matrix is the list of packages, so adding one is a line here rather than
-# a second workflow.
+# Everything runs at the root rather than inside each package. The packages are
+# npm workspaces and one of them depends on the other, so installing inside a
+# package directory sends npm to the registry for a sibling that is not
+# published there. That is what this workflow did first, and the build failed
+# on a module that exists three directories away.
 name: npm packages
 
 on:
@@ -20,25 +23,21 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        package: [bim-glb-viewer]
-    defaults:
-      run:
-        working-directory: packages/${{ matrix.package }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      # At the root, which is what links the workspaces to each other.
       - run: npm ci
       # Fails the build on a known high or critical advisory, rather than
       # leaving it to whoever remembers to look.
-      - run: npm audit --audit-level=high
+      - run: npm run audit
+      # The root script builds in dependency order, which `--workspaces` does
+      # not do on its own.
+      - run: npm run build
       # The tests import from dist/, so building first is what makes them a
       # check of the published artifact rather than of the source.
-      - run: npm run build
       - run: npm test
 
   publish:
@@ -48,12 +47,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    strategy:
-      matrix:
-        package: [bim-glb-viewer]
-    defaults:
-      run:
-        working-directory: packages/${{ matrix.package }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -62,6 +55,12 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
       - run: npm ci
       - run: npm run build
-      - run: npm publish
+      # Both, and the converter first. The viewer declares a dependency on it,
+      # so publishing the viewer alone puts a package on the registry whose
+      # dependency is not there.
+      - run: npm publish --workspace packages/bim-ifc-converter
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm publish --workspace packages/bim-glb-viewer
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
