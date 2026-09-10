@@ -211,7 +211,7 @@ export class SceneView {
     // where the walls are is asking that and not what temperature they are.
     if (this.state.highlightedClass
       && mesh.userData.ifcClass === this.state.highlightedClass) {
-      return this.palette.hovered;
+      return this.palette.highlighted;
     }
 
     const heat = this.heatOf(globalId);

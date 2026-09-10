@@ -16,6 +16,19 @@ export const SELECTED_COLOUR = 0xffff00;
 /** Pale blue, at half opacity. Also ProBIM's. */
 export const HOVERED_COLOUR = 0xa3f1ff;
 
+/**
+ * A whole class picked from the legend.
+ *
+ * Opaque, and saturated enough to read against a grey building, because this
+ * is not an overlay on an object already found: it is what makes a class
+ * findable at all. The translucent hover colour was tried here first and an
+ * 85 mm sensor disappeared into the wall behind it the moment it was picked.
+ *
+ * Violet because the other three meanings are taken: yellow is the selection,
+ * pale cyan the cursor, and the heatmap runs blue through white to orange.
+ */
+export const HIGHLIGHTED_COLOUR = 0x8b5cf6;
+
 /** How much of a wall is left when the model is made see-through. */
 const GHOST_OPACITY = 0.14;
 
@@ -43,6 +56,11 @@ export class Palette {
   readonly selected = highlight(SELECTED_COLOUR);
 
   readonly hovered = highlight(HOVERED_COLOUR);
+
+  /** A class picked from the legend. Opaque, unlike the two above. */
+  readonly highlighted = new MeshStandardMaterial({
+    color: new Color(HIGHLIGHTED_COLOUR), metalness: 0, roughness: 1, side: DoubleSide,
+  });
 
   /** The material each object arrived with, so it can be given back. */
   private readonly base = new Map<string, Material | Material[]>();
@@ -91,6 +109,7 @@ export class Palette {
   dispose(): void {
     this.selected.dispose();
     this.hovered.dispose();
+    this.highlighted.dispose();
     for (const material of this.heat.values()) material.dispose();
     for (const material of this.ghosts.values()) material.dispose();
     this.heat.clear();
