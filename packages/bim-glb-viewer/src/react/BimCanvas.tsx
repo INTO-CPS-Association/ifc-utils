@@ -40,7 +40,7 @@ import { rampColour } from '../ramp.js';
 import { resolveBindings } from '../resolver.js';
 import type { Binding } from '../binding.js';
 import { objectsOf } from './scene.js';
-import { SceneView, type PropertyTree } from '../viewer/index.js';
+import { SceneView, createGizmo, type PropertyTree } from '../viewer/index.js';
 
 const BACKGROUND = 0xf5f6f8;
 const NEAR_PLANE = 0.1;
@@ -212,6 +212,10 @@ function BimCanvas({
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
+    // The axes indicator. Built once and drawn after the model on every frame,
+    // so it sits over the view rather than in it.
+    const gizmo = createGizmo();
+
     const resize = () => {
       const { clientWidth, clientHeight } = parent;
       if (clientWidth === 0 || clientHeight === 0) return;
@@ -234,6 +238,7 @@ function BimCanvas({
       if (!running) return;
       controls.update();
       renderer.render(scene, camera);
+      gizmo.draw(renderer, camera);
       globalThis.requestAnimationFrame(tick);
     };
     tick();
@@ -364,6 +369,7 @@ function BimCanvas({
           (material as { dispose?: () => void } | undefined)?.dispose?.();
         }
       });
+      gizmo.dispose();
       renderer.dispose();
       renderer.forceContextLoss();
       parent.removeChild(renderer.domElement);

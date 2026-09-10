@@ -4,6 +4,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.11.0]
+
+### Added
+
+- An axes indicator in the bottom left of the view. A building on a plain background gives a person nothing to tell which way is up until they recognise a roof, and a model that arrives rotated then looks like an odd camera angle instead of a bug. This repository had exactly that: a converter laid every model on its side and it went unnoticed for weeks.
+
 ## [0.10.2]
 
 ### Fixed
