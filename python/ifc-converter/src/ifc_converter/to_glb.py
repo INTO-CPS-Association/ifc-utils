@@ -1,6 +1,6 @@
 """Turn an IFC file into a GLB the browser can draw.
 
-`to_scene.py` writes the same geometry as JSON. That is readable, and it is
+A JSON form of the same geometry is readable, and it is
 fine for the substation, which has ten objects and produces four kilobytes.
 It does not survive a real building: `L187x_AK_v_done_v3b_processed.ifc` is
 61 MB of IFC holding 10,505 objects, and every coordinate written as decimal
@@ -36,10 +36,9 @@ import numpy as np
 
 from ifc_explorer import explorer
 
-from .to_scene import COLOURS, DEFAULT_COLOUR
 
 # Objects the viewer must not draw. A space and a site are boxes that would
-# hide everything inside them, the same two `to_scene.py` skips. An opening
+# hide everything inside them. An opening
 # is a hole in a wall: it exists to be subtracted, and drawing it puts a
 # solid block back where the window should be.
 NOT_DRAWN = ("IfcSpace", "IfcSite", "IfcOpeningElement")
@@ -135,12 +134,26 @@ def _to_linear(channels):
     return linear
 
 
+# A colour per IFC class, used only when the model declares no surface style
+# for an object. Substation equipment is the case: those files carry no
+# IfcSurfaceStyle at all, so without this a plant room draws as one grey mass.
+# Every building model here does declare its own styles and never reaches this.
+COLOURS = {
+    "IfcSensor": "#e03131",
+    "IfcHeatExchanger": "#1971c2",
+    "IfcPump": "#f08c00",
+    "IfcValve": "#2f9e44",
+    "IfcFlowMeter": "#e8b800",
+}
+DEFAULT_COLOUR = "#adb5bd"
+
+
 def _colour_of(ifc_class):
     """Return the fallback glTF base colour of an IFC class, as linear RGBA.
 
     Used when the model declares no surface style for an object. The table is
-    the one `to_scene.py` assigns, so an object is the same colour whichever
-    exporter produced the file.
+    the substation equipment, which is the only family of models here that
+    arrives with no styles at all.
     """
     hex_colour = COLOURS.get(ifc_class, DEFAULT_COLOUR).lstrip("#")
     channels = [int(hex_colour[i:i + 2], 16) / 255 for i in (0, 2, 4)]
