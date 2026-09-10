@@ -14,3 +14,4 @@ export {
 } from './shortcuts.js';
 export { createGizmo, cornerViewport, GIZMO_SIZE_PX, GIZMO_MARGIN_PX, type Gizmo } from './gizmo.js';
 export { addOutlines } from './outline.js';
+export { buildField, sourceAt, CELL_M, CUT_M, BLOCKS, OPENS, SEARCH_CELLS, type Field } from './field.js';

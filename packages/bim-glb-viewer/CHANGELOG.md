@@ -4,6 +4,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.17.0]
+
+### Added
+
+- `viewer/field.ts`: which sensor reaches each point of a floor, as a grid that spreads by walking. Walls block, doors open again because a doorway is how air moves between rooms, and furniture does not block because air moves over a desk. It answers what the room, floor and building groupings cannot on a model that declares no `IfcSpace` and draws one storey, where every object is in the same zone and a dozen readings average into one colour over everything.
+- Straight-line distance was the obvious alternative and goes through walls: a sensor in one office colours the office next door, which shares no air with it.
+- The idea of a grid over the plan comes from ProBIM's `ExportHeatmap`, which samples a floor into cells and scores each one.
+
 ## [0.16.0]
 
 ### Changed
