@@ -123,6 +123,9 @@ export function BuildingModels({
   const [problem, setProblem] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [bindings, setBindings] = useState<Binding[]>([]);
+  // A manifest a placement tool wrote marks itself proposed, so the page can
+  // say so rather than presenting a guessed position as a survey.
+  const [proposed, setProposed] = useState(false);
   const [tree, setTree] = useState<PropertyTree | null>(null);
   const [handle, setHandle] = useState<ViewerHandle | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -191,7 +194,10 @@ export function BuildingModels({
   // sensors at all, and an empty list is the honest answer for those rather
   // than a failed request.
   useEffect(() => {
+    // Cleared first, so switching to a model with no manifest does not keep
+    // showing the previous model's sensors.
     setBindings([]);
+    setProposed(false);
     setNote(null);
     if (!chosen?.manifestPath || !libraryUrl) return undefined;
     let current = true;
@@ -201,8 +207,10 @@ export function BuildingModels({
         if (!response.ok) throw new Error(`the library returned HTTP ${response.status}`);
         return response.json();
       })
-      .then((manifest: { bindings?: Binding[] }) => {
-        if (current) setBindings(manifest.bindings ?? []);
+      .then((manifest: { bindings?: Binding[]; model?: { proposed?: boolean } }) => {
+        if (!current) return;
+        setBindings(manifest.bindings ?? []);
+        setProposed(manifest.model?.proposed === true);
       })
       .catch((error: Error) => {
         if (current) setProblem(`The manifest could not be read: ${error.message}`);
@@ -318,6 +326,7 @@ export function BuildingModels({
               url={fileUrl(libraryUrl, chosen.geometryPath ?? chosen.ifcPath)}
               convert={!chosen.geometryPath}
               bindings={bindings}
+              proposed={proposed}
               tree={tree ?? undefined}
               onReport={onReport}
               onReady={onReady}

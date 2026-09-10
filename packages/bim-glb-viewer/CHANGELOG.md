@@ -4,6 +4,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.10.2]
+
+### Fixed
+
+- A manifest whose placements are proposed rather than surveyed now says so. A tool that guesses where a sensor sits marks its output, and drawing that guess as a fact is how it ends up in a report as a measurement.
+- "1 sensors" now reads "1 sensor".
+- Switching to a model with no manifest kept the previous model's sensors on screen.
+
+## [0.10.1]
+
+### Fixed
+
+- The floor picker drew its label on top of its value, so All Floors read as "AlbFloors". Showing the empty choice at all stops the label floating on its own, so the label has to be pinned.
+
 ## [0.10.0]
 
 ### Added

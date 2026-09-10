@@ -40,10 +40,18 @@ export function FloorPicker({ storeys, current, onChange }: Readonly<FloorPicker
         label="Floor"
         value={current ?? ALL}
         onChange={(event) => onChange(event.target.value === ALL ? null : event.target.value)}
-        // Without this the select renders nothing while All Floors is chosen,
-        // because its value is the empty string, and an empty control reads as
-        // broken rather than as a choice.
-        slotProps={{ select: { displayEmpty: true, renderValue: (value: unknown) => (value === ALL ? 'All Floors' : String(value)) } }}
+        // Two settings that go together. `displayEmpty` is what makes the
+        // control show All Floors instead of nothing, since that choice is the
+        // empty string. It also stops the label floating on its own, so the
+        // label has to be told to stay shrunk, otherwise "Floor" is drawn on
+        // top of "All Floors" and the two words overlap.
+        slotProps={{
+          select: {
+            displayEmpty: true,
+            renderValue: (value: unknown) => (value === ALL ? 'All Floors' : String(value)),
+          },
+          inputLabel: { shrink: true },
+        }}
         sx={{ minWidth: 180 }}
       >
         <MenuItem value={ALL}>All Floors</MenuItem>

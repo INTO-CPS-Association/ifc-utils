@@ -102,6 +102,11 @@ function frame(
  * markers where the manifest asked for six is worse than one that says which
  * two are missing.
  */
+/** "1 sensor", "2 sensors". Written out because "1 sensors" reads as a bug. */
+function plural(word: string, count: number): string {
+  return count === 1 ? word : `${word}s`;
+}
+
 function addMarkers(model: Object3D, bindings: Binding[], radius: number) {
   const { resolved, unresolved } = resolveBindings(bindings, objectsOf(model));
   const size = Math.max(radius * MARKER_SHARE_OF_MODEL, 0.05);
@@ -142,6 +147,12 @@ export interface BimCanvasProps {
   convert?: boolean;
   /** The bindings to draw on it. Empty when the model declares no sensors. */
   bindings?: Binding[];
+  /**
+   * Whether the manifest says its placements were proposed rather than
+   * surveyed. A proposed position is a guess a tool made, and reporting it as
+   * a fact is how a guess ends up in a report as a measurement.
+   */
+  proposed?: boolean;
   /** What the model says each object is, so a floor filter and a heatmap have something to group by. */
   tree?: PropertyTree;
   /** Reported so the page can say what it could not do. */
@@ -167,7 +178,8 @@ export interface ViewerHandle {
 }
 
 function BimCanvas({
-  url, convert = false, bindings = [], tree, onReport, onReady, onHover, onSelect,
+  url, convert = false, bindings = [], proposed = false, tree,
+  onReport, onReady, onHover, onSelect,
 }: Readonly<BimCanvasProps>) {
   const holder = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
@@ -285,10 +297,11 @@ function BimCanvas({
 
       setLoading(false);
       setProgress(null);
+      const kind = proposed ? 'proposed sensor' : 'sensor';
       const sensors = bindings.length === 0 ? undefined
         : missing.length === 0
-          ? `${placed} sensors placed on the model.`
-          : `${placed} of ${bindings.length} sensors placed. `
+          ? `${placed} ${plural(kind, placed)} placed on the model.`
+          : `${placed} of ${bindings.length} ${plural(kind, bindings.length)} placed. `
             + `${missing.length} name an object this geometry does not have.`;
       const both = [note, sensors].filter(Boolean).join(' ');
       if (both) onReport?.(both);
@@ -355,7 +368,7 @@ function BimCanvas({
       renderer.forceContextLoss();
       parent.removeChild(renderer.domElement);
     };
-  }, [url, convert, bindings, tree, onReport, onReady, onHover, onSelect]);
+  }, [url, convert, bindings, proposed, tree, onReport, onReady, onHover, onSelect]);
 
   return (
     <Box sx={{
