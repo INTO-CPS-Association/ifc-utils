@@ -24,7 +24,7 @@ model = explorer.open_model("model.ifc")
 explorer.summary(model)          # schema, object count, declared unit
 explorer.storeys(model)          # floors, lowest first, in metres
 explorer.count_by_class(model)   # what the file actually holds
-explorer.sensors_in(model)       # empty on IFC2X3 rather than raising
+explorer.sensors_in(model)       # empty on IFC2X3 instead of raising
 ```
 
 ## The Part Worth Knowing
@@ -33,6 +33,6 @@ explorer.sensors_in(model)       # empty on IFC2X3 rather than raising
 
 `metre_scale(model)` reports the unit the file declares, which is right for a value read from an attribute such as a storey elevation.
 
-`geometry_scale(model)` reports what the geometry kernel actually did, which is right for vertices. It measures rather than assumes: it compares an object's position as the kernel computed it against the same position read straight out of the file, and their ratio is exactly the conversion that was applied.
+`geometry_scale(model)` reports what the geometry kernel actually did, which is right for vertices. It measures instead of assumes: it compares an object's position as the kernel computed it against the same position read straight out of the file, and their ratio is exactly the conversion that was applied.
 
 Guessing this wrong scales a model by a thousand and raises no error. A washbasin came out six tenths of a millimetre across before this was measured.

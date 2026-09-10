@@ -166,7 +166,7 @@ class TestItIsAlwaysValidJson:
     def test_the_whole_tree_serialises(self, model):
         """An IFC property value can arrive as an entity instance, which json
         refuses. If that reaches the output the file is unreadable, and the
-        failure appears in a browser rather than here."""
+        failure appears in a browser instead of here."""
         tree = to_metadata.metadata_from(model, "model.ifc")
 
         assert json.loads(json.dumps(tree))["objects"]
@@ -240,7 +240,7 @@ class TestTheThirdRouteToAStorey:
     def test_the_walk_stops_rather_than_recursing_forever(self, assembly_model):
         """A malformed model can relate two elements to each other. Without a
         limit that recurses until the interpreter gives up, which is a crash
-        rather than a missing field."""
+        instead of a missing field."""
         a = assembly_model.create_entity("IfcMember", GlobalId=_guid("loopA"), Name="A")
         b = assembly_model.create_entity("IfcMember", GlobalId=_guid("loopB"), Name="B")
         assembly_model.create_entity(

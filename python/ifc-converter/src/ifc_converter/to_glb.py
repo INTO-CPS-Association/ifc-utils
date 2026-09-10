@@ -80,7 +80,7 @@ Z_UP_TO_Y_UP = [
 def shapes_of(model):
     """Yield the triangulated objects of a model, one at a time.
 
-    IfcOpenShell's iterator is used rather than a `create_shape` call per
+    IfcOpenShell's iterator is used instead of a `create_shape` call per
     product, because it triangulates on every core and hands back one
     finished object at a time. Nothing but the current object is ever held
     in memory, which is what makes a 61 MB model possible on a laptop.
@@ -175,7 +175,7 @@ def _model_style_of(shape):
     the fallback table above holds five entries, all substation equipment, and
     a wall, a slab or a roof matched none of them. ProBIM looks correct on the
     same models because its OBJ export carries these styles through its `.mtl`
-    file, so it draws the architect's own colours rather than its own opinion.
+    file, so it draws the architect's own colours instead of its own opinion.
 
     Returns a (name, linear RGBA) pair, so equal styles can share one glTF
     material instead of one being written per object.
@@ -255,7 +255,7 @@ def _node_matrix(matrix, scale):
     file's own length unit, and have to become metres. The last is the 1 that
     closes a homogeneous matrix.
 
-    Keeping the placement here rather than baking it into the vertices is
+    Keeping the placement here instead of baking it into the vertices is
     what keeps the coordinates small. `2116_FEAS_kedelhuset.ifc` is
     georeferenced, so its objects sit around 404,000 mm from the origin, and
     a 32-bit float cannot hold that with millimetre precision.
@@ -290,7 +290,7 @@ def _drop_default_matrices(nodes):
     matrix, and glTF treats that as the default, so stating it is noise. Five
     of the ten models here contain at least one such object.
 
-    Run after _recentre rather than instead of a matrix, because recentring
+    Run after _recentre instead of instead of a matrix, because recentring
     reads every node's position and a node with no matrix has none to read.
     """
     for node in nodes:
@@ -426,7 +426,7 @@ def glb_from(model):
 
         # The model's own surface style wins when it has one. An architect
         # assigned those colours, and they are what makes a building read as a
-        # building rather than as a grey mass. The class table is the fallback
+        # building instead of as a grey mass. The class table is the fallback
         # for models that carry no presentation, which is the case for the
         # generated substation.
         style = _model_style_of(shape)

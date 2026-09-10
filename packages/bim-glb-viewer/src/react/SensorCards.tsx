@@ -1,7 +1,7 @@
 /**
  * One card per sensor, with the value that arrived and how old it is.
  *
- * The age is on every card, always. A number on a screen that nobody can date is worse than no number, because a person acts on it. A card whose reading has gone stale is greyed and says how long ago it last spoke, rather than continuing to look current.
+ * The age is on every card, always. A number on a screen that nobody can date is worse than no number, because a person acts on it. A card whose reading has gone stale is greyed and says how long ago it last spoke, instead of continuing to look current.
  *
  * Nothing here generates, interpolates or smooths a value. What is drawn is what arrived, and a sensor that has said nothing says so.
  */

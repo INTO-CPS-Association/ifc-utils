@@ -63,7 +63,7 @@ function endsWith(name: string, suffix: string): boolean {
  *
  * The pairing is by file name, because that is the only thing the conversion
  * can be relied on to preserve. A model with no geometry beside it is still
- * returned, so the page can say that conversion has not run rather than
+ * returned, so the page can say that conversion has not run instead of
  * leaving the model out and looking like it was never uploaded.
  */
 export function pairModels(entries: LibraryEntry[]): BimModel[] {

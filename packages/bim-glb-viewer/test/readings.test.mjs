@@ -5,7 +5,7 @@
  * are about the moment a value stops counting: the connection dropping, the
  * messages stopping, and the colouring going with them.
  *
- * Time is passed in rather than read, so a test can be at a moment instead of
+ * Time is passed in instead of read, so a test can be at a moment instead of
  * waiting for one.
  */
 
@@ -56,7 +56,7 @@ test('age reads in seconds while it is short and in minutes once it is not', () 
   assert.match(ageText(seconds(600), 'down', DEFAULT_STALE_AFTER_S, NOW), /^last message 10 min ago/);
 });
 
-test('a stale reading says so rather than looking updated', () => {
+test('a stale reading says so instead of looking updated', () => {
   assert.match(ageText(seconds(120), 'live', DEFAULT_STALE_AFTER_S, NOW), /not live$/);
 });
 
@@ -86,7 +86,7 @@ describe('the scopes worth offering', () => {
   });
 
   test('offers off and building whatever the readings look like', () => {
-    // One group is what Building means, rather than a failure of it.
+    // One group is what Building means, instead of a failure of it.
     assert.deepEqual(availableScopes([], at), ['off', 'building']);
   });
 
@@ -124,8 +124,8 @@ test('the range comes from the manifest, not from the readings', () => {
 });
 
 test('nothing current means no zones at all', () => {
-  // This is what makes the colouring disappear when a broker stops, rather
-  // than freeze on its last values.
+  // This is what makes the colouring disappear when a broker stops, instead
+  // of freeze on its last values.
   const readings = new Map([['a', seconds(600)]]);
 
   assert.equal(zonesOf([binding('a')], readings, 'building', () => ({}),
@@ -139,7 +139,7 @@ test('the off scope produces nothing without looking at any reading', () => {
     () => ({}), 'live', DEFAULT_STALE_AFTER_S, NOW), null);
 });
 
-test('a sensor whose object is in no zone is left out rather than guessed', () => {
+test('a sensor whose object is in no zone is left out instead of guessed', () => {
   const readings = new Map([['a', { value: 10, receivedAt: NOW }],
     ['b', { value: 30, receivedAt: NOW }]]);
   const zones = zonesOf([binding('a'), binding('b')], readings, 'room',

@@ -1,7 +1,7 @@
 /**
  * Tests for the shortcut table.
  *
- * The table binds the keys, builds the toolbar and writes the help. Most of what can go wrong is a mismatch between those three, so most of these check the table itself rather than any one action.
+ * The table binds the keys, builds the toolbar and writes the help. Most of what can go wrong is a mismatch between those three, so most of these check the table itself instead of any one action.
  */
 
 import { test } from 'node:test';

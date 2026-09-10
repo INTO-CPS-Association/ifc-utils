@@ -24,13 +24,13 @@ The directory says which ecosystem a package belongs to. The name says what it d
 
 ## Two Converters, On Purpose
 
-`bim-ifc-converter` and `ifc-converter` do the same job in different places, and that is deliberate rather than accidental duplication.
+`bim-ifc-converter` and `ifc-converter` do the same job in different places, and that is deliberate instead of accidental duplication.
 
 The browser one exists so a platform needs no conversion service: a person opens a model and it is converted on the machine that is looking at it. The Python one is the reference and the batch tool, and it is what says whether the other is right.
 
 They run against the same files in [`fixtures/`](fixtures), because two implementations of one job are only comparable if they are asked the same questions. Measured on the same models: they agree on object count exactly, the browser one is about nine times faster, and it produces about two per cent fewer triangles because some solids defeat its kernel.
 
-The converter is a separate package rather than part of the viewer, because versioning and testing a geometry conversion is a different problem from versioning and testing a drawing, and because a caller may want only the conversion, in a Node script for instance, without React or three.js coming with it. It reaches a consumer as a dependency of the viewer, loaded through a dynamic import, so the WebAssembly parser is fetched only when a model actually needs converting.
+The converter is a separate package instead of part of the viewer, because versioning and testing a geometry conversion is a different problem from versioning and testing a drawing, and because a caller may want only the conversion, in a Node script for instance, without React or three.js coming with it. It reaches a consumer as a dependency of the viewer, loaded through a dynamic import, so the WebAssembly parser is fetched only when a model actually needs converting.
 
 ## The Manifest
 
@@ -82,11 +82,11 @@ pip install -e python/ifc-explorer -e python/ifc-converter
 python -m pytest python/ifc-explorer python/ifc-converter
 ```
 
-`ifc-converter` depends on `ifc-explorer`: every converter asks it which units a model is in, what its storeys are and what its hash is. It is a layer rather than a peer, and installing the converter installs both.
+`ifc-converter` depends on `ifc-explorer`: every converter asks it which units a model is in, what its storeys are and what its hash is. It is a layer instead of a peer, and installing the converter installs both.
 
 ### Publishing
 
-Publishing is done by [the workflow](.github/workflows/npm.yml), on a release and on nothing else, to the organisation's GitHub Packages registry. Every package is ES modules only: a CommonJS build turns a dynamic `import()` into `Promise.resolve().then(require(...))`, which a bundler cannot split, and keeping heavy dependencies out of a host's main chunk is a requirement of issue 1762 rather than a preference.
+Publishing is done by [the workflow](.github/workflows/npm.yml), on a release and on nothing else, to the organisation's GitHub Packages registry. Every package is ES modules only: a CommonJS build turns a dynamic `import()` into `Promise.resolve().then(require(...))`, which a bundler cannot split, and keeping heavy dependencies out of a host's main chunk is a requirement of issue 1762 instead of a preference.
 
 ## How A Consumer Installs One
 

@@ -3,7 +3,7 @@
 #
 # The ten day cooldown this repository applies to new releases is not something
 # Dependabot enforces, so a pull request that proposes a version published less
-# than ten days ago is left to age rather than merged.
+# than ten days ago is left to age instead of merged.
 version: 2
 updates:
   - package-ecosystem: "npm"

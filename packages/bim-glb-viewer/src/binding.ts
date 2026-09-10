@@ -7,7 +7,7 @@
  *     source: { live: { transport: mqtt, topic: ... } }
  *     display: { unit: "°C", ramp: [4, 16] }
  *
- * They are read here rather than flattened, so a reader who opens the manifest
+ * They are read here instead of flattened, so a reader who opens the manifest
  * and a reader who opens the code see the same names. Flattening them is what
  * let two shapes of the same thing exist in this project and drift apart
  * without anyone noticing.

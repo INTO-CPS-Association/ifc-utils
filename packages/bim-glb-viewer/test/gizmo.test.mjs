@@ -1,7 +1,7 @@
 /**
  * Tests for where the axes indicator is drawn.
  *
- * Only the pure half is tested: the placement of the square. Drawing needs a graphics context, and a test that mocks a WebGL renderer proves the mock works rather than that the gizmo does.
+ * Only the pure half is tested: the placement of the square. Drawing needs a graphics context, and a test that mocks a WebGL renderer proves the mock works instead of that the gizmo does.
  */
 
 import { test, describe } from 'node:test';
@@ -18,7 +18,7 @@ describe('cornerViewport', () => {
     assert.equal(side, GIZMO_SIZE_PX);
   });
 
-  test('shrinks rather than hanging off a narrow view', () => {
+  test('shrinks instead of hanging off a narrow view', () => {
     // A panel narrower than the gizmo is a real case, and a square drawn past
     // the edge reads as a rendering fault.
     assert.equal(cornerViewport(60, 600).side, 60 - 2 * GIZMO_MARGIN_PX);

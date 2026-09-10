@@ -3,7 +3,7 @@
 Like the explorer tests, the models are built in memory, so the suite needs
 no fixture file on disk. The same building is built twice, once in metres and
 once in millimetres, because a unit bug in an exporter produces a model that
-loads and is a thousand times too small rather than a crash.
+loads and is a thousand times too small instead of a crash.
 
 Every check reads the GLB back from its bytes. Asserting on what the builder
 was about to write would pass even if the container were malformed.
@@ -234,7 +234,7 @@ class TestWhatIsExported:
 
     def test_a_space_is_left_out(self, exported):
         gltf, _ = exported
-        # It has geometry, so it is skipped on purpose rather than by accident.
+        # It has geometry, so it is skipped on purpose instead of by accident.
         assert "Room" not in meshes_by_name(gltf)
 
     def test_a_storey_is_left_out(self, exported):
@@ -249,7 +249,7 @@ class TestWhatIsExported:
         gltf, blob = to_glb.read_glb(to_glb.glb_from(empty))
 
         # The root node is still there, so the scene is valid glTF. The
-        # arrays are absent rather than empty, because glTF allows none of
+        # arrays are absent instead of empty, because glTF allows none of
         # them to be empty, and there is no binary chunk to describe.
         assert len(gltf["nodes"]) == 1
         assert "meshes" not in gltf
@@ -363,7 +363,7 @@ class TestMaterials:
         gltf, _ = exported
         # glTF asks for a linear base colour and the table is written in sRGB,
         # so the transfer function has to be applied on the way out. Derived
-        # from the table rather than restated: writing the numbers here made
+        # from the table instead of restated: writing the numbers here made
         # this test fail the day the sensor colour changed, which told nobody
         # anything about the conversion, which is the part that can break.
         expected = to_glb._to_linear(
@@ -420,7 +420,7 @@ class TestFarFromOrigin:
         gltf, _ = to_glb.read_glb(to_glb.glb_from(far))
 
         # Adding the offset back gives the coordinate the IFC file states,
-        # so the georeferencing is moved aside rather than thrown away.
+        # so the georeferencing is moved aside instead of thrown away.
         shift = gltf["scenes"][0]["extras"]["originOffset"]
         node = next(n for n in gltf["nodes"] if n.get("name") == "P-1")
         recovered = [node["matrix"][12 + axis] + shift[axis] for axis in range(3)]

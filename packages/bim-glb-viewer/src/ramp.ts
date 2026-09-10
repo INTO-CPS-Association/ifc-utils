@@ -28,7 +28,7 @@ function mix(from: number, to: number, amount: number): number {
 /**
  * The colour for one value on a ramp, as a 24 bit number.
  *
- * A value outside the range is clamped rather than extrapolated, so an
+ * A value outside the range is clamped instead of extrapolated, so an
  * implausible reading looks like the end of the scale instead of a colour the
  * legend never showed. A range of zero width would divide by zero, and is
  * treated as a range of one, which puts everything at the warm end.

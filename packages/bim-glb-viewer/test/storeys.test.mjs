@@ -30,12 +30,12 @@ test('a band reaches the floor above it', () => {
 
   assert.equal(bands[0].to, 3.2);
   // A little below the measured floor, so the slab a person stands on is in
-  // the band rather than cut away with the floor below.
+  // the band instead of cut away with the floor below.
   assert.equal(bands[0].from, -FLOOR_MARGIN_M);
 });
 
 test('the topmost floor gets the height the others have', () => {
-  // Taken from the building rather than assumed, so a plant room and an office
+  // Taken from the building instead of assumed, so a plant room and an office
   // block both get a sensible one.
   const bands = bandsFrom(['L1', 'L2', 'L3'],
     [...floor('L1', 0), ...floor('L2', 4), ...floor('L3', 8)]);
@@ -77,7 +77,7 @@ test('order comes from measured height, not from how the model lists them', () =
 });
 
 test('one object hanging below the slab does not set the floor', () => {
-  // The lower quartile rather than the minimum, for exactly this.
+  // The lower quartile instead of the minimum, for exactly this.
   const bands = bandsFrom(['L1'], [{ storey: 'L1', base: -4 }, ...floor('L1', 0)]);
 
   assert.equal(bands[0].from, -FLOOR_MARGIN_M);
@@ -90,13 +90,13 @@ test('a storey the model declares but fills with nothing gets no band', () => {
   assert.equal(bands.length, 2);
 });
 
-test('a model with no storeys gets no bands rather than an invented floor', () => {
+test('a model with no storeys gets no bands instead of an invented floor', () => {
   // A bridge, a road and a railway declare none at all.
   assert.deepEqual(bandsFrom([], []), []);
   assert.deepEqual(bandsFrom(['L1'], []), []);
 });
 
-test('an object with no finite base is ignored rather than poisoning the floor', () => {
+test('an object with no finite base is ignored instead of poisoning the floor', () => {
   const bands = bandsFrom(['L1'],
     [{ storey: 'L1', base: Number.NaN }, { storey: 'L1', base: Infinity }, ...floor('L1', 2)]);
 

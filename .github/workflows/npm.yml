@@ -5,7 +5,7 @@
 # `pull_request`: that republishes on every commit and lets a pull request from
 # a fork start a publish, which is a supply chain surface for no benefit.
 #
-# Everything runs at the root rather than inside each package. The packages are
+# Everything runs at the root instead of inside each package. The packages are
 # npm workspaces and one of them depends on the other, so installing inside a
 # package directory sends npm to the registry for a sibling that is not
 # published there. That is what this workflow did first, and the build failed
@@ -30,14 +30,14 @@ jobs:
           node-version: '22'
       # At the root, which is what links the workspaces to each other.
       - run: npm ci
-      # Fails the build on a known high or critical advisory, rather than
+      # Fails the build on a known high or critical advisory, instead of
       # leaving it to whoever remembers to look.
       - run: npm run audit
       # The root script builds in dependency order, which `--workspaces` does
       # not do on its own.
       - run: npm run build
       # The tests import from dist/, so building first is what makes them a
-      # check of the published artifact rather than of the source.
+      # check of the published artifact instead of of the source.
       - run: npm test
 
   publish:

@@ -69,7 +69,7 @@ export function meshesFrom(converted: Converted): Group {
     geometry.setAttribute('normal', new BufferAttribute(object.normals, 3));
     geometry.setIndex(new BufferAttribute(object.indices, 1));
     // The converter gives world space vertices, so the bounds have to be
-    // computed rather than inherited from a placement.
+    // computed instead of inherited from a placement.
     geometry.computeBoundingBox();
     geometry.computeBoundingSphere();
 

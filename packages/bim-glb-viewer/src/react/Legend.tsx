@@ -1,9 +1,9 @@
 /**
  * The two legends: what the colours of the model mean, and what the heatmap means.
  *
- * The class legend reads the colours the model arrived with rather than a table written here, because an architect assigned them and a legend that invented its own would describe a different building.
+ * The class legend reads the colours the model arrived with instead of a table written here, because an architect assigned them and a legend that invented its own would describe a different building.
  *
- * The heatmap legend states its range, and the range comes from the manifest rather than from the readings. A scale that rescaled itself would make a steady building look like a changing one, and a person reading two screenshots an hour apart would be comparing different things without being told.
+ * The heatmap legend states its range, and the range comes from the manifest instead of from the readings. A scale that rescaled itself would make a steady building look like a changing one, and a person reading two screenshots an hour apart would be comparing different things without being told.
  */
 
 import { Box, Chip, ListItemButton, Paper, Stack, Typography } from '@mui/material';
@@ -38,7 +38,7 @@ export function ClassLegend({ view, onChange }: Readonly<ClassLegendProps>) {
   const colours = view.classColours();
   if (colours.size === 0) return null;
 
-  // How many objects of each class, on the row rather than behind a hover. A
+  // How many objects of each class, on the row instead of behind a hover. A
   // count is what a person wants from a legend, and a tooltip shows it one row
   // at a time in a box the browser styles.
   const counts = view.classCounts();

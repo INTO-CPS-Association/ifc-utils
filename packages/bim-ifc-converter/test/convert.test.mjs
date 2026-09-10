@@ -4,7 +4,7 @@
  * A synthetic file proves nothing here: the whole difficulty of IFC conversion
  * is what real exporters produce.
  *
- * The files come from `fixtures/` at the top of the repository rather than
+ * The files come from `fixtures/` at the top of the repository instead of
  * from beside these tests, because the Python converter runs against exactly
  * the same three. Two implementations of one job are only comparable if they
  * are asked the same questions, and a copy of a fixture is a question that
@@ -95,7 +95,7 @@ describe('a basin, one object at the origin', () => {
 
   test('every object it returns carries a GlobalId', { skip: !bytes }, async () => {
     // Binding is the whole purpose, so an object without one is useless and is
-    // counted as failed rather than returned.
+    // counted as failed instead of returned.
     const { objects } = await convertIfc(bytes);
 
     for (const object of objects) {

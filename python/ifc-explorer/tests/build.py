@@ -1,6 +1,6 @@
 """A small model built in memory, for tests that need geometry.
 
-Kept here rather than imported from the converter's tests, because a test suite
+Kept here instead of imported from the converter's tests, because a test suite
 reaching across a package boundary makes two packages one. It is a few lines
 and duplicating them is cheaper than the coupling.
 

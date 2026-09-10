@@ -185,12 +185,12 @@ class TestAsYaml:
 class TestOldSchema:
     def test_ifc2x3_has_no_sensor_entity_and_must_not_crash(self):
         # IfcSensor was added in IFC4. One of the project's models is IFC2X3,
-        # and asking it for that entity raises rather than returning nothing.
+        # and asking it for that entity raises instead of returning nothing.
         model = ifcopenshell.file(schema="IFC2X3")
         assert explorer.sensors_in(model) == []
 
     def test_manifest_from_an_ifc2x3_model_is_still_valid(self, tmp_path):
-        # Written as a file rather than built with the api, because IFC2X3
+        # Written as a file instead of built with the api, because IFC2X3
         # requires an owner history on every created entity and setting that
         # up says nothing about the generator.
         source = tmp_path / "old.ifc"
@@ -236,7 +236,7 @@ class TestProvenance:
 
     def test_a_changed_model_produces_a_different_hash(self, model, tmp_path):
         """The point of the field. If editing a model left the hash alone it
-        would be decoration rather than provenance."""
+        would be decoration instead of provenance."""
         first = tmp_path / "first.ifc"
         model.write(str(first))
         before = to_manifest.manifest_from(model, first)["source_sha256"]
@@ -270,7 +270,7 @@ class TestProvenance:
 
     def test_an_unreadable_source_still_produces_a_manifest(self, model, tmp_path):
         """A missing hash is worth less than the manifest, so it is recorded
-        as unknown rather than raised. The bindings are the useful part."""
+        as unknown instead of raised. The bindings are the useful part."""
         missing = tmp_path / "never_written.ifc"
 
         manifest = to_manifest.manifest_from(model, missing)

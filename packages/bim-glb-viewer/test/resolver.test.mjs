@@ -37,7 +37,7 @@ test('resolves a binding by GlobalId', () => {
   assert.equal(resolved[0].object.nodeName, 'HX-1');
 });
 
-test('reports a binding whose object is not in the model, rather than dropping it', () => {
+test('reports a binding whose object is not in the model, instead of dropping it', () => {
   const { resolved, unresolved } = resolveBindings(
     [binding({ globalId: '0000000000000000000000' })], SCENE);
 

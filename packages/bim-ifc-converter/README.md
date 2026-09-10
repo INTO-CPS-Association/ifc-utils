@@ -28,7 +28,7 @@ for (const object of objects) {
 }
 ```
 
-`failed` counts objects the kernel could not turn into geometry, and objects with no GlobalId. It is returned rather than hidden: some shapes defeat any kernel, and a viewer that silently draws less than the file holds gives nobody a way to tell.
+`failed` counts objects the kernel could not turn into geometry, and objects with no GlobalId. It is returned instead of hidden: some shapes defeat any kernel, and a viewer that silently draws less than the file holds gives nobody a way to tell.
 
 ## What Comes Out
 
@@ -36,7 +36,7 @@ Plain typed arrays. Nothing here imports three.js or any other renderer, which i
 
 **Metres, Y up.** IFC is Z up and glTF is Y up, and the geometry the Python converter in this repository writes is already Y up. A viewer must not have to ask which of the two it is looking at.
 
-**The GlobalId survives.** It is the key a sensor is bound by, and it is the one identifier that survives a re-export. An object without one is counted as failed rather than returned, because nothing can be bound to it.
+**The GlobalId survives.** It is the key a sensor is bound by, and it is the one identifier that survives a re-export. An object without one is counted as failed instead of returned, because nothing can be bound to it.
 
 ## It Does Not Write A GLB
 

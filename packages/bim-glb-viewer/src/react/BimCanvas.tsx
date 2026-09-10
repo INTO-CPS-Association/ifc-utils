@@ -68,7 +68,7 @@ const NO_READING_COLOUR = 0x9aa3ad;
 /**
  * Where the camera sits for each named view, as a direction from the centre.
  *
- * Named rather than written into each shortcut, so adding a fourth is a line
+ * Named instead of written into each shortcut, so adding a fourth is a line
  * here and not a change to the table of keys.
  */
 const LOOK_FROM: Record<string, [number, number, number]> = {
@@ -111,7 +111,7 @@ function frame(
 /**
  * Put a marker on every binding the geometry can account for.
  *
- * Bindings that resolve to nothing are counted and reported rather than
+ * Bindings that resolve to nothing are counted and reported instead of
  * dropped, because a manifest pointing at an object the model does not have is
  * the ordinary consequence of a re-export, and a view that silently draws four
  * markers where the manifest asked for six is worse than one that says which
@@ -164,12 +164,12 @@ export interface BimCanvasProps {
    * got.
    */
   url: string;
-  /** True when `url` names an IFC file rather than converted geometry. */
+  /** True when `url` names an IFC file instead of converted geometry. */
   convert?: boolean;
   /** The bindings to draw on it. Empty when the model declares no sensors. */
   bindings?: Binding[];
   /**
-   * Whether the manifest says its placements were proposed rather than
+   * Whether the manifest says its placements were proposed instead of
    * surveyed. A proposed position is a guess a tool made, and reporting it as
    * a fact is how a guess ends up in a report as a measurement.
    */
@@ -216,7 +216,7 @@ function BimCanvas({
     // Two lamps, and their strengths matter more than they look. At 2 each the
     // sum clips every pale surface to white: a window frame, a plastered wall
     // and a ceiling all came out the same flat white, so the model read as
-    // untextured rather than as lit. These are the values the viewer this was
+    // untextured instead of as lit. These are the values the viewer this was
     // taken from uses, and they leave the light ones distinguishable.
     scene.add(new AmbientLight(0xffffff, AMBIENT_LIGHT));
     const sun = new DirectionalLight(0xffffff, SUN_LIGHT);
@@ -243,14 +243,14 @@ function BimCanvas({
     controls.enableDamping = true;
 
     // The axes indicator. Built once and drawn after the model on every frame,
-    // so it sits over the view rather than in it.
+    // so it sits over the view instead of in it.
     const gizmo = createGizmo();
 
     const resize = () => {
       const { clientWidth, clientHeight } = parent;
       if (clientWidth === 0 || clientHeight === 0) return;
       // `false` leaves the CSS size alone, which is what keeps the canvas
-      // inside its box rather than the box growing to fit the canvas.
+      // inside its box instead of the box growing to fit the canvas.
       renderer.setSize(clientWidth, clientHeight, false);
       camera.aspect = clientWidth / clientHeight;
       camera.updateProjectionMatrix();

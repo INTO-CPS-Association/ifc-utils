@@ -16,7 +16,7 @@
  * other renderer: the caller decides what to build from the numbers. That is
  * what lets this be tested in Node, where there is no canvas.
  *
- * Y up rather than IFC's Z up, because that is what glTF uses and what the
+ * Y up instead of IFC's Z up, because that is what glTF uses and what the
  * geometry produced by the Python converter in this repository already
  * carries. A viewer must not have to ask which of the two it is looking at.
  *
@@ -53,7 +53,7 @@ export interface Converted {
   /**
    * Objects the kernel could not triangulate.
    *
-   * Reported rather than hidden. Some shapes defeat any kernel, and a viewer
+   * Reported instead of hidden. Some shapes defeat any kernel, and a viewer
    * that silently draws less than the file holds gives no way to tell.
    */
   failed: number;
@@ -84,7 +84,7 @@ export interface ConvertOptions {
  * light: the greys of a real model came out at #c0c0c0 where the GLB of the
  * same file gives #868686.
  *
- * The exact curve rather than the `value ** 2.2` approximation, because the
+ * The exact curve instead of the `value ** 2.2` approximation, because the
  * approximation is wrong in the dark end and because the two converters have
  * to agree to the byte.
  */
@@ -96,7 +96,7 @@ function toLinear(value: number): number {
  * Multiply a vertex by web-ifc's flat 4x4 placement, column major.
  *
  * The kernel returns each object's triangles in its own local space plus the
- * placement that puts it in the building. Applying it here rather than passing
+ * placement that puts it in the building. Applying it here instead of passing
  * both out keeps the shape of the result simple: one array of world space
  * vertices per object, which is what a renderer wants.
  */
@@ -228,7 +228,7 @@ export async function convertIfc(
       const globalId = line?.GlobalId?.value;
       if (!globalId) {
         // Without a GlobalId nothing can be bound to it, and binding is the
-        // whole purpose. Counted rather than drawn.
+        // whole purpose. Counted instead of drawn.
         failed += 1;
         return;
       }

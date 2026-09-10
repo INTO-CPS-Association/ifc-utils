@@ -114,7 +114,7 @@ def elements(model, ifc_class):
     want, and it surprises people expecting an exact match.
 
     An unknown class returns an empty list instead of raising, so a report
-    can say "none" rather than crash. This matters for IFC2X3 files, where
+    can say "none" instead of crash. This matters for IFC2X3 files, where
     entities added in IFC4 simply do not exist.
     """
     try:
@@ -133,7 +133,7 @@ def host_of(element):
     contained in a storey, since an element has exactly one answer to where it
     is, and for a nested one that answer is its host.
 
-    Returns the entity rather than its name, because one caller wants the
+    Returns the entity instead of its name, because one caller wants the
     object and another wants the label, and the caller that wants a label can
     reach for `.Name` itself.
     """
@@ -150,8 +150,8 @@ def file_digest(path):
     and changes every GlobalId inside.
 
     Read in one megabyte blocks, because the largest model here is 61 MB and
-    there is no reason to hold it in memory to hash it. Returns None rather
-    than raising, since a missing hash is worth less than the artifact and the
+    there is no reason to hold it in memory to hash it. Returns None instead
+    of raising, since a missing hash is worth less than the artifact and the
     artifact is still worth writing.
     """
     digest = hashlib.sha256()
@@ -189,12 +189,12 @@ def geometry_scale(model, sample=64):
     millimetres, and comes back out of the kernel still in millimetres. Its
     unit assignment, its project and its representation contexts all read as
     ordinary, and what stops the kernel converting it was not identified. It
-    is committed as a fixture so the claim can be rechecked rather than taken
+    is committed as a fixture so the claim can be rechecked instead of taken
     on trust. Either answer, the declared unit or none, is right for some file
     and wrong for another.
 
     So neither is trusted and the conversion is measured instead. The
-    measurement is exact rather than a guess: `transformation.matrix` holds an
+    measurement is exact instead of a guess: `transformation.matrix` holds an
     object's position as the kernel computed it, and `get_local_placement`
     reads the same position straight out of the file with no unit applied.
     Their ratio is precisely what the kernel did, 1 when it applied nothing
@@ -248,7 +248,7 @@ def _kernel_scale(model, declared, sample):
     if abs(ratio * declared - 1.0) < RATIO_TOLERANCE:
         return 1.0
     # Neither, which means the kernel did something this does not model. The
-    # caller falls back to measuring sizes rather than acting on a number
+    # caller falls back to measuring sizes instead of acting on a number
     # nothing here explains.
     return None
 
@@ -351,7 +351,7 @@ def sensors_in(model):
     """Return the sensors, or nothing if the schema has no such entity.
 
     IfcSensor was added in IFC4. Asking an IFC2X3 file for it raises, and one
-    of the project's models is IFC2X3, so this has to be handled rather than
+    of the project's models is IFC2X3, so this has to be handled instead of
     left to crash.
     """
     try:

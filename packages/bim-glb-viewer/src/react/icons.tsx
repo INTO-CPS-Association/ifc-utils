@@ -1,7 +1,7 @@
 /**
  * The icon each shortcut is drawn with.
  *
- * The shortcut table names an icon and draws nothing, because it has to run where there is no React. This is the only place that turns a name into a picture, and it uses the host's own icon set so the toolbar looks like the rest of the application rather than like a second design language pasted into it.
+ * The shortcut table names an icon and draws nothing, because it has to run where there is no React. This is the only place that turns a name into a picture, and it uses the host's own icon set so the toolbar looks like the rest of the application instead of like a second design language pasted into it.
  *
  * A name with no icon here falls back to a neutral one instead of rendering nothing, so a shortcut added to the table is usable before anyone chooses a picture for it.
  */

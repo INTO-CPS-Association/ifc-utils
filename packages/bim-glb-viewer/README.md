@@ -34,7 +34,7 @@ const objects = [{ globalId: '0_sgz7bzz4Jh2ckU1ehFe$', nodeName: 'HX-1' }];
 
 const { resolved, unresolved } = resolveBindings(manifest.bindings, objects);
 
-// Bindings that fail are returned rather than dropped. A manifest pointing at
+// Bindings that fail are returned instead of dropped. A manifest pointing at
 // an object the geometry does not have is the ordinary consequence of a model
 // being re-exported, and a viewer that silently draws four markers where the
 // manifest asked for six is worse than one that says which two are missing.
@@ -87,7 +87,7 @@ bindings:
 
 `live` and `history` are separate on purpose. MQTT supplies the current value on the marker, and the time series database supplies the panel behind a click. Charting is not reimplemented inside the 3D view.
 
-Three optional fields are additions of this project rather than parts of the proposal, so a manifest written elsewhere still loads: `id`, the short tag a person says out loud; `mountedOn`, the equipment a sensor sits on; and `role`, which measurement point on that equipment, written as `TODO` when IFC cannot say.
+Three optional fields are additions of this project instead of parts of the proposal, so a manifest written elsewhere still loads: `id`, the short tag a person says out loud; `mountedOn`, the equipment a sensor sits on; and `role`, which measurement point on that equipment, written as `TODO` when IFC cannot say.
 
 ## Develop
 

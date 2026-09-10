@@ -7,13 +7,13 @@
  * An IFC file cannot be drawn as it stands. It is a text exchange format
  * holding parametric solids, and turning those into triangles needs a geometry
  * kernel. Conversion leaves a GLB beside the source, so a model here is in one
- * of two states, and the page says which rather than showing an empty canvas.
+ * of two states, and the page says which instead of showing an empty canvas.
  *
  * What the host supplies
  * ----------------------
  * Nothing in this file imports anything from the application that mounts it.
- * That is deliberate and it is the whole reason this lives in a package rather
- * than in the DTaaS repository: the host passes in the one thing only it
+ * That is deliberate and it is the whole reason this lives in a package instead
+ * of in the DTaaS repository: the host passes in the one thing only it
  * knows, the URL of the user's library, and everything else, including every
  * later improvement to this page, arrives as a version of this package.
  *
@@ -104,7 +104,7 @@ export interface BuildingModelsProps {
   /**
    * The last value received for each object, keyed by GlobalId.
    *
-   * Pushed in rather than fetched, because this knows nothing about where a
+   * Pushed in instead of fetched, because this knows nothing about where a
    * reading came from: a broker, a database or a test all look the same here.
    */
   readings?: Map<string, Reading>;
@@ -133,7 +133,7 @@ async function readJson<T>(response: Response, url: string): Promise<T> {
   const type = response.headers.get('content-type') ?? '';
   if (!type.includes('json')) {
     throw new Error(
-      `${url} returned a web page rather than data. That address is built from `
+      `${url} returned a web page instead of data. That address is built from `
       + 'the signed-in user name, so the workspace is probably served under a '
       + 'different name than the one signed in.',
     );
@@ -153,7 +153,7 @@ export function BuildingModels({
   const [note, setNote] = useState<string | null>(null);
   const [bindings, setBindings] = useState<Binding[]>([]);
   // A manifest a placement tool wrote marks itself proposed, so the page can
-  // say so rather than presenting a guessed position as a survey.
+  // say so instead of presenting a guessed position as a survey.
   const [proposed, setProposed] = useState(false);
   const [tree, setTree] = useState<PropertyTree | null>(null);
   const [handle, setHandle] = useState<ViewerHandle | null>(null);
@@ -164,7 +164,7 @@ export function BuildingModels({
   // that would be ruinous to copy on every frame.
   const [revision, bump] = useState(0);
   const hovered = useRef<string | null>(null);
-  // Notes a person has closed, held by their text rather than by a position.
+  // Notes a person has closed, held by their text instead of by a position.
   // Choosing another model produces a different sentence, which then shows
   // again, and choosing the same one back does not repeat what was dismissed.
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -211,7 +211,7 @@ export function BuildingModels({
       })
       .catch(() => {
         // Not an error worth stopping for: the model draws without it, and the
-        // page says less rather than nothing.
+        // page says less instead of nothing.
         if (current) setTree(null);
       });
 
@@ -221,8 +221,8 @@ export function BuildingModels({
   }, [chosen, libraryUrl]);
 
   // The manifest beside the model, when there is one. Most models declare no
-  // sensors at all, and an empty list is the honest answer for those rather
-  // than a failed request.
+  // sensors at all, and an empty list is the honest answer for those instead
+  // of a failed request.
   useEffect(() => {
     // Cleared first, so switching to a model with no manifest does not keep
     // showing the previous model's sensors.
@@ -249,7 +249,7 @@ export function BuildingModels({
     };
   }, [chosen, libraryUrl]);
 
-  // The readings reach the scene here rather than inside it, so a burst of
+  // The readings reach the scene here instead of inside it, so a burst of
   // messages is one repaint instead of one per message.
   useEffect(() => {
     if (!handle) return;

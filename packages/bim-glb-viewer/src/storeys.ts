@@ -7,7 +7,7 @@
  * does not match their height, and one declares twenty six storeys of which
  * four sit within twenty centimetres of each other.
  *
- * So the floors are measured from the objects rather than read from the
+ * So the floors are measured from the objects instead of read from the
  * header. The measurement and the filter then cannot disagree, because they
  * are the same measurement.
  *
@@ -44,14 +44,14 @@ export const MERGE_WITHIN_M = 0.5;
 
 /**
  * A little below the measured floor, so the slab a person stands on is inside
- * the band rather than cut away with the floor below.
+ * the band instead of cut away with the floor below.
  */
 export const FLOOR_MARGIN_M = 0.2;
 
 /** The height of the topmost floor when nothing above it says how tall it is. */
 const FALLBACK_STOREY_HEIGHT_M = 3;
 
-/** Gaps smaller than this are noise rather than a storey height. */
+/** Gaps smaller than this are noise instead of a storey height. */
 const NOT_A_STOREY_M = 0.1;
 
 function medianOf(values: number[]): number | undefined {
@@ -69,7 +69,7 @@ function medianOf(values: number[]): number | undefined {
  * where they are.
  *
  * Returns the bands lowest first. A model with no storeys, or whose storeys
- * hold no objects, gets an empty list rather than an invented floor.
+ * hold no objects, gets an empty list instead of an invented floor.
  */
 export function bandsFrom(order: string[], objects: ObjectBase[]): Band[] {
   const bases = new Map<string, number[]>();
@@ -85,7 +85,7 @@ export function bandsFrom(order: string[], objects: ObjectBase[]): Band[] {
     const found = bases.get(name);
     if (!found || found.length === 0) continue;
     const sorted = [...found].sort((a, b) => a - b);
-    // The lower quartile rather than the minimum: one object hanging below the
+    // The lower quartile instead of the minimum: one object hanging below the
     // slab would otherwise set the floor for the whole storey.
     levels.push({ name, height: sorted[Math.floor(sorted.length * 0.25)] });
   }
@@ -100,7 +100,7 @@ export function bandsFrom(order: string[], objects: ObjectBase[]): Band[] {
     else merged.push({ names: [level.name], height: level.height });
   }
 
-  // A height for the topmost floor, taken from the others rather than assumed,
+  // A height for the topmost floor, taken from the others instead of assumed,
   // so a plant room and an office block both get a sensible one.
   const gaps = merged
     .slice(1)

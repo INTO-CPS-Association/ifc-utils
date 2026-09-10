@@ -3,11 +3,11 @@
  *
  * A building drawn on a plain background gives a person nothing to tell which
  * way is up until they recognise a roof, and a model that arrives rotated
- * looks like a building seen from an odd angle rather than like a bug. This
+ * looks like a building seen from an odd angle instead of like a bug. This
  * repository had exactly that: one converter laid every model on its side and
  * it went unnoticed, because nothing on screen said which axis was which.
  *
- * It is drawn as a second scene into a corner of the same canvas rather than
+ * It is drawn as a second scene into a corner of the same canvas instead of
  * as an object in the model, so it keeps its size whatever the zoom and never
  * ends up inside a wall. It carries no state of its own: it is pointed at the
  * main camera's direction on every frame and holds nothing that has to be kept
@@ -64,7 +64,7 @@ export function cornerViewport(
   size = GIZMO_SIZE_PX,
   margin = GIZMO_MARGIN_PX,
 ): { x: number; y: number; side: number } {
-  // On a view smaller than the gizmo plus its margins, shrink rather than
+  // On a view smaller than the gizmo plus its margins, shrink instead of
   // draw outside it. A narrow panel is a real case and a gizmo hanging off
   // the edge looks like a rendering fault.
   const side = Math.max(0, Math.min(size, width - 2 * margin, height - 2 * margin));

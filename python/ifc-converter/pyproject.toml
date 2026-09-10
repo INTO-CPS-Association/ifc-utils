@@ -16,7 +16,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Topic :: Scientific/Engineering",
 ]
-# A layer on the explorer rather than a peer: every converter here asks it
+# A layer on the explorer instead of a peer: every converter here asks it
 # which units a model is in, what its storeys are and what its hash is.
 dependencies = [
   "ifc-explorer==0.1.0",

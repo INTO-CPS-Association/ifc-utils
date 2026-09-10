@@ -66,7 +66,7 @@ export interface ViewState {
 /** Roofs, slabs and ceilings: the lid that stops a floor being seen into. */
 const LIDS = new Set(['IfcSlab', 'IfcRoof', 'IfcCovering']);
 
-/** How far above a storey's floor a lid has to be before it counts as the lid of that floor rather than its floor. A slab's thickness puts its base slightly above the level it defines. */
+/** How far above a storey's floor a lid has to be before it counts as the lid of that floor instead of its floor. A slab's thickness puts its base slightly above the level it defines. */
 const LID_MARGIN_M = 0.5;
 
 export class SceneView {
@@ -123,7 +123,7 @@ export class SceneView {
   /**
    * The heat scopes worth offering for a set of bindings.
    *
-   * Asked of the readings rather than of the model, because a model that
+   * Asked of the readings instead of of the model, because a model that
    * declares ten storeys and carries sensors on one of them can be grouped
    * by storey and gains nothing from it.
    */
@@ -134,7 +134,7 @@ export class SceneView {
   /**
    * The colour the model gives each class of object, for a legend to state.
    *
-   * Read from the materials the model arrived with rather than from a table
+   * Read from the materials the model arrived with instead of from a table
    * here, because an architect assigned those colours and a legend that
    * invented its own would describe a different building.
    */
@@ -168,14 +168,14 @@ export class SceneView {
   /**
    * How large an object is, in metres, along each world axis.
    *
-   * Measured from the geometry rather than read from the tree, because the
+   * Measured from the geometry instead of read from the tree, because the
    * tree does not carry it and because the number a person wants when they
    * click a wall is the wall in front of them. Y is the height, since the
    * scene is Y up.
    *
    * The box is axis aligned, so a wall running at forty five degrees reports
-   * the box around it rather than its length. That is a real limitation and
-   * the reason this is labelled as a size rather than as dimensions.
+   * the box around it instead of its length. That is a real limitation and
+   * the reason this is labelled as a size instead of as dimensions.
    */
   sizeOf(globalId: string): { x: number; y: number; z: number } | undefined {
     const mesh = this.meshes.get(globalId);

@@ -35,7 +35,7 @@ Three things have to happen for a person to see a temperature on the right room:
 
 ## Why Two Converters
 
-They do the same job in different places, which is deliberate rather than accidental duplication.
+They do the same job in different places, which is deliberate instead of accidental duplication.
 
 The **browser one** exists so a platform needs no conversion service. A person opens a model and it is converted on the machine that is looking at it. Nothing is installed, nothing is deployed, and an air-gapped install works because the WebAssembly parser travels inside the package.
 
@@ -71,7 +71,7 @@ bindings:
 
 **The model.** A binding names an object by GlobalId, and the marker is drawn at that object. Nothing carries a coordinate, and that is on purpose: a coordinate written into a manifest is wrong the moment the model moves, while a GlobalId still points at the same wall.
 
-When a model declares its own sensors, as `IfcSensor` elements, the manifest is generated from it and every position is the model's own. When a model declares none, which is the ordinary case for an architectural discipline model, a person writes the manifest and still names objects rather than coordinates.
+When a model declares its own sensors, as `IfcSensor` elements, the manifest is generated from it and every position is the model's own. When a model declares none, which is the ordinary case for an architectural discipline model, a person writes the manifest and still names objects instead of coordinates.
 
 ## Two Ways Readings Arrive
 

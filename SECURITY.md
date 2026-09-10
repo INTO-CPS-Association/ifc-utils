@@ -14,7 +14,7 @@ You will get an acknowledgement, and an assessment of whether the report is acce
 
 They read files a person uploaded and messages a broker delivered. Both are untrusted input, and the packages treat them that way:
 
-- **A manifest is validated before use.** It is written by a person and will frequently be wrong. Validation reports which binding and which field failed, and a manifest that fails is refused rather than half applied.
+- **A manifest is validated before use.** It is written by a person and will frequently be wrong. Validation reports which binding and which field failed, and a manifest that fails is refused instead of half applied.
 - **A selector that names nothing, or names two objects, is refused.** Guessing which object was meant would present a guess as a fact.
 - **A value read from a model, a manifest or a payload is never treated as markup.** React escapes by default and nothing here uses `dangerouslySetInnerHTML`.
 - **Nothing is fetched from a third party at runtime.** Every asset a package needs is part of the package, which is also what makes an air-gapped install possible.

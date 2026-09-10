@@ -31,7 +31,7 @@ test('reads the object, the topic and the display from where the file puts them'
   assert.equal(idOf(FULL), 'TS-01');
 });
 
-test('a binding with only history has no topic, rather than throwing', () => {
+test('a binding with only history has no topic, instead of throwing', () => {
   // Legal: it exists for the panel behind a click and never reaches a marker.
   const historyOnly = { ...FULL, source: { history: FULL.source.history } };
   assert.equal(topicOf(historyOnly), undefined);

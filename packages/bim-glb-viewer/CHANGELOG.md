@@ -8,12 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
-- A heat scope is offered when the sensors divide into more than one group, rather than when the model declares the grouping. A model that declares ten storeys and carries all ten of its sensors on one of them could be grouped by storey and gained nothing from it: the whole building took one colour, which is the building mean under another name.
+- A heat scope is offered when the sensors divide into more than one group, instead of when the model declares the grouping. A model that declares ten storeys and carries all ten of its sensors on one of them could be grouped by storey and gained nothing from it: the whole building took one colour, which is the building mean under another name.
 - `availableScopes` takes the bindings and a lookup instead of a summary of what the model declares, and `SceneView.scopesFor` answers it for a set of bindings.
 
 ### Added
 
-- Each legend row carries the number of objects of its class. On the row rather than behind a hover, because a count is what a person wants from a legend.
+- Each legend row carries the number of objects of its class. On the row instead of behind a hover, because a count is what a person wants from a legend.
 - `SceneView.classCounts`.
 
 ## [0.15.0]
@@ -31,7 +31,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - The background and the field of view match the viewer this package was taken from, `#e9edef` and 45 degrees. A lighter background washes into the pale surfaces of a model and the silhouette disappears, and a wider lens bends the walls of a room outwards.
-- The properties button reads Properties rather than counting them.
+- The properties button reads Properties instead of counting them.
 
 ## [0.13.0]
 
@@ -50,7 +50,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
-- The two lamps were at 2 each, which clipped every pale surface to white: a window frame, a plastered wall and a ceiling all came out the same flat white and the model read as untextured rather than as lit. They now match the viewer this was taken from, 0.75 and 0.9, and the sun sits above and to one side so the faces of a box differ.
+- The two lamps were at 2 each, which clipped every pale surface to white: a window frame, a plastered wall and a ceiling all came out the same flat white and the model read as untextured instead of as lit. They now match the viewer this was taken from, 0.75 and 0.9, and the sun sits above and to one side so the faces of a box differ.
 
 ### Removed
 
@@ -60,7 +60,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
-- When the library address answers with a web page, the message now states the likely cause rather than only the fact. Both times this happened the cause was the user name: once not known yet, once a deployment serving a workspace under a different name than the one signed in. Naming that turns a long search into a line of configuration.
+- When the library address answers with a web page, the message now states the likely cause instead of only the fact. Both times this happened the cause was the user name: once not known yet, once a deployment serving a workspace under a different name than the one signed in. Naming that turns a long search into a line of configuration.
 
 ## [0.11.1]
 
@@ -78,7 +78,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
-- A manifest whose placements are proposed rather than surveyed now says so. A tool that guesses where a sensor sits marks its output, and drawing that guess as a fact is how it ends up in a report as a measurement.
+- A manifest whose placements are proposed instead of surveyed now says so. A tool that guesses where a sensor sits marks its output, and drawing that guess as a fact is how it ends up in a report as a measurement.
 - "1 sensors" now reads "1 sensor".
 - Switching to a model with no manifest kept the previous model's sensors on screen.
 
@@ -92,13 +92,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
-- The three views the demo this came from had and this did not: a card per sensor, the heatmap legend, and the legend of what the model's own colours mean. The class legend reads the colours the model arrived with rather than a table written here, because an architect assigned them and a legend that invented its own would describe a different building.
-- `BuildingModels` takes the readings and the feed state as properties. Pushed in rather than fetched, so a broker, a database and a test all reach the viewer the same way, and a burst of messages is one repaint instead of one per message.
+- The three views the demo this came from had and this did not: a card per sensor, the heatmap legend, and the legend of what the model's own colours mean. The class legend reads the colours the model arrived with instead of a table written here, because an architect assigned them and a legend that invented its own would describe a different building.
+- `BuildingModels` takes the readings and the feed state as properties. Pushed in instead of fetched, so a broker, a database and a test all reach the viewer the same way, and a burst of messages is one repaint instead of one per message.
 - `SceneView.classColours`, which the class legend reads.
 
 ### Fixed
 
-- The floor picker rendered nothing while All Floors was chosen, because its value is the empty string. An empty control reads as broken rather than as a choice.
+- The floor picker rendered nothing while All Floors was chosen, because its value is the empty string. An empty control reads as broken instead of as a choice.
 
 ## [0.9.0]
 
@@ -107,7 +107,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The interface: a toolbar generated from the shortcut table, a floor picker, a panel saying what the selected object is, and the shortcut list. The table binds the keys, builds the toolbar and writes the help, so a button and a key cannot disagree.
 - `BimCanvas` hands the page a `SceneView` and the camera commands, and reports what the cursor is over and what was clicked. Picking only considers visible objects, so a floor filter that hides a wall also stops that wall being clicked through the floor above it.
 - The property tree is loaded beside the model, which is what gives the floor filter and the heatmap something to group by. A model without one still draws.
-- `@mui/icons-material` as an optional peer, so the toolbar uses the host's own icon set rather than introducing a second design language.
+- `@mui/icons-material` as an optional peer, so the toolbar uses the host's own icon set instead of introducing a second design language.
 
 ## [0.8.0]
 
@@ -115,7 +115,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - The `./viewer` entry point: the three.js layer with no React, so a consumer that draws its own interface never pulls React and MUI in behind it.
 - `SceneView`, which holds the state of one loaded model. One place decides what an object is painted with and one place writes `visible`, which is what stops the floor filter bringing back a slab the lid toggle just removed.
-- `bandsFrom`, which measures where the floors are from the objects rather than reading the elevations a header declares. Two models declare millimetres and carry metres, one lists its storeys out of order, and one names four floors that sit within twenty centimetres of each other.
+- `bandsFrom`, which measures where the floors are from the objects instead of reading the elevations a header declares. Two models declare millimetres and carry metres, one lists its storeys out of order, and one names four floors that sit within twenty centimetres of each other.
 - The reading helpers: how old a value is, whether it counts as current, and what the current ones average to per zone.
 
 ## [0.5.0]

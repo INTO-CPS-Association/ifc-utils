@@ -29,7 +29,7 @@ const GlobalId = z
 /**
  * How a binding names the thing it applies to.
  *
- * A union rather than a bare string, as the issue asks, so a non-IFC asset
+ * A union instead of a bare string, as the issue asks, so a non-IFC asset
  * can reuse this manifest instead of needing a second schema. Exactly one
  * form must be given: two would leave the resolver choosing, and a manifest
  * should not depend on which it chose.
@@ -113,7 +113,7 @@ export const ProvenanceSchema = z.object({
   metadata: z.string().min(1).optional(),
   schema: z.string().optional(),
   metre_scale: z.number().positive().optional(),
-  // Present and true when the placement is proposed rather than read from the
+  // Present and true when the placement is proposed instead of read from the
   // model. The viewer must say so: a reader who confuses the two believes the
   // building is instrumented when it is not.
   proposed: z.boolean().optional(),
@@ -141,13 +141,13 @@ export type ManifestResult =
   | { ok: false; problems: ManifestProblem[] };
 
 /**
- * Validate a manifest, reporting every problem rather than the first.
+ * Validate a manifest, reporting every problem instead of the first.
  *
- * `safeParse` rather than `parse`, matching how the client validates its own
+ * `safeParse` instead of `parse`, matching how the client validates its own
  * settings, because a malformed manifest is a thing to report and not an
  * exception to escape from.
  *
- * Every problem names its location as `bindings[3].display.ramp` rather than
+ * Every problem names its location as `bindings[3].display.ramp` instead of
  * as a path array, because that is how a person reads a YAML file.
  */
 export function readManifest(value: unknown): ManifestResult {

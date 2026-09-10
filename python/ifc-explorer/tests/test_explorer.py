@@ -147,7 +147,7 @@ class TestElements:
         assert [element["name"] for element in found] == ["HX-1"]
 
     def test_unknown_class_returns_empty_instead_of_raising(self, model):
-        # A report should be able to say "none" rather than crash. This
+        # A report should be able to say "none" instead of crash. This
         # happens with IFC2X3 files asked for an IFC4 entity.
         assert explorer.elements(model, "IfcNotARealEntity") == []
 
@@ -201,7 +201,7 @@ class TestGeometryScale:
         assert explorer.geometry_scale(model) == 1.0
 
     def test_a_millimetre_model_the_kernel_left_alone_is_scaled(self):
-        """The exception, measured rather than assumed.
+        """The exception, measured instead of assumed.
 
         This file declares millimetres and comes back out of the kernel in
         millimetres, so the declared scale is the right answer for it. It is
@@ -213,7 +213,7 @@ class TestGeometryScale:
         assert explorer.geometry_scale(model) == 0.001
 
     def test_the_wall_comes_out_three_metres_either_way(self):
-        """The point of the decision, stated as a size rather than a factor."""
+        """The point of the decision, stated as a size instead of a factor."""
         model = explorer.open_model(self.FIXTURES / "wall_kernel_keeps_units.ifc")
         scale = explorer.geometry_scale(model)
 

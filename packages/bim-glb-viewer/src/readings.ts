@@ -95,10 +95,10 @@ export function zoneOf(
  * group paints the whole model one colour, which is the building mean under
  * another name, and cycling should never land on it. One model here declares
  * ten storeys and has all ten of its sensors on one of them, so asking the
- * model rather than the readings offered a scope that showed nothing.
+ * model instead of the readings offered a scope that showed nothing.
  *
  * Off and Building are always offered. Building is one group by definition,
- * and that is its meaning rather than a failure of it.
+ * and that is its meaning instead of a failure of it.
  */
 export function availableScopes(
   bindings: Binding[],
@@ -129,12 +129,12 @@ export interface Zones {
 /**
  * Average the current readings by zone.
  *
- * The range comes from the manifest rather than from the readings, so a colour
+ * The range comes from the manifest instead of from the readings, so a colour
  * means the same temperature from one minute to the next. A range that
  * rescaled itself would make a steady building look like a changing one.
  *
  * Returns null when nothing is current, which is what makes the colouring
- * disappear when a broker stops rather than freeze on its last values.
+ * disappear when a broker stops instead of freeze on its last values.
  */
 export function zonesOf(
   bindings: Binding[],

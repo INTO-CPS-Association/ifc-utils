@@ -7,7 +7,7 @@
  * nothing and imports no 3D library, so it can be tested in jsdom where WebGL
  * does not exist.
  *
- * The scene is passed in as a plain list rather than as a three.js object, so
+ * The scene is passed in as a plain list instead of as a three.js object, so
  * this file has no opinion about what draws the model. That is the point of
  * the manifest being the load-bearing piece: swap the renderer and this does
  * not change.
@@ -47,7 +47,7 @@ export interface ResolveResult<T extends SceneObject> {
 /**
  * Match every binding against the scene.
  *
- * Bindings that fail are returned rather than dropped. A manifest pointing at
+ * Bindings that fail are returned instead of dropped. A manifest pointing at
  * an object the geometry does not have is the ordinary consequence of a model
  * being re-exported, and a viewer that silently draws four markers where the
  * manifest asked for six is worse than one that says which two are missing.

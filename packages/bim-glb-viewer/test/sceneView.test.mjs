@@ -73,7 +73,7 @@ test('the floors come from the measured geometry', () => {
   assert.deepEqual(building().storeys, ['L1', 'L2']);
 });
 
-test('a model with no storeys offers none rather than inventing one', () => {
+test('a model with no storeys offers none instead of inventing one', () => {
   const model = new Group();
   model.add(object('a', 'IfcWall', 0));
   model.updateMatrixWorld(true);

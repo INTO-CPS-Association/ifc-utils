@@ -54,7 +54,7 @@ def _clean(value):
 
     IfcOpenShell hands back plain Python for most property values, but a
     select type arrives as an entity instance, which json cannot serialise.
-    Those become their string form rather than being dropped, because a
+    Those become their string form instead of being dropped, because a
     reader is better served by an imperfect value than by a missing key.
     """
     if value is None or isinstance(value, (bool, int, float, str)):
@@ -162,7 +162,7 @@ def room_of(element, hops=0):
 def host_name_of(element):
     """Return the name of the equipment this element is nested on, or None.
 
-    A label rather than the entity, because this file is read by a viewer that
+    A label instead of the entity, because this file is read by a viewer that
     wants something to print. The relationship itself is resolved once, in
     `explorer.host_of`.
     """
@@ -223,7 +223,7 @@ def metadata_from(model, source_path):
         ],
         # The rooms the model declares, in the order it lists them. Empty for
         # the six models that declare none, which is a fact about those files
-        # rather than a gap here.
+        # instead of a gap here.
         "rooms": sorted({
             space.Name or space.LongName
             for space in _spaces(model)

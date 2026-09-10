@@ -33,7 +33,7 @@ export interface ObjectPanelProps {
    *
    * All of it is kept and none of it is thrown away, because a person asking
    * about a wall's U-value has nowhere else to look. It is behind a button
-   * rather than on the panel because sixty rows under a click is not an
+   * instead of on the panel because sixty rows under a click is not an
    * answer, it is a haystack.
    */
   properties?: Record<string, Record<string, unknown>>;

@@ -63,7 +63,7 @@ describe('addOutlines', () => {
     assert.equal(meshes[0].children[0].parent.visible, false);
   });
 
-  test('skips an object with no geometry rather than throwing', () => {
+  test('skips an object with no geometry instead of throwing', () => {
     const empty = new Mesh();
     empty.geometry = undefined;
 

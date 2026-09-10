@@ -41,7 +41,7 @@ still reads a manifest this writes:
 This module exists because the shape used to be written out by hand in three
 places, in two different forms: the generator produced the nested shape above
 and nothing read it, while the viewer and the publisher read a flat shape that
-a person maintained by hand. They agreed by luck rather than by construction.
+a person maintained by hand. They agreed by luck instead of by construction.
 """
 
 import json
@@ -49,7 +49,7 @@ import json
 import yaml
 
 # The transport the live half of a binding uses. One value today, and named
-# rather than repeated, because a second transport would be a change here.
+# instead of repeated, because a second transport would be a change here.
 LIVE_TRANSPORT = "mqtt"
 
 # Where readings are stored. The history half of a binding names a bucket in
@@ -69,7 +69,7 @@ def binding(global_id, label, topic, unit, ramp,
     supplies the panel behind a click. Charting is not reimplemented inside the
     3D view.
 
-    Optional parts are left out rather than written as null, so a manifest
+    Optional parts are left out instead of written as null, so a manifest
     holds what is known and does not claim the rest.
     """
     source = {"live": {"transport": LIVE_TRANSPORT, "topic": topic}}
