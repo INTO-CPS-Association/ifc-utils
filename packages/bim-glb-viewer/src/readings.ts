@@ -18,6 +18,13 @@ export interface Reading {
   receivedAt: number;
   /** The unit the payload itself declared, when it declared one. */
   unit?: string;
+  /**
+   * What the payload calls this value: a sample read off the instrument, an
+   * average over an interval, a prediction, the output of a simulation. The
+   * word is carried through as it arrived, so a viewer can say which of those
+   * a number is instead of presenting all four as a measurement.
+   */
+  kind?: string;
 }
 
 /** Whether the transport is connected, which no age can tell on its own. */

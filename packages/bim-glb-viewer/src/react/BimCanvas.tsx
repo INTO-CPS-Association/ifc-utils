@@ -40,7 +40,7 @@ import { resolveBindings } from '../resolver.js';
 import type { Binding } from '../binding.js';
 import { objectsOf } from './scene.js';
 import {
-  SceneView, addOutlines, createFieldSheet, createGizmo, type PropertyTree,
+  SceneView, addOutlines, createFieldSheet, createGizmo, createGlow, type PropertyTree,
 } from '../viewer/index.js';
 
 // The same near-white the viewer this was taken from uses. A lighter one
@@ -303,6 +303,12 @@ function BimCanvas({
       // laid over the floor and not part of the building.
       const sheet = createFieldSheet(scene);
       cleanUp.push(() => sheet.dispose());
+      // The halo sits beside the model for the same reason the sheet does: it
+      // is a mark on the building and not part of it, and putting it inside
+      // the model would give it the model's transform twice.
+      const glow = createGlow(scene);
+      view.attachGlow(glow);
+      cleanUp.push(() => glow.dispose());
       // After the view has found the objects, so the outlines go on exactly
       // what is drawn and nothing else. They are children of their meshes, so
       // the teardown that walks the scene disposes them along with everything

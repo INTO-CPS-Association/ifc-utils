@@ -6,8 +6,9 @@
  * Nothing here generates, interpolates or smooths a value. What is drawn is what arrived, and a sensor that has said nothing says so.
  */
 
-import { Box, Card, CardActionArea, Chip, Stack, Typography } from '@mui/material';
-import { displayOf, idOf, objectOf, type Binding } from '../binding.js';
+import { Box, Card, CardActionArea, Chip, Stack, Tooltip, Typography } from '@mui/material';
+import { alertCounts, alertsOf } from '../alerts.js';
+import { idOf, objectOf, type Binding } from '../binding.js';
 import { ageText, isLive, type FeedState, type Reading } from '../readings.js';
 
 export interface SensorCardsProps {
@@ -31,18 +32,39 @@ export function SensorCards({
   // a person reads once and then has to scroll past forever.
   if (bindings.length === 0) return null;
 
+  // What a person wants to know before reading twenty cards is whether any of
+  // them needs them. The counts say that in one line, and the cards say which.
+  const counts = alertCounts(bindings, readings, objectOf, feed);
+
   return (
     <Stack sx={{ gap: 0.75 }}>
+      {(counts.warn > 0 || counts.note > 0) && (
+        <Stack direction="row" sx={{ gap: 0.5, flexWrap: 'wrap' }}>
+          {counts.warn > 0 && (
+            <Chip
+              size="small"
+              color="warning"
+              label={`${counts.warn} of ${bindings.length} need attention`}
+            />
+          )}
+          {counts.note > 0 && (
+            <Chip
+              size="small"
+              variant="outlined"
+              label={`${counts.note} not measured directly`}
+            />
+          )}
+        </Stack>
+      )}
       {bindings.map((binding) => {
         const globalId = objectOf(binding);
         const reading = globalId ? readings.get(globalId) : undefined;
         const live = isLive(reading, feed);
-        const declared = displayOf(binding).unit;
-        // The payload's own unit wins on the card, and a difference from the
-        // manifest is named. Silently trusting either is a wrong number in a
-        // building.
-        const unit = reading?.unit ?? declared;
-        const differs = reading?.unit !== undefined && reading.unit !== declared;
+        // The payload's own unit wins on the card. A difference from the
+        // manifest is one of the alerts below, since silently trusting either
+        // is a wrong number in a building.
+        const unit = reading?.unit ?? binding.display?.unit;
+        const alerts = alertsOf(binding, reading, feed);
 
         return (
           <Card
@@ -70,13 +92,22 @@ export function SensorCards({
               <Typography variant="caption" color="text.secondary" display="block">
                 {ageText(reading, feed)}
               </Typography>
-              {differs && (
-                <Chip
-                  size="small"
-                  color="warning"
-                  sx={{ mt: 0.5 }}
-                  label={`Unit differs from manifest (${declared})`}
-                />
+              {alerts.length > 0 && (
+                <Stack direction="row" sx={{ gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+                  {alerts.map((alert) => (
+                    // The chip is the short form and the tooltip is the
+                    // sentence. A person scanning twenty cards reads the
+                    // chips, and only the one they stop on needs the reason.
+                    <Tooltip key={alert.label} title={alert.detail}>
+                      <Chip
+                        size="small"
+                        color={alert.level === 'warn' ? 'warning' : 'default'}
+                        variant={alert.level === 'warn' ? 'filled' : 'outlined'}
+                        label={alert.label}
+                      />
+                    </Tooltip>
+                  ))}
+                </Stack>
               )}
             </CardActionArea>
           </Card>

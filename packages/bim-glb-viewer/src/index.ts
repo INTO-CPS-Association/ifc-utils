@@ -49,6 +49,14 @@ export {
 export { rampColour, RAMP_STOPS } from './ramp.js';
 
 export {
+  alertsOf,
+  alertCounts,
+  MEASURED_KIND,
+  type Alert,
+  type AlertLevel,
+} from './alerts.js';
+
+export {
   bandsFrom,
   bandOf,
   MERGE_WITHIN_M,

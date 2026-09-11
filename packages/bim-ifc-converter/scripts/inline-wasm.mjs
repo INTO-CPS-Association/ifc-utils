@@ -33,7 +33,11 @@ writeFileSync('src/generated/wasm.ts', `/* eslint-disable */
 //
 // web-ifc.wasm, ${(wasm.length / 1024).toFixed(0)} KB, as base64.
 
-export const WEB_IFC_WASM_BASE64 =
+// The type annotation is what keeps the declaration file one line long.
+// Without it TypeScript infers the literal type and writes the whole 1.7 MB
+// of base64 into the .d.ts as a type, which doubles what a consumer
+// downloads and says nothing a consumer can use.
+export const WEB_IFC_WASM_BASE64: string =
   '${base64}';
 `);
 

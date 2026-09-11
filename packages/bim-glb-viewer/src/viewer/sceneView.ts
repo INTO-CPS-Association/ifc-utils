@@ -14,6 +14,7 @@ import {
   type FeedState, type HeatScope, type Reading, type Zones,
 } from '../readings.js';
 import { bandOf, bandsFrom, type Band } from '../storeys.js';
+import { type Glow } from './glow.js';
 import { Palette, SHELL } from './appearance.js';
 import { buildField, sourceAt, type Field } from './field.js';
 
@@ -255,12 +256,22 @@ export class SceneView {
    * alone otherwise: the objects do not move and neither do the sensors.
    */
   buildField(bindings: Binding[]): void {
-    const key = bindings.map((binding) => objectOf(binding) ?? '').join(',');
+    // The storey is part of the key, not only the bindings. The cut runs
+    // 1.2 m above the floor of the storey in force, and the cut is what
+    // decides which objects are walls, so a field built for the ground floor
+    // describes the ground floor and nothing else. Leaving it out is why the
+    // heatmap only ever worked on the first level.
+    const key = [this.state.storey, ...bindings.map((b) => objectOf(b) ?? '')].join(',');
     if (key === this.fieldKey) return;
     this.fieldKey = key;
     this.fieldSources = [];
     this.field = null;
     if (bindings.length === 0) return;
+
+    // The lowest band is the floor a single storey model has, and the chosen
+    // one otherwise. The cut has to be inside the storey being drawn.
+    const band = this.state.storey ? bandOf(this.bands, this.state.storey) : undefined;
+    const floor = band ?? this.bands[0];
 
     const box = new Box3();
     const sources: Vector3[] = [];
@@ -268,14 +279,17 @@ export class SceneView {
       const globalId = objectOf(binding);
       const mesh = globalId === undefined ? undefined : this.meshes.get(globalId);
       if (!mesh || globalId === undefined) continue;
-      sources.push(box.setFromObject(mesh).getCenter(new Vector3()));
+      const at = box.setFromObject(mesh).getCenter(new Vector3());
+      // A sensor on the ground floor says nothing about the floor above it.
+      // Without this, every sensor in the building was flooded onto whichever
+      // plan was on screen, so the second storey showed the first one's heat.
+      // With no floor chosen the whole building is on screen at once, and
+      // every sensor belongs to what is drawn.
+      if (band && (at.y <= band.from || at.y >= band.to)) continue;
+      sources.push(at);
       this.fieldSources.push(globalId);
     }
-    // The lowest band is the floor a single storey model has, and the chosen
-    // one otherwise. The cut has to be inside the storey being drawn.
-    const chosen = this.state.storey;
-    const band = this.bands.find((b) => b.names.includes(chosen ?? '')) ?? this.bands[0];
-    this.field = buildField(this.meshes.values(), sources, band ? band.from : 0);
+    this.field = buildField(this.meshes.values(), sources, floor ? floor.from : 0);
   }
 
   /** The colour a heatmap gives one object, or null when it gives none. Null covers three cases that must all leave the object in its own colour: the heatmap is off, no sensor covers the object's zone, and the readings have gone stale. A heatmap of stale values is a confident wrong answer. */
@@ -311,12 +325,35 @@ export class SceneView {
     return base;
   }
 
+  /**
+   * Lend this view a halo to put around the selected object.
+   *
+   * The halo lives in the scene and the scene belongs to whatever draws, so
+   * it is handed in instead of made here. What this owns is the decision of
+   * when it is on, which belongs beside the rest of the appearance rules.
+   */
+  attachGlow(glow: Glow | null): void {
+    this.glow = glow;
+    this.refreshMaterials();
+  }
+
+  private glow: Glow | null = null;
+
   /** Paint everything. Called by anything that changes appearance. */
   refreshMaterials(): void {
     for (const [globalId, mesh] of this.meshes) {
       const material = this.materialFor(globalId, mesh);
       if (material) mesh.material = material;
     }
+
+    if (this.glow === null) return;
+    const selected = this.state.selected === null
+      ? undefined
+      : this.meshes.get(this.state.selected);
+    // A halo around an object the floor filter has hidden is a glow around
+    // nothing, on a floor the object is not even on.
+    if (selected?.visible) this.glow.show(selected);
+    else this.glow.hide();
   }
 
   /**

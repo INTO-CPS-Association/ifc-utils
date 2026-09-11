@@ -335,3 +335,140 @@ describe('the Per Sensor scope', () => {
     assert.equal(view.scopesFor([bind('s1')]).includes('sensor'), false);
   });
 });
+
+describe('the Per Sensor scope across floors', () => {
+  /**
+   * Two floors, one sensor each, on opposite sides of the plan.
+   *
+   * The sensors are placed so that the wrong answer is visible: the probe on
+   * the upper floor sits directly above the lower floor's sensor, so a field
+   * that still holds both sources hands it the sensor downstairs.
+   */
+  function twoFloors() {
+    const model = new Group();
+    const add = (globalId, ifcClass, x, y, size) => {
+      const mesh = new Mesh(new BoxGeometry(...size), new MeshStandardMaterial());
+      mesh.position.set(x, y, 0);
+      mesh.userData.globalId = globalId;
+      mesh.userData.ifcClass = ifcClass;
+      model.add(mesh);
+    };
+    add('slab1', 'IfcSlab', 0, 0.1, [12, 0.2, 6]);
+    add('slab2', 'IfcSlab', 0, 3.1, [12, 0.2, 6]);
+    add('s1', 'IfcSensor', -4, 1.2, [0.1, 0.1, 0.1]);
+    add('s2', 'IfcSensor', 4, 4.2, [0.1, 0.1, 0.1]);
+    add('p2', 'IfcFurniture', -4, 4.2, [0.4, 0.4, 0.4]);
+    model.updateMatrixWorld(true);
+
+    return new SceneView(model, {
+      storeys: [{ name: 'L1' }, { name: 'L2' }],
+      objects: {
+        slab1: { ifcClass: 'IfcSlab', storey: 'L1' },
+        s1: { ifcClass: 'IfcSensor', storey: 'L1' },
+        slab2: { ifcClass: 'IfcSlab', storey: 'L2' },
+        s2: { ifcClass: 'IfcSensor', storey: 'L2' },
+        p2: { ifcClass: 'IfcFurniture', storey: 'L2' },
+      },
+    });
+  }
+
+  const bind = (globalId) => ({
+    selector: { globalId },
+    label: globalId,
+    source: { live: { transport: 'mqtt', topic: `t/${globalId}` } },
+    display: { unit: 'C', ramp: [0, 40] },
+  });
+
+  test('changing floor rebuilds the field instead of reusing the first one', () => {
+    // The field used to be keyed on the bindings alone, so the first floor
+    // looked at was the only floor the heatmap ever described.
+    const view = twoFloors();
+    view.state.heat = 'sensor';
+
+    view.state.storey = 'L1';
+    view.buildField([bind('s1'), bind('s2')]);
+    const onFirst = [...view.fieldSources];
+
+    view.state.storey = 'L2';
+    view.buildField([bind('s1'), bind('s2')]);
+
+    assert.deepEqual(onFirst, ['s1']);
+    assert.deepEqual(view.fieldSources, ['s2']);
+  });
+
+  test('a sensor downstairs does not heat the floor above it', () => {
+    const view = twoFloors();
+    view.state.heat = 'sensor';
+    view.state.storey = 'L2';
+    view.buildField([bind('s1'), bind('s2')]);
+
+    assert.equal(view.zoneFor('p2'), 's2');
+  });
+
+  test('with no floor chosen every sensor is a source, since all of them are drawn', () => {
+    const view = twoFloors();
+    view.state.heat = 'sensor';
+    view.buildField([bind('s1'), bind('s2')]);
+
+    assert.deepEqual(view.fieldSources, ['s1', 's2']);
+  });
+});
+
+describe('the selection halo', () => {
+  /** A halo that records what it was asked to do, so no canvas is needed. */
+  function recorder() {
+    const calls = [];
+    return {
+      calls,
+      show: (mesh) => calls.push(mesh.userData.globalId),
+      hide: () => calls.push(null),
+      dispose: () => {},
+    };
+  }
+
+  test('goes around the selected object', () => {
+    const view = building();
+    const glow = recorder();
+    view.attachGlow(glow);
+
+    view.state.selected = 'w1';
+    view.refreshMaterials();
+
+    assert.equal(glow.calls[glow.calls.length - 1], 'w1');
+  });
+
+  test('comes off when the selection is cleared', () => {
+    const view = building();
+    const glow = recorder();
+    view.attachGlow(glow);
+
+    view.state.selected = 'w1';
+    view.refreshMaterials();
+    view.state.selected = null;
+    view.refreshMaterials();
+
+    assert.equal(glow.calls[glow.calls.length - 1], null);
+  });
+
+  test('comes off when the floor filter hides what is selected', () => {
+    // A halo around a hidden object is a glow around nothing, on a floor the
+    // object is not on.
+    const view = building();
+    const glow = recorder();
+    view.attachGlow(glow);
+
+    view.state.selected = 'w1';
+    view.state.storey = 'L2';
+    view.refreshVisibility();
+    view.refreshMaterials();
+
+    assert.equal(glow.calls[glow.calls.length - 1], null);
+  });
+
+  test('a view with no halo paints exactly as before', () => {
+    const view = building();
+    view.state.selected = 'w1';
+
+    assert.doesNotThrow(() => view.refreshMaterials());
+  });
+});

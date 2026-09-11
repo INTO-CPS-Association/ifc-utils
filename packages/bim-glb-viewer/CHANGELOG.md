@@ -4,6 +4,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.19.0]
+
+### Added
+
+- `alerts.ts`: what is wrong with a sensor, said in words. A sensor that has gone quiet, a value outside the range the model declares for it, a unit the payload and the manifest disagree on, and a value the payload says was not measured directly. Every bound comes from the manifest, which the converter reads out of the sensor's own property set, so a building with different limits gets different alerts without a line of the package changing.
+- `Reading.kind` carries the payload's own word for what a value is: a sample read off the instrument, an average over an interval, a prediction, the output of a simulation. Without it a viewer presents all four as a measurement.
+- `SensorCards` shows those alerts as chips, with the sentence behind each on hover, and a count above the cards so a person knows whether any of twenty needs them before reading them.
+- `viewer/glow.ts`: a halo around the selected object, built from the object's own geometry drawn a little larger and added to the light already there. The selection was a translucent repaint, which works on a wall and leaves an 85 mm wall thermostat an 85 mm yellow speck. The halo grows by a fixed margin in metres instead of by a scale factor, so a thermostat gains a ring a person can see across a room and a wall does not become a second wall.
+- `SceneView.attachGlow`, so the decision of when the halo is on sits beside the rest of the appearance rules while the scene stays owned by whatever draws.
+
+### Fixed
+
+- The Per Sensor heatmap described only the first floor looked at. The field was keyed on the bindings alone, so changing storey never rebuilt it, and every sensor in the building was flooded onto whichever plan was on screen. The storey is now part of the key, and only the sensors standing on the floor being drawn feed it.
+
 ## [0.18.0]
 
 ### Added
