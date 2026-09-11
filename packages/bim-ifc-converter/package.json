@@ -33,11 +33,11 @@
   },
   "files": [
     "dist",
-    "LICENSE.md"
+    "LICENSE.md",
+    "THIRD-PARTY-NOTICES.md"
   ],
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "restricted"
+    "access": "public"
   },
   "scripts": {
     "build": "node scripts/inline-wasm.mjs && tsc -p tsconfig.json",

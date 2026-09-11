@@ -4,6 +4,11 @@ Turn an IFC file into drawable geometry, in the browser.
 
 IFC is a text exchange format holding parametric solids: a wall is a profile swept along a path with holes subtracted, not a list of triangles. Producing the triangles needs a geometry kernel, and the one used here is [web-ifc](https://github.com/ThatOpen/engine_web-ifc) compiled to WebAssembly. The conversion happens on the machine that is looking at the model, so a platform needs no converter service.
 
+The WebAssembly binary is inlined into the published package, so installing it
+is all a consumer does. web-ifc is under the Mozilla Public License 2.0 and is
+redistributed unmodified, with the notice that licence requires in
+[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
+
 ## Install
 
 ```bash

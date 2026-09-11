@@ -67,8 +67,7 @@
     "LICENSE.md"
   ],
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "restricted"
+    "access": "public"
   },
   "scripts": {
     "build": "tsc -p tsconfig.esm.json && node scripts/stubs.mjs",

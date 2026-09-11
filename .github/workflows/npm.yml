@@ -40,7 +40,12 @@ jobs:
       # check of the published artifact instead of of the source.
       - run: npm test
 
-  publish:
+  # Two registries, which is what this organisation already does for libms and
+  # runner. GitHub Packages requires a token to install even a public package,
+  # so a DTaaS contributor cloning the client would need a personal token just
+  # to run yarn install. npmjs needs none. Publishing to both means the
+  # organisation keeps its own copy and a consumer needs nothing.
+  publish-github:
     if: github.event_name == 'release'
     needs: check
     runs-on: ubuntu-latest
@@ -48,8 +53,10 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # Pinned by commit, not by tag, because a tag can be moved to point at
+      # different code. These are the commits this organisation already uses.
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f
         with:
           node-version: '22'
           registry-url: 'https://npm.pkg.github.com'
@@ -64,3 +71,24 @@ jobs:
       - run: npm publish --workspace packages/bim-glb-viewer
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-npmjs:
+    if: github.event_name == 'release'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm ci
+      - run: npm run build
+      - run: npm publish --workspace packages/bim-ifc-converter
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --workspace packages/bim-glb-viewer
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
