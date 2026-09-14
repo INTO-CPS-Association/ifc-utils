@@ -58,7 +58,7 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
       - run: npm ci
       - run: npm run build
-      - run: npm publish --workspace packages/bim-glb-viewer
+      - run: npm publish --workspace packages/bim-kit
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -76,6 +76,6 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       - run: npm run build
-      - run: npm publish --workspace packages/bim-glb-viewer
+      - run: npm publish --workspace packages/bim-kit
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -2,7 +2,7 @@
 
 IFC files this repository did not produce, kept because each one breaks an assumption a converter is likely to make.
 
-They live here instead of beside one package because **both converters run against them**: the browser one under `packages/bim-glb-viewer` and the Python one under `python/`. Two implementations of one job are only comparable if they are asked the same questions, and a copy of a fixture is a question that drifts. They are small enough to read, and they are committed as plain files instead of through Git LFS so the tests run on a fresh clone with nothing fetched.
+They live here instead of beside one package because **both converters run against them**: the browser one under `packages/bim-kit` and the Python one under `python/`. Two implementations of one job are only comparable if they are asked the same questions, and a copy of a fixture is a question that drifts. They are small enough to read, and they are committed as plain files instead of through Git LFS so the tests run on a fresh clone with nothing fetched.
 
 ## Where They Come From
 

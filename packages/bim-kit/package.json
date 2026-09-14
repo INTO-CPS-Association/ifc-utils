@@ -1,5 +1,5 @@
 {
-  "name": "@into-cps-association/bim-glb-viewer",
+  "name": "@into-cps-association/bim-kit",
   "version": "0.1.0",
   "description": "Bind live sensor readings to the objects of a BIM model, by IFC GlobalId.",
   "keywords": [
@@ -11,11 +11,11 @@
     "dtaas"
   ],
   "license": "SEE LICENSE IN LICENSE.md",
-  "homepage": "https://github.com/INTO-CPS-Association/ifc-utils/tree/main/packages/bim-glb-viewer",
+  "homepage": "https://github.com/INTO-CPS-Association/ifc-utils/tree/main/packages/bim-kit",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/INTO-CPS-Association/ifc-utils.git",
-    "directory": "packages/bim-glb-viewer"
+    "directory": "packages/bim-kit"
   },
   "bugs": "https://github.com/INTO-CPS-Association/ifc-utils/issues",
   "engines": {

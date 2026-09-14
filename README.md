@@ -15,7 +15,7 @@ The directory says which ecosystem a package belongs to. The name says what it d
 
 | Package | Runs | What it does |
 | --- | --- | --- |
-| [`packages/bim-glb-viewer`](packages/bim-glb-viewer) | browser | Reads a binding manifest, resolves it against a model, and draws the model with live values on it. Ships a React page for the DTaaS client. |
+| [`packages/bim-kit`](packages/bim-kit) | browser | Reads a binding manifest, resolves it against a model, and draws the model with live values on it. Ships a React page for the DTaaS client. |
 | [`python/ifc-explorer`](python/ifc-explorer) | a machine with Python | Reads an IFC model and answers questions about it. Writes nothing. |
 | [`python/ifc-converter`](python/ifc-converter) | a machine with Python | Turns an IFC model into GLB, a property tree and a manifest, using IfcOpenShell. |
 
@@ -90,7 +90,7 @@ Publishing is done by [the workflow](.github/workflows/npm.yml), on a release an
 ## How A Consumer Installs One
 
 ```bash
-npm install @into-cps-association/bim-glb-viewer
+npm install @into-cps-association/bim-kit
 ```
 
 Heavy dependencies are peers, not dependencies: React, MUI and three.js are declared as optional peers so a host that already has them never receives a second copy, and a consumer that wants only the manifest logic never receives them at all. The core entry point imports nothing.

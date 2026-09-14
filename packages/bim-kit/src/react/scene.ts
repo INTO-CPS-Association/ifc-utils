@@ -1,7 +1,7 @@
 /**
  * Reading a loaded glTF scene as the binding resolver wants to see it.
  *
- * The resolver in `@into-cps-association/bim-glb-viewer` takes a plain list of
+ * The resolver in `@into-cps-association/bim-kit` takes a plain list of
  * objects and knows nothing about three.js, which is what lets it be tested in
  * jsdom where WebGL does not exist. This is the small adapter that produces
  * that list, and it is the only file in the route that knows both sides.

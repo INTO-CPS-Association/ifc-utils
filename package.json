@@ -10,7 +10,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace packages/bim-glb-viewer",
+    "build": "npm run build --workspace packages/bim-kit",
     "test": "npm run test --workspaces --if-present",
     "audit": "npm audit --audit-level=high"
   }

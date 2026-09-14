@@ -11,7 +11,7 @@
  * route that leaks one on every visit stops drawing after a handful.
  *
  * What is drawn on the model comes from the manifest, through
- * `@into-cps-association/bim-glb-viewer`. This file holds no opinion about
+ * `@into-cps-association/bim-kit`. This file holds no opinion about
  * what a binding looks like, which is the point of that package existing.
  */
 

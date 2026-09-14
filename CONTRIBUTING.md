@@ -25,7 +25,7 @@ The tests import from `dist/`, not from `src/`. A test that passes on the source
 
 **A reason.** Comments say why, not what. A reader can see what the code does; what they cannot see is the case that made it necessary.
 
-**No new dependency without a reason that survives being said out loud.** The core of `bim-glb-viewer` imports nothing at all, and that is not an accident: it is what lets it be tested where WebGL, workers and WebAssembly do not exist. Heavy things are peer dependencies, so a host that already has React, MUI or three.js never receives a second copy.
+**No new dependency without a reason that survives being said out loud.** The core of `bim-kit` imports nothing at all, and that is not an accident: it is what lets it be tested where WebGL, workers and WebAssembly do not exist. Heavy things are peer dependencies, so a host that already has React, MUI or three.js never receives a second copy.
 
 **Nothing newer than ten days.** A dependency or a version published less than ten days ago is not accepted. Freshly published releases are the main vector for supply chain attacks, and most malicious versions are found and pulled within days. Pin exact versions.
 

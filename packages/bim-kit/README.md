@@ -1,23 +1,37 @@
-# @into-cps-association/bim-glb-viewer
+# @into-cps-association/bim-kit
 
 Bind live sensor readings to the objects of a BIM model, by IFC GlobalId.
 
-A building model says where things are. A sensor stream says what they measure. Nothing in either says which reading belongs to which wall. A manifest does, and this package is the code that reads it.
+A building model says where things are. A sensor stream says what they measure. Nothing in either says which reading belongs to which wall. A manifest does, and this package is the code that reads it, the code that converts the model, and the code that draws the result.
 
-It is the piece [DTaaS issue 1762][issue] calls load-bearing: if the manifest schema is right, the conversion, the viewer and the transport can each be replaced without touching the others.
+It answers what [DTaaS issue 1762][issue] proposes, and the manifest is the piece that issue calls load-bearing: if its schema is right, the conversion, the viewer and the transport can each be replaced without touching the others.
 
 [issue]: https://github.com/INTO-CPS-Association/DTaaS/issues/1762
 
+## What Is In It
+
+Four entry points, so a consumer takes what it needs and nothing else.
+
+| Entry point | What it holds | What it pulls in |
+| --- | --- | --- |
+| `.` | The manifest, the binding, the resolver, the readings, the alerts, the colour ramp | nothing |
+| `./schema` | Validating a manifest a person wrote | `zod` |
+| `./converter` | IFC to geometry, in the browser | the inlined `web-ifc` WebAssembly |
+| `./viewer` | The three.js scene, the floor filter, the heatmap, the selection | `three` |
+| `./react` | The whole page as components | `react` and `@mui/material` |
+
+The core entry point imports nothing at all, which is what lets manifest logic be tested in jsdom where WebGL, workers and WebAssembly do not exist. Everything heavier sits behind its own entry point and behind a dynamic import, so a host that never opens the page never downloads a renderer or a parser.
+
 ## What It Does Not Do
 
-**It draws nothing.** No renderer is imported, so it runs in jsdom, in Node and in a browser alike. The DTaaS client's unit tests run in jsdom, where WebGL, workers and WASM do not exist, and everything testable without a canvas is kept where it can be tested.
+**It subscribes to nothing.** Readings are handed in. The package knows neither the broker nor the topic scheme, which is what lets the same component serve a local demonstration and a platform deployment.
 
-**It reads no IFC.** Conversion runs outside the browser, in Python, and produces the geometry and the manifest this consumes.
+**It writes no manifest.** Producing one is the job of the Python tools in this repository, which read the IFC and record the provenance.
 
 ## Install
 
 ```bash
-npm install @into-cps-association/bim-glb-viewer
+npm install @into-cps-association/bim-kit
 ```
 
 The core has no dependencies. The schema validator is a separate entry point because it needs `zod`, and `zod` is an optional peer: a manifest written by the converter has already been validated once, so most consumers never load it.
@@ -26,7 +40,7 @@ The core has no dependencies. The schema validator is a separate entry point bec
 
 ```js
 import { resolveBindings, topicOf, displayOf, rampColour }
-  from '@into-cps-association/bim-glb-viewer';
+  from '@into-cps-association/bim-kit';
 
 // Whatever loaded the geometry produces these. A GLB written by
 // ifc_explorer.to_glb carries globalId in glTF `extras` on every node.
@@ -53,7 +67,7 @@ for (const { binding, object } of resolved) {
 Validating a manifest a person wrote:
 
 ```js
-import { readManifest } from '@into-cps-association/bim-glb-viewer/schema';
+import { readManifest } from '@into-cps-association/bim-kit/schema';
 
 const result = readManifest(parsedYaml);
 if (!result.ok) {

@@ -26,6 +26,6 @@ ifc-to-manifest model.ifc model.yaml      # the binding manifest
 
 ## The Browser Does This Too
 
-[`@into-cps-association/bim-glb-viewer/converter`](../../packages/bim-glb-viewer) converts in a browser, using web-ifc compiled to WebAssembly. The two are deliberately independent implementations of one job, and they run against the same files in [`fixtures/`](../../fixtures) so they can be compared.
+[`@into-cps-association/bim-kit/converter`](../../packages/bim-kit) converts in a browser, using web-ifc compiled to WebAssembly. The two are deliberately independent implementations of one job, and they run against the same files in [`fixtures/`](../../fixtures) so they can be compared.
 
 Measured on the same models: they agree on object count exactly, the browser is about nine times faster, and it produces about two per cent fewer triangles because some solids defeat its kernel. Use the browser one to look at a model now, and this one as the reference and for batches.

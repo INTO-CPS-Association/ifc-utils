@@ -7,12 +7,12 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/packages/bim-glb-viewer"
+    directory: "/packages/bim-kit"
     schedule:
       interval: "weekly"
       day: "sunday"
     commit-message:
-      prefix: "bim-glb-viewer: "
+      prefix: "bim-kit: "
 
   - package-ecosystem: "github-actions"
     directory: "/"
