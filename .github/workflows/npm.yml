@@ -62,20 +62,28 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # npmjs publishing uses OIDC trusted publishing, so no long-lived token is
+  # stored in the repository. The runner exchanges a short-lived identity for a
+  # one-time publish credential, and npm records build provenance automatically.
+  # The trusted publisher for this package must be configured once on npmjs,
+  # under the package's publishing access, to point at this repository and this
+  # workflow file. A stored token would be a credential that can leak, which is
+  # what this avoids.
   publish-npmjs:
     if: github.event_name == 'release'
     needs: check
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
       - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+      # Trusted publishing needs npm 11.5.1 or newer, and node 22 ships npm 10.
+      - run: npm install -g npm@11.5.1
       - run: npm ci
       - run: npm run build
       - run: npm publish --workspace packages/bim-kit
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
