@@ -18,6 +18,11 @@ The first published version. What it does:
 - Sensor alerts: a sensor that has gone quiet, a value outside the range the model declares for it, a unit the payload and the manifest disagree on, and a value the payload says was not measured directly.
 - A floor filter, a transparency mode, a selection halo, a class legend, a property panel and a keyboard shortcut table.
 - React components for a host that wants the whole page, and a renderer-free entry point for a host that only needs the manifest logic.
+- Converting IFC to glTF in the browser, reached at `./converter`. The `web-ifc` geometry kernel is embedded as base64, so a consumer installs one package and serves no extra file, and a production build contains no `.wasm` and fetches none.
+
+### Notes on the shape
+
+This was two packages during development, a viewer and a converter. They are one because the split delivered nothing: the converter was a normal dependency of the viewer, so installing the viewer installed both anyway, and a host had to declare a package it never imported for the inner dependency to resolve. One package is one install, one version and one changelog.
 
 ### Notes
 

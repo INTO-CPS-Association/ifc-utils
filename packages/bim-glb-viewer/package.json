@@ -45,6 +45,10 @@
     "./viewer": {
       "types": "./dist/esm/viewer/index.d.ts",
       "default": "./dist/esm/viewer/index.js"
+    },
+    "./converter": {
+      "types": "./dist/esm/converter.d.ts",
+      "default": "./dist/esm/converter.js"
     }
   },
   "typesVersions": {
@@ -65,14 +69,15 @@
     "react",
     "schema",
     "LICENSE.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "THIRD-PARTY-NOTICES.md"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.esm.json && node scripts/stubs.mjs",
-    "test": "tsc -p tsconfig.esm.json --noEmit && node --test 'test/*.test.mjs'",
+    "build": "node scripts/inline-wasm.mjs && tsc -p tsconfig.esm.json && node scripts/stubs.mjs",
+    "test": "node scripts/inline-wasm.mjs && tsc -p tsconfig.esm.json --noEmit && node --test 'test/*.test.mjs'",
     "prepublishOnly": "npm run build",
     "prepack": "node scripts/licence.mjs",
     "audit": "npm audit --audit-level=high"
@@ -117,6 +122,6 @@
     "zod": "4.1.13"
   },
   "dependencies": {
-    "@into-cps-association/bim-ifc-converter": "^0.1.0"
+    "web-ifc": "0.0.77"
   }
 }

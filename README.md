@@ -16,7 +16,6 @@ The directory says which ecosystem a package belongs to. The name says what it d
 | Package | Runs | What it does |
 | --- | --- | --- |
 | [`packages/bim-glb-viewer`](packages/bim-glb-viewer) | browser | Reads a binding manifest, resolves it against a model, and draws the model with live values on it. Ships a React page for the DTaaS client. |
-| [`packages/bim-ifc-converter`](packages/bim-ifc-converter) | browser | Turns an IFC file into drawable geometry, wrapping [web-ifc][webifc] compiled to WebAssembly. |
 | [`python/ifc-explorer`](python/ifc-explorer) | a machine with Python | Reads an IFC model and answers questions about it. Writes nothing. |
 | [`python/ifc-converter`](python/ifc-converter) | a machine with Python | Turns an IFC model into GLB, a property tree and a manifest, using IfcOpenShell. |
 
@@ -24,7 +23,7 @@ The directory says which ecosystem a package belongs to. The name says what it d
 
 ## Two Converters, On Purpose
 
-`bim-ifc-converter` and `ifc-converter` do the same job in different places, and that is deliberate instead of accidental duplication.
+The viewer's `./converter` entry point and `ifc-converter` do the same job in different places, and that is deliberate instead of accidental duplication.
 
 The browser one exists so a platform needs no conversion service: a person opens a model and it is converted on the machine that is looking at it. The Python one is the reference and the batch tool, and it is what says whether the other is right.
 

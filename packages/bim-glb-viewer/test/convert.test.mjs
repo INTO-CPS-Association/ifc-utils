@@ -16,7 +16,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { convertIfc } from '../dist/index.js';
+import { convertIfc } from '../dist/esm/converter.js';
 
 const FIXTURES = fileURLToPath(new URL('../../../fixtures/', import.meta.url));
 

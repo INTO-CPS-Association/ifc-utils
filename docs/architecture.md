@@ -15,7 +15,7 @@ Three things have to happen for a person to see a temperature on the right room:
                          |
         +----------------+----------------+
         |                                 |
-  ifc-converter                    bim-ifc-converter
+  ifc-converter                    bim-glb-viewer/converter
   Python, IfcOpenShell             browser, web-ifc in WebAssembly
   a machine, in batches            the machine looking at the model
         |                                 |

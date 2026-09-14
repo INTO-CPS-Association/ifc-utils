@@ -1,7 +1,7 @@
 /**
  * Turning converted IFC geometry into something three.js can draw.
  *
- * `@into-cps-association/bim-ifc-converter` returns plain typed arrays and
+ * The converter returns plain typed arrays and
  * imports no renderer, which is what lets it be tested where there is no
  * canvas. This is the small adapter that meets it, and it is the only file
  * that knows both sides.
@@ -21,7 +21,7 @@ import {
   Mesh,
   MeshStandardMaterial,
 } from 'three';
-import type { Converted, ConvertedObject } from '@into-cps-association/bim-ifc-converter';
+import type { Converted, ConvertedObject } from '../converter.js';
 
 /** How transparent a colour has to be before it is drawn as transparent. */
 const OPAQUE_ENOUGH = 0.99;

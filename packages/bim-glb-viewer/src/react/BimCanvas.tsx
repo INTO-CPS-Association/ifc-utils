@@ -384,7 +384,7 @@ function BimCanvas({
       setProgress('Reading the IFC file');
       (async () => {
         const [{ convertIfc }, { meshesFrom }] = await Promise.all([
-          import('@into-cps-association/bim-ifc-converter'),
+          import('../converter.js'),
           import('./ifcMeshes.js'),
         ]);
         const response = await fetch(url, { credentials: 'include' });

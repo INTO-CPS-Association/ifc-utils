@@ -5,11 +5,7 @@
 # `pull_request`: that republishes on every commit and lets a pull request from
 # a fork start a publish, which is a supply chain surface for no benefit.
 #
-# Everything runs at the root instead of inside each package. The packages are
-# npm workspaces and one of them depends on the other, so installing inside a
-# package directory sends npm to the registry for a sibling that is not
-# published there. That is what this workflow did first, and the build failed
-# on a module that exists three directories away.
+# Everything runs at the root, which is where the workspace is defined.
 name: npm packages
 
 on:
@@ -62,12 +58,6 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
       - run: npm ci
       - run: npm run build
-      # Both, and the converter first. The viewer declares a dependency on it,
-      # so publishing the viewer alone puts a package on the registry whose
-      # dependency is not there.
-      - run: npm publish --workspace packages/bim-ifc-converter
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm publish --workspace packages/bim-glb-viewer
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -86,9 +76,6 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       - run: npm run build
-      - run: npm publish --workspace packages/bim-ifc-converter
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: npm publish --workspace packages/bim-glb-viewer
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

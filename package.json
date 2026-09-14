@@ -3,11 +3,14 @@
   "private": true,
   "description": "IFC and BIM software utilities for DTaaS. This file exists to make the packages under packages/ one npm workspace, so one of them can depend on another by version while both are still being written.",
   "license": "SEE LICENSE IN LICENSE.md",
-  "engines": { "node": ">=20" },
-  "workspaces": ["packages/*"],
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "_comment_build": "In dependency order, which npm does not work out for `run --workspaces`: it takes the workspaces alphabetically, so the viewer built before the converter it takes its types from. That order worked on a machine where dist already existed and failed on every clean checkout.",
-    "build": "npm run build --workspace packages/bim-ifc-converter && npm run build --workspace packages/bim-glb-viewer",
+    "build": "npm run build --workspace packages/bim-glb-viewer",
     "test": "npm run test --workspaces --if-present",
     "audit": "npm audit --audit-level=high"
   }
