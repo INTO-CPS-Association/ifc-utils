@@ -10,7 +10,11 @@ import type { ReactElement } from 'react';
 import BlurOnIcon from '@mui/icons-material/BlurOn';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+// `HelpOutline` was removed in @mui/icons-material 9. `HelpOutlined` is the
+// same question mark in the same outlined weight, under the name that
+// survived. Importing the old one leaves the host's bundler emitting a
+// module it cannot resolve, which fails at runtime and not at build time.
+import HelpOutlineIcon from '@mui/icons-material/HelpOutlined';
 import HighlightAltIcon from '@mui/icons-material/HighlightAlt';
 import LayersClearIcon from '@mui/icons-material/LayersClear';
 import OpacityIcon from '@mui/icons-material/Opacity';
