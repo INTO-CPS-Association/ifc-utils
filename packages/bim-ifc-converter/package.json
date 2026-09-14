@@ -1,6 +1,6 @@
 {
   "name": "@into-cps-association/bim-ifc-converter",
-  "version": "0.2.1",
+  "version": "0.1.0",
   "description": "Turn an IFC file into drawable geometry and a property tree, in the browser.",
   "keywords": [
     "ifc",
@@ -34,7 +34,8 @@
   "files": [
     "dist",
     "LICENSE.md",
-    "THIRD-PARTY-NOTICES.md"
+    "THIRD-PARTY-NOTICES.md",
+    "CHANGELOG.md"
   ],
   "publishConfig": {
     "access": "public"

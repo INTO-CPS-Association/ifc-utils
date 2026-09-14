@@ -4,6 +4,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.0]
+
+The first published version. What it does:
+
+### Added
+
+- A viewer for a GLB produced from an IFC model, with the building's own colours, object outlines and a coordinates gizmo.
+- Reading and validating a binding manifest, the file that maps an IFC `GlobalId` to a sensor and its MQTT topic. Every error names the binding and the field, because a manifest is written by a person and will frequently be wrong.
+- Resolving a binding to the object it names, by `globalId`, `nodeName` or `expressId`. A binding whose object is absent is reported and counted instead of dropped, which is the ordinary consequence of a model being re-exported.
+- Live readings drawn on the model. The package subscribes to nothing and draws what it is handed, so the transport is the host's choice.
+- Four heatmap scopes: per sensor, per room, per storey and per building. Per sensor rasterises the floor and floods it from each sensor, so walls stop the colour and a doorway lets it through, which is the only scope that says anything on a model that declares no `IfcSpace`.
+- Sensor alerts: a sensor that has gone quiet, a value outside the range the model declares for it, a unit the payload and the manifest disagree on, and a value the payload says was not measured directly.
+- A floor filter, a transparency mode, a selection halo, a class legend, a property panel and a keyboard shortcut table.
+- React components for a host that wants the whole page, and a renderer-free entry point for a host that only needs the manifest logic.
+
+### Notes
+
+Versions 0.10.0 to 0.19.0 exist in this repository's git history and were never published to any registry. They were the development of the above, and the entries below are kept for the record.
+
+---
+
+## Development History, Unpublished
+
 ## [0.19.0]
 
 ### Added
