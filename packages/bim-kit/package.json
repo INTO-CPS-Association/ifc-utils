@@ -118,7 +118,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "three": "0.185.0",
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "zod": "4.1.13"
   },
   "dependencies": {
