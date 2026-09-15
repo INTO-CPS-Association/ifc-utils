@@ -112,7 +112,7 @@
   },
   "devDependencies": {
     "@mui/icons-material": "7.3.5",
-    "@mui/material": "7.3.5",
+    "@mui/material": "9.4.0",
     "@types/react": "19.2.6",
     "@types/three": "0.185.4",
     "react": "19.2.0",
