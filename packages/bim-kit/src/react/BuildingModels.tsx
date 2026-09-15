@@ -302,14 +302,6 @@ export function BuildingModels({
       width: '100%', minWidth: 0, flexGrow: 1, p: 3, overflowX: 'hidden',
     }}
     >
-      <Typography variant="h5" sx={{ mb: 1 }}>
-        Building Models
-      </Typography>
-      <Typography variant="body1" sx={{ mb: 2 }}>
-        Models uploaded to the shared library under <code>{directory}</code>.
-        Upload one on the Library page.
-      </Typography>
-
       {problem && <Alert severity="error" sx={{ mb: 2 }}>{problem}</Alert>}
 
       <Paper sx={{ p: 2, mb: 2 }}>

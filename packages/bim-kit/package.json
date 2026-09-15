@@ -1,6 +1,6 @@
 {
   "name": "@into-cps-association/bim-kit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Bind live sensor readings to the objects of a BIM model, by IFC GlobalId.",
   "keywords": [
     "ifc",

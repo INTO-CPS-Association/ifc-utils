@@ -4,6 +4,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.1]
+
+### Changed
+
+- The building models view no longer renders its own page heading or the copy about where models are uploaded. That framing is the host application's, so a page does not show the title twice and the package stays a viewer instead of carrying deployment-specific text.
+
 ## [0.1.0]
 
 The first published version. What it does:
