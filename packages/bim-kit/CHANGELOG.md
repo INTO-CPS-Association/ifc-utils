@@ -6,9 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [0.1.1]
 
+### Added
+
+- `BuildingModels` takes `onPersistGeometry`, called with a model and the GLB when that model was converted in the browser because no geometry sat beside it. A host that stores the bytes stops the model being reconverted on every visit. The package does not store anything itself and holds no opinion about where the library is written to, so the transport stays the host's choice, the same way readings are. The GLB is the model alone, before any marker or outline, so it reloads as the same shape a GLB produced outside the browser has, with the `GlobalId` of each object carried in glTF `extras`.
+- `BimCanvas` takes `onConverted`, the lower half of the same feature: it is handed the converted GLB once, and the exporter that produces it is fetched only when a host asks for the bytes, so a viewer that never stores a conversion never pulls it in.
+
 ### Changed
 
+- The model is chosen from a menu instead of a list down the page, and the one being drawn is named above its own drawing. A library with a dozen IFC files pushed the viewer below the fold, so a person scrolling names had no way to tell a model was drawn underneath. The menu keeps every file one click away, the name and the size stay in the menu where there is room for them, and a line under it says how many models the library holds.
 - The building models view no longer renders its own page heading or the copy about where models are uploaded. That framing is the host application's, so a page does not show the title twice and the package stays a viewer instead of carrying deployment-specific text.
+
+### Fixed
+
+- Surfaces no longer speckle against each other as the camera moves in. The far clipping plane was floored at five kilometres whatever the model measured, so a substation twenty metres across carried a depth range fifty thousand times its near plane and ran out of the precision needed to order two faces in the same plane, which an IFC model has wherever a slab meets a wall. The plane is a ceiling now and follows the model: for that substation the ratio drops from 50,000 to 1,407.
 
 ## [0.1.0]
 

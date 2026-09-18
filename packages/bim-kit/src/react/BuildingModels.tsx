@@ -24,13 +24,16 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  AlertTitle,
   Box,
   Chip,
   CircularProgress,
-  List,
-  ListItemButton,
+  FormControl,
+  InputLabel,
   ListItemText,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   Typography,
 } from '@mui/material';
@@ -63,7 +66,27 @@ const CONVERTS_HERE =
   'No converted geometry sits beside this model, so it is read from the IFC '
   + 'file in your browser. That takes a moment the first time.';
 
-function ModelList({
+/** Says whether a model already has geometry beside it, in one word. */
+function StateChip({ model }: Readonly<{ model: BimModel }>) {
+  return (
+    <Chip
+      size="small"
+      label={model.geometryPath ? 'Converted' : 'From IFC'}
+      color={model.geometryPath ? 'success' : 'default'}
+      variant={model.geometryPath ? 'filled' : 'outlined'}
+    />
+  );
+}
+
+/**
+ * Choose a model from a menu instead of from a list down the page.
+ *
+ * A library with a dozen IFC files pushed the viewer below the fold, so a
+ * person scrolling a list of names had no way to tell there was a model drawn
+ * underneath it. A menu keeps every file one click away and leaves the drawing
+ * where the eye lands.
+ */
+function ModelPicker({
   models,
   chosen,
   onChoose,
@@ -73,23 +96,33 @@ function ModelList({
   onChoose: (model: BimModel) => void;
 }>) {
   return (
-    <List dense>
-      {models.map((model) => (
-        <ListItemButton
-          key={model.ifcPath}
-          selected={chosen?.ifcPath === model.ifcPath}
-          onClick={() => onChoose(model)}
-        >
-          <ListItemText primary={model.name} secondary={formatSize(model.sizeBytes)} />
-          <Chip
-            size="small"
-            label={model.geometryPath ? 'Converted' : 'From IFC'}
-            color={model.geometryPath ? 'success' : 'default'}
-            variant={model.geometryPath ? 'filled' : 'outlined'}
-          />
-        </ListItemButton>
-      ))}
-    </List>
+    <FormControl fullWidth size="small">
+      <InputLabel id="bim-model-label">IFC model</InputLabel>
+      <Select
+        labelId="bim-model-label"
+        label="IFC model"
+        value={chosen?.ifcPath ?? ''}
+        onChange={(event) => {
+          const picked = models.find((model) => model.ifcPath === event.target.value);
+          if (picked) onChoose(picked);
+        }}
+        // Only the name in the closed control. The size and the state belong in
+        // the menu, where there is room for them.
+        renderValue={(value) =>
+          models.find((model) => model.ifcPath === value)?.name ?? ''}
+      >
+        {models.map((model) => (
+          <MenuItem key={model.ifcPath} value={model.ifcPath}>
+            <ListItemText
+              primary={model.name}
+              secondary={formatSize(model.sizeBytes)}
+              sx={{ mr: 2 }}
+            />
+            <StateChip model={model} />
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
   );
 }
 
@@ -110,6 +143,21 @@ export interface BuildingModelsProps {
   readings?: Map<string, Reading>;
   /** Whether the transport is connected, which no age can tell on its own. */
   feed?: FeedState;
+  /**
+   * Store the geometry converted in the browser, so the model is not
+   * reconverted on the next visit.
+   *
+   * Called with the model and its GLB when a model with no geometry beside it
+   * has just been converted here. Where the bytes go is the host's decision,
+   * because this knows nothing about how the library is written to. Returning
+   * without throwing means the geometry was stored, and the list refreshes so
+   * the model reads as converted. A rejection is swallowed: the drawing already
+   * on screen is unaffected, and the model reconverts next time instead.
+   *
+   * Absent means conversions are not stored, which is the behaviour of every
+   * version before this one.
+   */
+  onPersistGeometry?: (model: BimModel, glb: Uint8Array) => Promise<void>;
 }
 
 /**
@@ -127,15 +175,21 @@ export interface BuildingModelsProps {
  * signed in. So the message names the address and states that cause, because
  * the alternative is reading a parser error and looking in the wrong place.
  */
+/** What failed, and the address and cause behind it. */
+interface Problem {
+  summary: string;
+  detail: string;
+}
+
 async function readJson<T>(response: Response, url: string): Promise<T> {
   if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}`);
 
   const type = response.headers.get('content-type') ?? '';
   if (!type.includes('json')) {
     throw new Error(
-      `${url} returned a web page instead of data. That address is built from `
-      + 'the signed-in user name, so the workspace is probably served under a '
-      + 'different name than the one signed in.',
+      `The workspace returned a web page instead of data at ${url}. That `
+      + 'address carries the name of the signed-in user, and a workspace '
+      + 'served under a different name is what this looks like.',
     );
   }
   return response.json() as Promise<T>;
@@ -146,10 +200,11 @@ export function BuildingModels({
   directory = MODELS_DIRECTORY,
   readings = new Map(),
   feed = 'down',
+  onPersistGeometry,
 }: Readonly<BuildingModelsProps>) {
   const [models, setModels] = useState<BimModel[] | null>(null);
   const [chosen, setChosen] = useState<BimModel | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Problem | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [bindings, setBindings] = useState<Binding[]>([]);
   // A manifest a placement tool wrote marks itself proposed, so the page can
@@ -169,6 +224,10 @@ export function BuildingModels({
   // again, and choosing the same one back does not repeat what was dismissed.
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const dismiss = (text: string) => setDismissed((seen) => new Set(seen).add(text));
+  // Bumped after a conversion is stored, so the listing is read again and the
+  // just-written GLB is paired with its model. The model then reads as
+  // converted, and choosing it again loads the file instead of reconverting.
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     if (!libraryUrl) return undefined;
@@ -182,14 +241,17 @@ export function BuildingModels({
       })
       .catch((error: Error) => {
         if (!current) return;
-        setProblem(`The list of models could not be read: ${error.message}`);
+        setProblem({
+          summary: 'The shared library could not be listed.',
+          detail: error.message,
+        });
         setModels([]);
       });
 
     return () => {
       current = false;
     };
-  }, [libraryUrl, directory]);
+  }, [libraryUrl, directory, reload]);
 
   /**
    * The property tree beside the model, when there is one.
@@ -241,7 +303,12 @@ export function BuildingModels({
         setProposed(manifest.model?.proposed === true);
       })
       .catch((error: Error) => {
-        if (current) setProblem(`The manifest could not be read: ${error.message}`);
+        if (current) {
+          setProblem({
+            summary: 'The sensor manifest could not be read.',
+            detail: error.message,
+          });
+        }
       });
 
     return () => {
@@ -262,6 +329,20 @@ export function BuildingModels({
   const onReport = useCallback((message: string) => setNote(message), []);
   const onHover = useCallback((globalId: string | null) => { hovered.current = globalId; }, []);
   const onSelect = useCallback((globalId: string | null) => setSelected(globalId), []);
+
+  // A conversion just finished in the canvas. Hand it to the host to store, and
+  // when that returns, read the directory again so the new GLB is paired with
+  // its model. A host that supplies no way to store gets no callback, so the
+  // canvas never exports and nothing here runs.
+  const onConverted = useCallback((glb: Uint8Array) => {
+    if (!chosen || !onPersistGeometry) return;
+    onPersistGeometry(chosen, glb)
+      .then(() => setReload((n) => n + 1))
+      .catch(() => {
+        // The drawing is already on screen. A model with no stored geometry
+        // reconverts next time, which is the state the page was in anyway.
+      });
+  }, [chosen, onPersistGeometry]);
   const onReady = useCallback((ready: ViewerHandle) => {
     setHandle(ready);
     setSelected(null);
@@ -302,7 +383,15 @@ export function BuildingModels({
       width: '100%', minWidth: 0, flexGrow: 1, p: 3, overflowX: 'hidden',
     }}
     >
-      {problem && <Alert severity="error" sx={{ mb: 2 }}>{problem}</Alert>}
+      {/* The headline says what failed, which is the part a person acts on.
+          The address and the likely cause follow it, so a long diagnostic line
+          does not have to be read before the failure is understood. */}
+      {problem && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          <AlertTitle>{problem.summary}</AlertTitle>
+          {problem.detail}
+        </Alert>
+      )}
 
       <Paper sx={{ p: 2, mb: 2 }}>
         {models === null && <CircularProgress size={24} />}
@@ -312,7 +401,17 @@ export function BuildingModels({
           </Typography>
         )}
         {models !== null && models.length > 0 && (
-          <ModelList models={models} chosen={chosen} onChoose={setChosen} />
+          <>
+            <ModelPicker models={models} chosen={chosen} onChoose={setChosen} />
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', mt: 1 }}
+            >
+              {models.length} IFC {models.length === 1 ? 'model' : 'models'} in
+              the shared library.
+            </Typography>
+          </>
         )}
       </Paper>
 
@@ -330,6 +429,19 @@ export function BuildingModels({
 
       {chosen && (
         <Paper sx={{ p: 1 }}>
+          {/* The model being drawn, named above its own drawing, so the page
+              says what is on screen without a scroll back to the menu. */}
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{ px: 1, pt: 1, pb: 0.5 }}
+          >
+            <Typography variant="h6" component="h2">
+              {chosen.name}
+            </Typography>
+            <StateChip model={chosen} />
+          </Stack>
           {handle && (
             <>
               <Toolbar
@@ -360,6 +472,7 @@ export function BuildingModels({
               onReady={onReady}
               onHover={onHover}
               onSelect={onSelect}
+              onConverted={onPersistGeometry ? onConverted : undefined}
             />
           </Suspense>
           {handle && (

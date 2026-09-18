@@ -52,6 +52,9 @@ const SUN_LIGHT = 0.9;
 
 const FIELD_OF_VIEW = 45;
 
+// The limits of the depth range, in metres. They are a floor for the near
+// plane and a ceiling for the far one, so a model far smaller than the ceiling
+// does not pay for depth it never uses. See `frame` for why that matters.
 const NEAR_PLANE = 0.1;
 const FAR_PLANE = 5000;
 
@@ -102,8 +105,16 @@ function frame(
 
   camera.position.copy(centre)
     .add(new Vector3(...LOOK_FROM[from]).normalize().multiplyScalar(distance));
+  // Depth precision falls as the ratio of far to near grows, and an IFC model
+  // has coplanar faces everywhere a slab meets a wall or one storey is built on
+  // the next. Once precision runs out those faces cannot be ordered and they
+  // flicker against each other as the camera moves, which is the speckle that
+  // appears on zoom. The far plane used to be floored at FAR_PLANE, so a
+  // hundred metre building carried a five kilometre range and spent almost all
+  // of its depth buffer on empty space. It is a ceiling now, and both planes
+  // follow the model.
   camera.near = Math.max(distance / 1000, NEAR_PLANE);
-  camera.far = Math.max(distance * 10, FAR_PLANE);
+  camera.far = Math.min(distance * 10, FAR_PLANE);
   camera.updateProjectionMatrix();
   controls.target.copy(centre);
   controls.update();
@@ -189,6 +200,55 @@ export interface BimCanvasProps {
   /** Told which object the cursor is over, and which is selected. */
   onHover?: (globalId: string | null) => void;
   onSelect?: (globalId: string | null) => void;
+  /**
+   * Handed the converted geometry as a GLB, once, when `convert` was true and
+   * the conversion succeeded. It is the model on its own, before any marker or
+   * outline is added, so it is the same shape a GLB produced outside the
+   * browser has. A host that wants to store the result so the model is not
+   * reconverted on the next visit reads it here. Nothing is stored when this is
+   * absent, and a host that stores it decides where, because this knows nothing
+   * about where the model's files live.
+   */
+  onConverted?: (glb: Uint8Array) => void;
+}
+
+/**
+ * The subset of three's `GLTFExporter` this file uses.
+ *
+ * Typed here instead of importing the class, because the exporter is fetched
+ * dynamically only when a conversion has to be stored, so its type must not
+ * pull the module into the static graph.
+ */
+type GltfExporter = {
+  parse(
+    input: Object3D,
+    onDone: (result: ArrayBuffer | object) => void,
+    onError: (error: unknown) => void,
+    options: { binary?: boolean; onlyVisible?: boolean },
+  ): void;
+};
+
+/**
+ * Serialise a model to the bytes of a binary glTF.
+ *
+ * `binary: true` asks for a GLB, which arrives as an `ArrayBuffer`.
+ * `onlyVisible: false` keeps every object, so a model exported while a floor
+ * filter hides part of it still stores the whole building.
+ */
+function exportGlb(
+  Exporter: new () => GltfExporter,
+  model: Object3D,
+): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    new Exporter().parse(
+      model,
+      (result) => resolve(new Uint8Array(result as ArrayBuffer)),
+      (error) => reject(
+        error instanceof Error ? error : new Error('the geometry could not be exported'),
+      ),
+      { binary: true, onlyVisible: false },
+    );
+  });
 }
 
 /** What a page can do to the scene from outside. */
@@ -210,7 +270,7 @@ export interface ViewerHandle {
 
 function BimCanvas({
   url, convert = false, bindings = [], proposed = false, tree,
-  onReport, onReady, onHover, onSelect,
+  onReport, onReady, onHover, onSelect, onConverted,
 }: Readonly<BimCanvasProps>) {
   const holder = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
@@ -400,7 +460,28 @@ function BimCanvas({
         });
         const dropped = converted.failed === 0 ? ''
           : ` ${converted.failed} could not be turned into geometry.`;
-        show(meshesFrom(converted),
+        const model = meshesFrom(converted);
+
+        // Store the geometry before the scene decorates the model. `show` adds
+        // markers and outlines to it, and the stored GLB has to be the model
+        // alone so it reloads as the same shape a GLB from outside the browser
+        // has. The exporter is fetched only here, so a viewer that never stores
+        // a conversion never pulls it in. This is best-effort: a failed export
+        // leaves the drawing untouched, and the model simply reconverts next
+        // time instead of loading a file that was never written.
+        if (onConverted) {
+          try {
+            const { GLTFExporter } = await import(
+              'three/examples/jsm/exporters/GLTFExporter.js'
+            );
+            const glb = await exportGlb(GLTFExporter as never, model);
+            if (running) onConverted(glb);
+          } catch {
+            // Persistence is an optimisation, not a requirement for drawing.
+          }
+        }
+
+        show(model,
           `Converted in the browser: ${converted.objects.length} objects.${dropped}`);
       })().catch((error: Error) => failed(`This model could not be converted. ${error.message}`));
     } else {
@@ -430,7 +511,7 @@ function BimCanvas({
       renderer.forceContextLoss();
       parent.removeChild(renderer.domElement);
     };
-  }, [url, convert, bindings, proposed, tree, onReport, onReady, onHover, onSelect]);
+  }, [url, convert, bindings, proposed, tree, onReport, onReady, onHover, onSelect, onConverted]);
 
   return (
     <Box sx={{
