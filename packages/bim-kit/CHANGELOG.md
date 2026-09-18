@@ -10,10 +10,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - `BuildingModels` takes `onPersistGeometry`, called with a model and the GLB when that model was converted in the browser because no geometry sat beside it. A host that stores the bytes stops the model being reconverted on every visit. The package does not store anything itself and holds no opinion about where the library is written to, so the transport stays the host's choice, the same way readings are. The GLB is the model alone, before any marker or outline, so it reloads as the same shape a GLB produced outside the browser has, with the `GlobalId` of each object carried in glTF `extras`.
 - `BimCanvas` takes `onConverted`, the lower half of the same feature: it is handed the converted GLB once, and the exporter that produces it is fetched only when a host asks for the bytes, so a viewer that never stores a conversion never pulls it in.
+- `BuildingModels` reads an optional `catalogue.json` from the models directory, which maps an IFC file name to the name of the building it holds. A file name says what the file is called and not what the building is, and a library of a dozen of them is unreadable without that. The package names nothing itself: a deployment decides what its buildings are called by editing one file in its own library, and a catalogue that is absent, unreadable or broken leaves every model under its file name instead of failing the list. `readCatalogue` and `CATALOGUE_FILE` are exported for a host that wants to write one.
 
 ### Changed
 
 - The model is chosen from a menu instead of a list down the page, and the one being drawn is named above its own drawing. A library with a dozen IFC files pushed the viewer below the fold, so a person scrolling names had no way to tell a model was drawn underneath. The menu keeps every file one click away, the name and the size stay in the menu where there is room for them, and a line under it says how many models the library holds.
+- The model picker is named by a heading above it, `IFC Model`, instead of by a floating label inside the control, so the section is named the same way the chosen model is named above its drawing.
 - The building models view no longer renders its own page heading or the copy about where models are uploaded. That framing is the host application's, so a page does not show the title twice and the package stays a viewer instead of carrying deployment-specific text.
 
 ### Fixed

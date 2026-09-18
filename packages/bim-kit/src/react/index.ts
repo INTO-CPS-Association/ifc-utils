@@ -22,11 +22,13 @@ export { HelpPanel, type HelpPanelProps } from './HelpPanel.js';
 // alone imports it from its own path.
 export type { BimCanvasProps } from './BimCanvas.js';
 export {
+  CATALOGUE_FILE,
   MODELS_DIRECTORY,
   contentsUrl,
   fileUrl,
   formatSize,
   pairModels,
+  readCatalogue,
   type BimModel,
   type LibraryEntry,
 } from './assets.js';

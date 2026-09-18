@@ -29,7 +29,6 @@ import {
   Chip,
   CircularProgress,
   FormControl,
-  InputLabel,
   ListItemText,
   MenuItem,
   Paper,
@@ -53,6 +52,7 @@ import {
   fileUrl,
   formatSize,
   pairModels,
+  readCatalogue,
   type BimModel,
   type LibraryEntry,
 } from './assets.js';
@@ -97,10 +97,14 @@ function ModelPicker({
 }>) {
   return (
     <FormControl fullWidth size="small">
-      <InputLabel id="bim-model-label">IFC model</InputLabel>
+      {/* A heading rather than a floating label, so the section is named before
+          the control instead of inside it, the same way the chosen model is
+          named above its drawing. */}
+      <Typography variant="subtitle2" component="h2" id="bim-model-label" sx={{ mb: 1 }}>
+        IFC Model
+      </Typography>
       <Select
-        labelId="bim-model-label"
-        label="IFC model"
+        aria-labelledby="bim-model-label"
         value={chosen?.ifcPath ?? ''}
         onChange={(event) => {
           const picked = models.find((model) => model.ifcPath === event.target.value);
@@ -109,12 +113,12 @@ function ModelPicker({
         // Only the name in the closed control. The size and the state belong in
         // the menu, where there is room for them.
         renderValue={(value) =>
-          models.find((model) => model.ifcPath === value)?.name ?? ''}
+          models.find((model) => model.ifcPath === value)?.title ?? ''}
       >
         {models.map((model) => (
           <MenuItem key={model.ifcPath} value={model.ifcPath}>
             <ListItemText
-              primary={model.name}
+              primary={model.title}
               secondary={formatSize(model.sizeBytes)}
               sx={{ mr: 2 }}
             />
@@ -234,10 +238,17 @@ export function BuildingModels({
     let current = true;
 
     const url = contentsUrl(libraryUrl, directory);
-    fetch(url, { credentials: 'include' })
-      .then((response) => readJson<{ content?: LibraryEntry[] }>(response, url))
-      .then((listing) => {
-        if (current) setModels(pairModels(listing.content ?? []));
+    // The listing decides whether the page works, so its failure is reported.
+    // The catalogue only decides what the models are called, so it is fetched
+    // beside the listing and never fails the page.
+    Promise.all([
+      fetch(url, { credentials: 'include' }).then((response) =>
+        readJson<{ content?: LibraryEntry[] }>(response, url),
+      ),
+      readCatalogue(libraryUrl, directory),
+    ])
+      .then(([listing, titles]) => {
+        if (current) setModels(pairModels(listing.content ?? [], titles));
       })
       .catch((error: Error) => {
         if (!current) return;
@@ -438,7 +449,7 @@ export function BuildingModels({
             sx={{ px: 1, pt: 1, pb: 0.5 }}
           >
             <Typography variant="h6" component="h2">
-              {chosen.name}
+              {chosen.title}
             </Typography>
             <StateChip model={chosen} />
           </Stack>

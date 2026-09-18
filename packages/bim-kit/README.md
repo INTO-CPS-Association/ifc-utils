@@ -79,6 +79,28 @@ if (!result.ok) {
 }
 ```
 
+## Naming The Buildings
+
+A file name says what the file is called, not what the building is, so a library
+of a dozen IFC files reads as a list of export names. `BuildingModels` looks for
+`catalogue.json` in the models directory and uses it to name them:
+
+```json
+{
+  "Building_1911_AK_v2.ifc": "Navitas, Building 1911",
+  "2116_FEAS_kedelhuset.ifc": "FEAS Kedelhuset"
+}
+```
+
+The key is the IFC file name and the value is what to show. A model the file does
+not mention keeps its file name, and so does every model when the file is absent,
+unreadable or broken, because a naming file must never be able to break the list
+of models.
+
+Nothing is named inside this package. A deployment decides what its own buildings
+are called by editing one file in its own library, and no version of this package
+is involved.
+
 ## The Manifest
 
 The shape is the one issue 1762 proposes.

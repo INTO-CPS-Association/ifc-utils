@@ -30,6 +30,15 @@ export interface LibraryEntry {
 export interface BimModel {
   /** The file name without its suffix, which is what a person recognises. */
   name: string;
+  /**
+   * What to call the model on screen.
+   *
+   * A file name says what the file is called and not what the building is, so
+   * `catalogue.json` beside the models can give each one a title. Without that
+   * file, or without an entry in it, this is the file name and the page reads
+   * exactly as it did before.
+   */
+  title: string;
   ifcPath: string;
   sizeBytes?: number;
   /** Present once the conversion has run. Absent means it has not. */
@@ -50,6 +59,24 @@ const MANIFEST = '.manifest.json';
 /** Where the models a person uploads are kept, under the shared library. */
 export const MODELS_DIRECTORY = 'common/models';
 
+/**
+ * The optional file that names the buildings, read from the models directory.
+ *
+ * It maps an IFC file name to the title to show, and nothing more:
+ *
+ * ```json
+ * {
+ *   "Building_1911_AK_v2.ifc": "Navitas, Building 1911",
+ *   "2116_FEAS_kedelhuset.ifc": "FEAS Kedelhuset"
+ * }
+ * ```
+ *
+ * Absent, unreadable or malformed, every model keeps its file name. Nothing is
+ * named in this package, so a deployment decides what its buildings are called
+ * by editing one file in its own library.
+ */
+export const CATALOGUE_FILE = 'catalogue.json';
+
 function stemOf(name: string, suffix: string): string {
   return name.slice(0, name.length - suffix.length);
 }
@@ -66,7 +93,10 @@ function endsWith(name: string, suffix: string): boolean {
  * returned, so the page can say that conversion has not run instead of
  * leaving the model out and looking like it was never uploaded.
  */
-export function pairModels(entries: LibraryEntry[]): BimModel[] {
+export function pairModels(
+  entries: LibraryEntry[],
+  titles: ReadonlyMap<string, string> = new Map(),
+): BimModel[] {
   const derived = new Map<string, LibraryEntry>();
   for (const entry of entries) {
     if (endsWith(entry.name, GEOMETRY)) {
@@ -84,6 +114,7 @@ export function pairModels(entries: LibraryEntry[]): BimModel[] {
       const stem = stemOf(entry.name, IFC);
       return {
         name: stem,
+        title: titles.get(entry.name) ?? stem,
         ifcPath: entry.path,
         sizeBytes: entry.size,
         geometryPath: derived.get(stem + GEOMETRY)?.path,
@@ -91,7 +122,7 @@ export function pairModels(entries: LibraryEntry[]): BimModel[] {
         manifestPath: derived.get(stem + MANIFEST)?.path,
       };
     })
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) => left.title.localeCompare(right.title));
 }
 
 /**
@@ -116,6 +147,43 @@ export function contentsUrl(libraryUrl: string, path: string): string {
 /** The bytes of one file. */
 export function fileUrl(libraryUrl: string, path: string): string {
   return join(libraryUrl, 'files', path);
+}
+
+/**
+ * The titles in the catalogue, or an empty map when there are none.
+ *
+ * Never rejects. The catalogue is an optional convenience, so a missing file, a
+ * server that answers with a page instead of data, or a file somebody has
+ * broken while editing all mean the same thing here: no titles, and every model
+ * keeps its file name. Failing the whole models list over a naming file would
+ * be the wrong trade.
+ */
+export async function readCatalogue(
+  libraryUrl: string,
+  directory: string = MODELS_DIRECTORY,
+): Promise<Map<string, string>> {
+  const titles = new Map<string, string>();
+  try {
+    const response = await fetch(
+      fileUrl(libraryUrl, `${directory}/${CATALOGUE_FILE}`),
+      { credentials: 'include' },
+    );
+    if (!response.ok) return titles;
+
+    const parsed: unknown = await response.json();
+    if (typeof parsed !== 'object' || parsed === null) return titles;
+
+    // Only string values are taken, so a number or an object left in the file
+    // by mistake is skipped instead of reaching the page as "[object Object]".
+    Object.entries(parsed as Record<string, unknown>).forEach(([file, title]) => {
+      if (typeof title === 'string' && title.trim() !== '') {
+        titles.set(file, title.trim());
+      }
+    });
+  } catch {
+    return titles;
+  }
+  return titles;
 }
 
 /** How large a model is, for a page that has to admit a 24 MB download. */
