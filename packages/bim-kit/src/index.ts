@@ -47,6 +47,13 @@ export {
 } from './resolver.js';
 
 export { rampColour, RAMP_STOPS } from './ramp.js';
+export {
+  IFC_HEAD_BYTES,
+  decodeStepString,
+  entityArguments,
+  ifcBuildingName,
+  usableName,
+} from './ifcName.js';
 
 export {
   alertsOf,

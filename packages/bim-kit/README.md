@@ -81,27 +81,20 @@ if (!result.ok) {
 
 ## Naming The Buildings
 
-A file name says what a file is called, not what the building is. `BuildingModels` reads `catalogue.json` from the models directory and names each model from it:
+A file name says what a file is called, not what the building is. `BuildingModels` shows each model by the name its IFC file gives the building, read from the file itself. Nothing is named in this package, and there is no separate file of names: the name lives in the model.
 
-```json
-{
-  "2116_FEAS_kedelhuset.ifc": "FEAS - Kommunehospital",
-  "Building_1911_AK_v2.ifc": "Pædagogisk Center"
-}
-```
+An IFC file names its project and its building near the top. In every model this was written against, both sit within the first 6 KB, including one of 64 MB, so the page requests only the first 64 KB of each file with an HTTP range. Twelve models are named in about 150 ms, and a server that ignores the range is read only as far as that too, so no model is ever downloaded to name it.
 
-The key is the IFC file name and the value is what to show. A model the file does not mention shows its file name with its separators read as spaces, and so does every model when the file is absent, unreadable or broken, because a naming file must never be able to break the list of models.
+The name is taken from the project's `LongName`, then its `Name`, then the building's. In the real models the name was on the project, and the building's own name was empty, template text, or once misspelt. Template text nobody replaced, "Project Name" and "Building Name", and a job number such as 34372 are not names and are skipped. A model whose file gives no name is shown by its file name, with its separators read as spaces. A name two files share identifies neither, so both keep their file names.
 
-The catalogue is generated from the IFC files by `ifc-to-catalogue`, in the `ifc-converter` package of this repository, which reads the name each file carries on its project and its building:
+To name a building whose file does not, write the name into the file with `ifc-set-name`, in the `ifc-converter` package of this repository:
 
 ```sh
-ifc-to-catalogue common/models --dry-run   # show what it would write
-ifc-to-catalogue common/models             # write catalogue.json
+ifc-set-name Building_1912_AK_v4.ifc "Name of the building" --dry-run
+ifc-set-name Building_1912_AK_v4.ifc "Name of the building"
 ```
 
-Many files carry no name. A Revit export that nobody filled in keeps the template text, "Project Name" and "Building Name", and those are skipped instead of shown. For such a building, a person writes the name in `catalogue.overrides.json` beside the models, in the same shape. The generator applies it on top and never overwrites it, so `catalogue.json` itself is never edited by hand.
-
-Nothing is named inside this package, and no version of it is involved in naming a deployment's buildings.
+It sets the project's `LongName` and changes nothing else: every byte outside that one argument is left as it was, and no `GlobalId` moves, so a manifest keeps its sensors.
 
 ## The Manifest
 

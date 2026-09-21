@@ -31,7 +31,7 @@ Issues = "https://github.com/INTO-CPS-Association/ifc-utils/issues"
 ifc-to-glb = "ifc_converter.to_glb:main"
 ifc-to-metadata = "ifc_converter.to_metadata:main"
 ifc-to-manifest = "ifc_converter.to_manifest:main"
-ifc-to-catalogue = "ifc_converter.to_catalogue:main"
+ifc-set-name = "ifc_converter.set_name:main"
 
 [project.optional-dependencies]
 test = ["pytest==8.3.4"]

@@ -52,7 +52,8 @@ import {
   fileUrl,
   formatSize,
   pairModels,
-  readCatalogue,
+  readIfcName,
+  uniqueNames,
   type BimModel,
   type LibraryEntry,
 } from './assets.js';
@@ -258,16 +259,25 @@ export function BuildingModels({
 
     const url = contentsUrl(libraryUrl, directory);
     // The listing decides whether the page works, so its failure is reported.
-    // The catalogue only decides what the models are called, so it is fetched
-    // beside the listing and never fails the page.
-    Promise.all([
-      fetch(url, { credentials: 'include' }).then((response) =>
-        readJson<{ content?: LibraryEntry[] }>(response, url),
-      ),
-      readCatalogue(libraryUrl, directory),
-    ])
-      .then(([listing, titles]) => {
-        if (current) setModels(pairModels(listing.content ?? [], titles));
+    fetch(url, { credentials: 'include' })
+      .then((response) => readJson<{ content?: LibraryEntry[] }>(response, url))
+      .then((listing) => {
+        if (!current) return;
+        const entries = listing.content ?? [];
+        // Shown straight away under their file names, so the menu is usable
+        // while the names are read.
+        setModels(pairModels(entries));
+
+        // Then named from the files themselves, the start of each read in
+        // parallel. A name that cannot be read leaves the file name in place,
+        // so this never fails the page.
+        const ifcs = entries.filter((entry) => entry.name.toLowerCase().endsWith('.ifc'));
+        Promise.all(ifcs.map((entry) => readIfcName(libraryUrl, entry.path)))
+          .then((found) => {
+            if (!current) return;
+            const names = new Map(ifcs.map((entry, i) => [entry.name, found[i]]));
+            setModels(pairModels(entries, uniqueNames(names)));
+          });
       })
       .catch((error: Error) => {
         if (!current) return;
