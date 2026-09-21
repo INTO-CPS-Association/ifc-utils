@@ -539,3 +539,21 @@ test('choosing a floor shows that floor', async () => {
 
   assert.equal(view.state.storey, 'L2');
 });
+
+test('the floor picker sits on the toolbar row, right after its last button', async () => {
+  // One line of controls above the drawing. jsdom has no layout, so this
+  // checks the structure that produces it: the toolbar and the floor picker
+  // are siblings in one wrapping row, with the picker after the toolbar.
+  workspace({ files: [ifc('Building_1912_AK_v4.ifc')], heads: { 'Building_1912_AK_v4.ifc': TEMPLATE } });
+  const user = userEvent.setup();
+  show();
+
+  await screen.findByText(/1 IFC model/);
+  await choose(user, 'Building 1912 AK v4');
+  await viewerReady();
+
+  const toolbar = document.querySelector('[data-revision]');
+  const floor = screen.getByRole('combobox', { name: /^Floor/ });
+  assert.ok(toolbar.nextElementSibling.contains(floor));
+  assert.equal(getComputedStyle(toolbar.parentElement).flexWrap, 'wrap');
+});

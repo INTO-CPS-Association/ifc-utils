@@ -107,12 +107,9 @@ function ModelPicker({
   onChoose: (model: BimModel) => void;
 }>) {
   return (
-    // Wide enough for the longest name in the DTaaS library,
-    // "[3D IFC SG] Project CleanTech One 02-24 IFC SG", to show in full. A
-    // longer one is cut in the closed control, where the heading above the
-    // drawing still names the model in full, and the open menu is as wide as
-    // its longest entry.
-    <FormControl fullWidth size="small" sx={{ maxWidth: '30rem' }}>
+    // As wide as the messages below it, so the picker, the notices and the
+    // drawing share one column and a long model name shows in full.
+    <FormControl fullWidth size="small">
       {/* A heading and not a floating label, so the section is named before
           the control instead of inside it, the same way the chosen model is
           named above its drawing. */}
@@ -553,7 +550,13 @@ export function BuildingModels({
             <StateChip model={current ?? chosen} />
           </Stack>
           {handle && (
-            <>
+            // The floor picker sits on the toolbar's row, after its last
+            // button, so the controls above the drawing take one line. It
+            // wraps to the next line when the page is too narrow for both.
+            <Box sx={{
+              display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1,
+            }}
+            >
               <Toolbar
                 view={handle.view}
                 context={shortcutContext(handle.view)}
@@ -568,7 +571,7 @@ export function BuildingModels({
                   bump((n) => n + 1);
                 }}
               />
-            </>
+            </Box>
           )}
           <Suspense fallback={<CircularProgress sx={{ m: 4 }} />}>
             <BimCanvas

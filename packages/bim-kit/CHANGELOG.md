@@ -4,6 +4,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- The model picker is as wide as the messages under it, so the picker, the notices and the drawing share one column.
+- The floor picker sits on the toolbar's row, after its last button, and wraps to the next line only when the page is too narrow for both.
+
 ## [0.1.1]
 
 ### Added
