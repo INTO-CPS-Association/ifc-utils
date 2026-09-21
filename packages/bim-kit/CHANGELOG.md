@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- `MODELS_DIRECTORY` is deprecated, and a host passes `directory` to `BuildingModels` instead. Where a deployment keeps its models is that deployment's convention, so the package should be told and not assume it. The default stays for compatibility with 0.1.0, which exported it, and goes in 0.2.0.
 - The model is chosen from a menu instead of a list down the page, and the one being drawn is named above its own drawing. A library with a dozen IFC files pushed the viewer below the fold, so a person scrolling names had no way to tell a model was drawn underneath. The menu keeps every file one click away, the name and the size stay in the menu where there is room for them, and a line under it says how many models the library holds.
 - The class legend rows are 32 pixels high. A host theme that gives every list button a 44 pixel minimum, right for a navigation drawer, made each row of the legend that tall and pushed most of a dozen classes out of sight. Thirty two pixels stays above the 24 pixel target size WCAG 2.2 sets at level AA.
 - The model picker sits on the page at the width of the search field on every other page, instead of filling the row inside a padded panel of its own, which made it read as a different kind of control.

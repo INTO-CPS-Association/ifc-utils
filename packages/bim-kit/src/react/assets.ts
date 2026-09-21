@@ -1,12 +1,12 @@
 /**
  * Finding the building models a user has, and the geometry derived from them.
  *
- * A person uploads an IFC file through the Library page, which lands it in the
- * workspace at `common/models/`. The browser cannot read IFC: it is a text
- * exchange format holding parametric solids, and turning it into triangles is
- * the job of a geometry kernel that does not run here. Conversion happens
- * outside the browser and leaves its result beside the source, so this module
- * only has to notice whether that has happened.
+ * The models sit in a directory of the user's library that the host names: this
+ * package does not know where a deployment keeps them. An IFC file is a text
+ * exchange format holding parametric solids, and a GLB converted from it sits
+ * beside it when one has been made, so this module pairs each IFC with what has
+ * been derived from it and reads the building's name from the start of the
+ * file.
  *
  * The Library page already embeds the workspace file server, so the same
  * server answers here: `api/contents` lists a directory and `files` serves the
@@ -57,7 +57,13 @@ const TREE = '.json';
 // taken for the property tree.
 const MANIFEST = '.manifest.json';
 
-/** Where the models a person uploads are kept, under the shared library. */
+/**
+ * The directory DTaaS keeps models in, kept only so a host of 0.1.0 still works.
+ *
+ * @deprecated The directory is the host's convention and not this package's,
+ * so a host passes it to `BuildingModels` as `directory`. This default is kept
+ * for compatibility with 0.1.0, which exported it, and goes in 0.2.0.
+ */
 export const MODELS_DIRECTORY = 'common/models';
 
 

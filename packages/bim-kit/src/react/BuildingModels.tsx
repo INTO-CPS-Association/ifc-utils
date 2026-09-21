@@ -1,8 +1,8 @@
 /**
  * The building models page.
  *
- * A person uploads an IFC file to the shared library and it lands in the
- * workspace at `common/models`. This lists what is there and draws it.
+ * A person uploads an IFC file to the directory of their library that the host
+ * names. This lists what is there and draws it.
  *
  * An IFC file cannot be drawn as it stands. It is a text exchange format
  * holding parametric solids, and turning those into triangles needs a geometry
@@ -151,7 +151,12 @@ export interface BuildingModelsProps {
    * `https://host/jane/`. The host knows this and the package cannot.
    */
   libraryUrl: string;
-  /** Which directory under the library holds the models. */
+  /**
+   * Which directory under the library holds the models.
+   *
+   * The host's convention, so the host passes it. Left out, it falls back to
+   * the directory DTaaS uses, which is deprecated and goes in 0.2.0.
+   */
   directory?: string;
   /**
    * The last value received for each object, keyed by GlobalId.
