@@ -119,7 +119,11 @@ function ModelPicker({
         IFC Model
       </Typography>
       <Select
-        aria-labelledby="bim-model-label"
+        // labelId and not aria-labelledby. Passed straight to Select, the
+        // attribute lands on the outer box, and the element with the combobox
+        // role, the one a screen reader announces, was left with no name.
+        // labelId is the prop MUI puts on that element.
+        labelId="bim-model-label"
         value={chosen?.ifcPath ?? ''}
         onChange={(event) => {
           const picked = models.find((model) => model.ifcPath === event.target.value);
@@ -219,10 +223,21 @@ async function readJson<T>(response: Response, url: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/**
+ * The readings a host that passes none gets, shared by every render.
+ *
+ * A default of `new Map()` in the parameter list made a new map on every
+ * render. The effect that applies readings depends on it and repaints, which
+ * renders again, which made another map: once the viewer was ready the page
+ * applied readings and repainted the model without end. One map, made once,
+ * has the same identity every time.
+ */
+const NO_READINGS = new Map<string, Reading>();
+
 export function BuildingModels({
   libraryUrl,
   directory = MODELS_DIRECTORY,
-  readings = new Map(),
+  readings = NO_READINGS,
   feed = 'down',
   onPersistGeometry,
 }: Readonly<BuildingModelsProps>) {
@@ -525,8 +540,11 @@ export function BuildingModels({
             spacing={1}
             sx={{ px: 1, pt: 1, pb: 0.5 }}
           >
+            {/* From the listing, like the chip beside it: a model can be chosen
+                before its name has been read from its file, and the object picked
+                from the menu keeps the file name it had then. */}
             <Typography variant="h6" component="h2">
-              {chosen.title}
+              {(current ?? chosen).title}
             </Typography>
             <StateChip model={current ?? chosen} />
           </Stack>
