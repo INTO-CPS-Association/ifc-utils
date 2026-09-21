@@ -15,11 +15,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - The model is chosen from a menu instead of a list down the page, and the one being drawn is named above its own drawing. A library with a dozen IFC files pushed the viewer below the fold, so a person scrolling names had no way to tell a model was drawn underneath. The menu keeps every file one click away, the name and the size stay in the menu where there is room for them, and a line under it says how many models the library holds.
+- The class legend rows are 32 pixels high. A host theme that gives every list button a 44 pixel minimum, right for a navigation drawer, made each row of the legend that tall and pushed most of a dozen classes out of sight. Thirty two pixels stays above the 24 pixel target size WCAG 2.2 sets at level AA.
+- The model picker sits on the page at the width of the search field on every other page, instead of filling the row inside a padded panel of its own, which made it read as a different kind of control.
 - The model picker is named by a heading above it, `IFC Model`, instead of by a floating label inside the control, so the section is named the same way the chosen model is named above its drawing.
 - The building models view no longer renders its own page heading or the copy about where models are uploaded. That framing is the host application's, so a page does not show the title twice and the package stays a viewer instead of carrying deployment-specific text.
 
 ### Fixed
 
+- The page says when it is storing a conversion, and says when it has. A large model goes up in dozens of pieces, and the page used to show nothing while that happened, so a person who looked at the menu in the meantime saw the model still marked From IFC and concluded the save had failed. It shows a progress message while saving, a success message once stored, and a warning when the store is refused, since that cost lands on the next visit.
+- The model being drawn is described by the latest listing. The chosen model was the object picked from the menu and was never refreshed, so after a save the chip beside its name and the notice that it was read from the IFC file both stayed wrong until the model was chosen again. The canvas stays bound to the object it was mounted with, so the model already on screen is not redrawn.
 - Surfaces no longer speckle against each other as the camera moves in. The far clipping plane was floored at five kilometres whatever the model measured, so a substation twenty metres across carried a depth range fifty thousand times its near plane and ran out of the precision needed to order two faces in the same plane, which an IFC model has wherever a slab meets a wall. The plane is a ceiling now and follows the model: for that substation the ratio drops from 50,000 to 1,407.
 
 ## [0.1.0]

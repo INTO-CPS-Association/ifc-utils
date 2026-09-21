@@ -53,14 +53,19 @@ export function ClassLegend({ view, onChange }: Readonly<ClassLegendProps>) {
   return (
     <Paper variant="outlined" sx={{ p: 1 }}>
       <Typography variant="caption" color="text.secondary">In This Model</Typography>
-      <Stack sx={{ mt: 0.5, gap: 0.3 }}>
+      <Stack sx={{ mt: 0.5, gap: 0.25 }}>
         {[...colours].map(([ifcClass, colour]) => (
           <ListItemButton
             key={ifcClass}
             dense
             selected={view.state.highlightedClass === ifcClass}
             onClick={() => pick(ifcClass)}
-            sx={{ gap: 0.75, py: 0.2, borderRadius: 1 }}
+            // A host theme may give every list button a 44 pixel minimum, which
+            // is right for a navigation drawer a finger has to hit and wrong for
+            // a legend of dozens of classes, where it pushed most of the list
+            // out of sight. Thirty two pixels keeps each row above the 24 pixel
+            // target size WCAG 2.2 sets at level AA.
+            sx={{ gap: 0.75, py: 0.2, minHeight: 32, borderRadius: 1 }}
           >
             <Swatch colour={colour} />
             <Typography variant="body2">{ifcClass.replace(/^Ifc/, '')}</Typography>

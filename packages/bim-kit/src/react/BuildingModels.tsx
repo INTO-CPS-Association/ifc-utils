@@ -62,6 +62,16 @@ import {
 // shows up there immediately.
 const BimCanvas = lazy(() => import('./BimCanvas.js'));
 
+const SAVING =
+  'Saving the conversion to the library, so the next visit loads it instead '
+  + 'of converting again. A large model takes a moment.';
+
+const STORED =
+  'Stored in the library. The next visit loads this model without converting it.';
+
+const NOT_STORED =
+  'The conversion could not be stored, so this model will convert again next time.';
+
 const CONVERTS_HERE =
   'No converted geometry sits beside this model, so it is read from the IFC '
   + 'file in your browser. That takes a moment the first time.';
@@ -96,7 +106,11 @@ function ModelPicker({
   onChoose: (model: BimModel) => void;
 }>) {
   return (
-    <FormControl fullWidth size="small">
+    // Three hundred pixels, the width of the search field on every other page.
+    // A long file name is cut in the closed control, where the heading above
+    // the drawing already names the model in full, and the open menu is as
+    // wide as its longest entry.
+    <FormControl fullWidth size="small" sx={{ maxWidth: 300 }}>
       {/* A heading rather than a floating label, so the section is named before
           the control instead of inside it, the same way the chosen model is
           named above its drawing. */}
@@ -232,6 +246,11 @@ export function BuildingModels({
   // just-written GLB is paired with its model. The model then reads as
   // converted, and choosing it again loads the file instead of reconverting.
   const [reload, setReload] = useState(0);
+  // Where the last conversion is on its way to the library. A large model goes
+  // up in dozens of pieces, and without this the page said nothing while it
+  // happened, so a person who looked at the menu in the meantime saw the model
+  // still marked as unconverted and concluded the save had failed.
+  const [save, setSave] = useState<'idle' | 'saving' | 'stored' | 'failed'>('idle');
 
   useEffect(() => {
     if (!libraryUrl) return undefined;
@@ -345,13 +364,33 @@ export function BuildingModels({
   // when that returns, read the directory again so the new GLB is paired with
   // its model. A host that supplies no way to store gets no callback, so the
   // canvas never exports and nothing here runs.
+  // The chosen model as the latest listing describes it. The canvas stays bound
+  // to `chosen`, because swapping that object after a save would change the
+  // canvas key and redraw the model already on screen. Everything the page says
+  // about the model reads from here instead, so it follows the save.
+  const current = chosen
+    ? models?.find((model) => model.ifcPath === chosen.ifcPath) ?? chosen
+    : null;
+
+  // A save belongs to the model it was made for. Choosing another one clears
+  // the message, so a model is never described by the save of the last one.
+  const choose = useCallback((model: BimModel) => {
+    setSave('idle');
+    setChosen(model);
+  }, []);
+
   const onConverted = useCallback((glb: Uint8Array) => {
     if (!chosen || !onPersistGeometry) return;
+    setSave('saving');
     onPersistGeometry(chosen, glb)
-      .then(() => setReload((n) => n + 1))
+      .then(() => {
+        setSave('stored');
+        setReload((n) => n + 1);
+      })
       .catch(() => {
-        // The drawing is already on screen. A model with no stored geometry
-        // reconverts next time, which is the state the page was in anyway.
+        // The drawing is already on screen, so nothing is lost now. The page
+        // says so, because the cost lands on the next visit, which reconverts.
+        setSave('failed');
       });
   }, [chosen, onPersistGeometry]);
   const onReady = useCallback((ready: ViewerHandle) => {
@@ -404,7 +443,10 @@ export function BuildingModels({
         </Alert>
       )}
 
-      <Paper sx={{ p: 2, mb: 2 }}>
+      {/* On the page, the way the search field on the other pages is, and
+          not in a box of its own: in a padded, bordered panel it read as a
+          different kind of control from every other one in the application. */}
+      <Box sx={{ mb: 3 }}>
         {models === null && <CircularProgress size={24} />}
         {models?.length === 0 && (
           <Typography variant="body2">
@@ -413,7 +455,7 @@ export function BuildingModels({
         )}
         {models !== null && models.length > 0 && (
           <>
-            <ModelPicker models={models} chosen={chosen} onChoose={setChosen} />
+            <ModelPicker models={models} chosen={chosen} onChoose={choose} />
             <Typography
               variant="caption"
               color="text.secondary"
@@ -424,11 +466,31 @@ export function BuildingModels({
             </Typography>
           </>
         )}
-      </Paper>
+      </Box>
 
-      {chosen && !chosen.geometryPath && !dismissed.has(CONVERTS_HERE) && (
+      {current && !current.geometryPath && !dismissed.has(CONVERTS_HERE) && (
         <Alert severity="info" sx={{ mb: 2 }} onClose={() => dismiss(CONVERTS_HERE)}>
           {CONVERTS_HERE}
+        </Alert>
+      )}
+
+      {save === 'saving' && (
+        <Alert
+          severity="info"
+          icon={<CircularProgress size={18} />}
+          sx={{ mb: 2 }}
+        >
+          {SAVING}
+        </Alert>
+      )}
+      {save === 'stored' && !dismissed.has(STORED) && (
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => dismiss(STORED)}>
+          {STORED}
+        </Alert>
+      )}
+      {save === 'failed' && !dismissed.has(NOT_STORED) && (
+        <Alert severity="warning" sx={{ mb: 2 }} onClose={() => dismiss(NOT_STORED)}>
+          {NOT_STORED}
         </Alert>
       )}
 
@@ -451,7 +513,7 @@ export function BuildingModels({
             <Typography variant="h6" component="h2">
               {chosen.title}
             </Typography>
-            <StateChip model={chosen} />
+            <StateChip model={current ?? chosen} />
           </Stack>
           {handle && (
             <>
