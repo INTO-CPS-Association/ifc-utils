@@ -29,6 +29,7 @@ export {
   formatSize,
   pairModels,
   readCatalogue,
+  readableName,
   type BimModel,
   type LibraryEntry,
 } from './assets.js';

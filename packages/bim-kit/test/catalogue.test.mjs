@@ -13,7 +13,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { pairModels, readCatalogue, CATALOGUE_FILE }
+import { pairModels, readCatalogue, readableName, CATALOGUE_FILE }
   from '../dist/esm/react/assets.js';
 
 /** Two IFC files, one with geometry beside it, as the contents API lists them. */
@@ -37,22 +37,24 @@ const jsonResponse = (body) => ({
 test('a model with no catalogue entry keeps its file name', () => {
   const models = pairModels(ENTRIES);
   assert.equal(models.length, 2);
+  // The file name, with its separators read as spaces.
   assert.deepEqual(
     models.map((model) => model.title),
-    ['2116_FEAS_kedelhuset', 'Building_1911_AK_v2'],
+    ['2116 FEAS kedelhuset', 'Building 1911 AK v2'],
   );
 });
 
 test('a catalogue entry names the building, and the list sorts by that name', () => {
+  // The names these two files carry, read out of them.
   const titles = new Map([
-    ['Building_1911_AK_v2.ifc', 'Navitas, Building 1911'],
-    ['2116_FEAS_kedelhuset.ifc', 'FEAS Kedelhuset'],
+    ['Building_1911_AK_v2.ifc', 'Pædagogisk Center'],
+    ['2116_FEAS_kedelhuset.ifc', 'FEAS - Kommunehospital'],
   ]);
   const models = pairModels(ENTRIES, titles);
 
   assert.deepEqual(
     models.map((model) => model.title),
-    ['FEAS Kedelhuset', 'Navitas, Building 1911'],
+    ['FEAS - Kommunehospital', 'Pædagogisk Center'],
   );
   // The file name is still there, because the geometry beside a model is
   // found by it and a title must not be able to break that.
@@ -63,11 +65,21 @@ test('a catalogue entry names the building, and the list sorts by that name', ()
 });
 
 test('a model the catalogue does not mention keeps its file name', () => {
-  const titles = new Map([['Building_1911_AK_v2.ifc', 'Navitas']]);
+  const titles = new Map([['Building_1911_AK_v2.ifc', 'Pædagogisk Center']]);
   const models = pairModels(ENTRIES, titles);
   assert.deepEqual(
     models.map((model) => model.title),
-    ['2116_FEAS_kedelhuset', 'Navitas'],
+    ['2116 FEAS kedelhuset', 'Pædagogisk Center'],
+  );
+});
+
+test('a file name reads with spaces for its separators and keeps its case', () => {
+  // AK and v4 mean something, so the case is not guessed at.
+  assert.equal(readableName('Building_1912_AK_v4'), 'Building 1912 AK v4');
+  assert.equal(readableName('L187x_AK__v_done'), 'L187x AK v done');
+  assert.equal(
+    readableName('[3D IFC SG] Project CleanTech One 02-24 IFC SG'),
+    '[3D IFC SG] Project CleanTech One 02-24 IFC SG',
   );
 });
 

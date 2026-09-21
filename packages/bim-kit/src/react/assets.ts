@@ -66,8 +66,8 @@ export const MODELS_DIRECTORY = 'common/models';
  *
  * ```json
  * {
- *   "Building_1911_AK_v2.ifc": "Navitas, Building 1911",
- *   "2116_FEAS_kedelhuset.ifc": "FEAS Kedelhuset"
+ *   "Building_1911_AK_v2.ifc": "Pædagogisk Center",
+ *   "2116_FEAS_kedelhuset.ifc": "FEAS - Kommunehospital"
  * }
  * ```
  *
@@ -93,6 +93,17 @@ function endsWith(name: string, suffix: string): boolean {
  * returned, so the page can say that conversion has not run instead of
  * leaving the model out and looking like it was never uploaded.
  */
+/**
+ * A file name as a person reads it, for a model the catalogue does not name.
+ *
+ * Only the separators change: `Building_1912_AK_v4` reads "Building 1912 AK v4".
+ * The case is left alone, because in these names it carries meaning, as in AK
+ * and v4, and a guess at a building name would be worse than the file's own.
+ */
+export function readableName(stem: string): string {
+  return stem.replace(/_+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 export function pairModels(
   entries: LibraryEntry[],
   titles: ReadonlyMap<string, string> = new Map(),
@@ -114,7 +125,7 @@ export function pairModels(
       const stem = stemOf(entry.name, IFC);
       return {
         name: stem,
-        title: titles.get(entry.name) ?? stem,
+        title: titles.get(entry.name) ?? readableName(stem),
         ifcPath: entry.path,
         sizeBytes: entry.size,
         geometryPath: derived.get(stem + GEOMETRY)?.path,

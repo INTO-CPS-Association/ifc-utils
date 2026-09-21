@@ -81,25 +81,27 @@ if (!result.ok) {
 
 ## Naming The Buildings
 
-A file name says what the file is called, not what the building is, so a library
-of a dozen IFC files reads as a list of export names. `BuildingModels` looks for
-`catalogue.json` in the models directory and uses it to name them:
+A file name says what a file is called, not what the building is. `BuildingModels` reads `catalogue.json` from the models directory and names each model from it:
 
 ```json
 {
-  "Building_1911_AK_v2.ifc": "Navitas, Building 1911",
-  "2116_FEAS_kedelhuset.ifc": "FEAS Kedelhuset"
+  "2116_FEAS_kedelhuset.ifc": "FEAS - Kommunehospital",
+  "Building_1911_AK_v2.ifc": "Pædagogisk Center"
 }
 ```
 
-The key is the IFC file name and the value is what to show. A model the file does
-not mention keeps its file name, and so does every model when the file is absent,
-unreadable or broken, because a naming file must never be able to break the list
-of models.
+The key is the IFC file name and the value is what to show. A model the file does not mention shows its file name with its separators read as spaces, and so does every model when the file is absent, unreadable or broken, because a naming file must never be able to break the list of models.
 
-Nothing is named inside this package. A deployment decides what its own buildings
-are called by editing one file in its own library, and no version of this package
-is involved.
+The catalogue is generated from the IFC files by `ifc-to-catalogue`, in the `ifc-converter` package of this repository, which reads the name each file carries on its project and its building:
+
+```sh
+ifc-to-catalogue common/models --dry-run   # show what it would write
+ifc-to-catalogue common/models             # write catalogue.json
+```
+
+Many files carry no name. A Revit export that nobody filled in keeps the template text, "Project Name" and "Building Name", and those are skipped instead of shown. For such a building, a person writes the name in `catalogue.overrides.json` beside the models, in the same shape. The generator applies it on top and never overwrites it, so `catalogue.json` itself is never edited by hand.
+
+Nothing is named inside this package, and no version of it is involved in naming a deployment's buildings.
 
 ## The Manifest
 
