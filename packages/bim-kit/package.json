@@ -125,7 +125,7 @@
     "react-dom": "19.2.0",
     "three": "0.185.0",
     "typescript": "5.9.3",
-    "zod": "4.1.13"
+    "zod": "4.6.5"
   },
   "dependencies": {
     "web-ifc": "0.0.77"
