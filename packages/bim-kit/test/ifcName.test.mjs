@@ -21,6 +21,8 @@ import {
   usableName,
 } from '../dist/esm/ifcName.js';
 import {
+  contentsUrl,
+  formatSize,
   pairModels,
   readableName,
   readIfcName,
@@ -59,6 +61,27 @@ test('a doubled quote and a doubled backslash are one of each', () => {
   assert.equal(decodeStepString("O''Brien\\\\x"), "O'Brien\\x");
 });
 
+test('an escaped upper-half character reads from ISO 8859-1', () => {
+  // \\S\\ adds 128 to the character after it: \\S\\i is 0x69 + 0x80, 0xE9, é.
+  assert.equal(decodeStepString('caf\\S\\i'), 'café');
+});
+
+test('a code page switch carries no character of its own', () => {
+  assert.equal(decodeStepString('a\\PA\\b'), 'ab');
+});
+
+test('an escaped UTF-32 run is the characters it stands for', () => {
+  assert.equal(decodeStepString('\\X4\\0001F3E0\\X0\\'), '🏠');
+});
+
+test('a backslash that starts no escape is kept as it is', () => {
+  assert.equal(decodeStepString('a\\qb'), 'a\\qb');
+});
+
+test('an escape that is never closed ends the string there', () => {
+  assert.equal(decodeStepString('ab\\X2\\00E6'), 'ab');
+});
+
 test('the arguments are split at the top level only', () => {
   const args = entityArguments(PAEDAGOGISK, 'IFCPROJECT');
   assert.equal(args.length, 9);
@@ -67,6 +90,16 @@ test('the arguments are split at the top level only', () => {
   assert.deepEqual(
     entityArguments("#1= IFCPROJECT('a, b',$);", 'IFCPROJECT'),
     ["'a, b'", '$'],
+  );
+});
+
+test('a doubled quote inside an argument stays inside it', () => {
+  // O'Brien's Hall, as ISO 10303-21 writes it.
+  const args = entityArguments("#1= IFCPROJECT('O''Brien''s Hall',$);", 'IFCPROJECT');
+  assert.deepEqual(args, ["'O''Brien''s Hall'", '$']);
+  assert.equal(
+    ifcBuildingName("#1= IFCPROJECT('x',#2,'O''Brien''s Hall',$,$,$);"),
+    "O'Brien's Hall",
   );
 });
 
@@ -135,6 +168,32 @@ test('a model is shown by the name its file gives, or by its file name', () => {
   );
 });
 
+test('each model is paired with the geometry, tree and manifest beside it', () => {
+  const [model] = pairModels([
+    { name: 'a.ifc', path: 'm/a.ifc', size: 1 },
+    { name: 'a.glb', path: 'm/a.glb' },
+    { name: 'a.json', path: 'm/a.json' },
+    { name: 'a.manifest.json', path: 'm/a.manifest.json' },
+  ]);
+  assert.equal(model.geometryPath, 'm/a.glb');
+  assert.equal(model.treePath, 'm/a.json');
+  // Ending in .json as well, and not taken for the tree.
+  assert.equal(model.manifestPath, 'm/a.manifest.json');
+});
+
+test('the listing and file addresses are built under the library', () => {
+  assert.equal(contentsUrl('http://host/jane', 'common/models'),
+    'http://host/jane/api/contents/common/models');
+  assert.equal(contentsUrl('http://host/jane/', 'common/models'),
+    'http://host/jane/api/contents/common/models');
+});
+
+test('a size reads in the unit a person expects', () => {
+  assert.equal(formatSize(undefined), '');
+  assert.equal(formatSize(11 * 1024), '11 KB');
+  assert.equal(formatSize(24.2 * 1024 * 1024), '24.2 MB');
+});
+
 test('a file name reads with spaces for its separators and keeps its case', () => {
   assert.equal(readableName('Building_1912_AK_v4'), 'Building 1912 AK v4');
   assert.equal(readableName('L187x_AK__v_done'), 'L187x AK v done');
@@ -197,6 +256,22 @@ test('a server that sends the whole file is read only as far as the limit', asyn
   );
   assert.equal(name, 'Pædagogisk Center');
   assert.equal(response.cancelled, true);
+});
+
+test('a response with no stream is read from its buffer, to the limit', async () => {
+  // Not every fetch gives a readable body. Without one the bytes come from the
+  // buffer, cut at the same limit.
+  const bytes = new TextEncoder().encode(PAEDAGOGISK + 'x'.repeat(100 * 1024));
+  const name = await withFetch(
+    async () => ({
+      ok: true,
+      status: 200,
+      body: null,
+      arrayBuffer: async () => bytes.buffer,
+    }),
+    () => readIfcName('http://host/jane/', 'common/models/a.ifc'),
+  );
+  assert.equal(name, 'Pædagogisk Center');
 });
 
 test('a name that cannot be read is null, and never a failure', async () => {

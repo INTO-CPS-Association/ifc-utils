@@ -197,9 +197,10 @@ async function readHead(response: Response, limit: number): Promise<string> {
 
   const bytes = new Uint8Array(Math.min(total, limit));
   let offset = 0;
+  // Every chunk but the last starts before the limit, since reading stops as
+  // soon as the limit is passed, so the last one is the only one cut short.
   for (const chunk of chunks) {
     const room = bytes.length - offset;
-    if (room <= 0) break;
     bytes.set(chunk.subarray(0, room), offset);
     offset += Math.min(chunk.length, room);
   }
