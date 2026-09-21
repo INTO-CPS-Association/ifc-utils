@@ -68,16 +68,21 @@ const { BuildingModels } = await import('../dist/esm/react/BuildingModels.js');
  * test can look at the page before the names arrive.
  */
 function workspace({ files, heads = {}, json = {}, listing = 'ok' }) {
-  const state = { files: [...files], heads, json, listing, gate: null };
+  const state = { files: [...files], heads, json, listing, gate: null, cached: null };
   const page = () => new Response('<!doctype html>', { headers: { 'content-type': 'text/html' } });
   const data = (value) => new Response(JSON.stringify(value), {
     headers: { 'content-type': 'application/json' },
   });
-  globalThis.fetch = async (url) => {
+  globalThis.fetch = async (url, init = {}) => {
     const address = String(url);
     if (address.includes('/api/contents/')) {
       if (state.listing === 'page') return page();
       if (state.listing === 'error') return new Response('', { status: 500 });
+      // Jupyter sends the listing with Last-Modified and no Cache-Control, so
+      // a browser may answer a later request from its cache. A request that
+      // does not opt out gets the first listing again, as it could in a tab.
+      if (init.cache !== 'no-store' && state.cached) return data(state.cached);
+      state.cached = { type: 'directory', content: [...state.files] };
       return data({ type: 'directory', content: state.files });
     }
     if (address.includes('/files/')) {

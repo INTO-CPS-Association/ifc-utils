@@ -107,12 +107,13 @@ function ModelPicker({
   onChoose: (model: BimModel) => void;
 }>) {
   return (
-    // Three hundred pixels, the width of the search field on every other page.
-    // A long file name is cut in the closed control, where the heading above
-    // the drawing already names the model in full, and the open menu is as
-    // wide as its longest entry.
-    <FormControl fullWidth size="small" sx={{ maxWidth: 300 }}>
-      {/* A heading rather than a floating label, so the section is named before
+    // Wide enough for the longest name in the DTaaS library,
+    // "[3D IFC SG] Project CleanTech One 02-24 IFC SG", to show in full. A
+    // longer one is cut in the closed control, where the heading above the
+    // drawing still names the model in full, and the open menu is as wide as
+    // its longest entry.
+    <FormControl fullWidth size="small" sx={{ maxWidth: '30rem' }}>
+      {/* A heading and not a floating label, so the section is named before
           the control instead of inside it, the same way the chosen model is
           named above its drawing. */}
       <Typography variant="subtitle2" component="h2" id="bim-model-label" sx={{ mb: 1 }}>
@@ -279,7 +280,10 @@ export function BuildingModels({
 
     const url = contentsUrl(libraryUrl, directory);
     // The listing decides whether the page works, so its failure is reported.
-    fetch(url, { credentials: 'include' })
+    // It is never taken from the browser cache: Jupyter sends it with
+    // Last-Modified and no Cache-Control, so a cached copy could be reused, and
+    // the listing read again after a save would miss the file just written.
+    fetch(url, { credentials: 'include', cache: 'no-store' })
       .then((response) => readJson<{ content?: LibraryEntry[] }>(response, url))
       .then((listing) => {
         if (!current) return;
