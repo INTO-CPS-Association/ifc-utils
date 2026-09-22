@@ -1,19 +1,72 @@
-# Keep dependencies current, on the same weekly rhythm the DTaaS repository
+# Keep dependencies current on the same weekly rhythm the DTaaS repository
 # uses, so a person reviews both on the same day.
 #
-# The ten day cooldown this repository applies to new releases is not something
-# Dependabot enforces, so a pull request that proposes a version published less
-# than ten days ago is left to age instead of merged.
+# Three rules apply below:
+#
+# - Cooldown. A release is proposed only once it is ten days old, which is this
+#   repository's supply-chain rule: a malicious release is usually found and
+#   pulled within days. Dependabot applies it to npm and pip version updates.
+#   Security updates skip it by design, because waiting on a known
+#   vulnerability is the greater risk. Dependabot has no cooldown for GitHub
+#   Actions, so an action update younger than ten days is left to age before
+#   it is merged.
+# - Groups. Minor and patch updates arrive as one pull request per ecosystem
+#   each week, so they are reviewed together instead of piling up one per
+#   package. Major updates stay one per package, because those are the ones
+#   that break and need to be read one at a time.
+# - Security updates are grouped as well, so one advisory that touches several
+#   packages is one pull request.
 version: 2
 updates:
+  # The npm workspace. Its lock file is at the root and covers packages/*, so
+  # the root is the directory to update. Updating packages/bim-kit on its own
+  # changed its package.json without the lock file, and npm ci then failed on
+  # every pull request.
   - package-ecosystem: "npm"
-    directory: "/packages/bim-kit"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "sunday"
+    cooldown:
+      default-days: 10
     commit-message:
-      prefix: "bim-kit: "
+      prefix: "npm: "
+    groups:
+      npm-minor-and-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
 
+  # The two Python packages pin exact versions in pyproject.toml.
+  - package-ecosystem: "pip"
+    directories:
+      - "/python/ifc-explorer"
+      - "/python/ifc-converter"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    cooldown:
+      default-days: 10
+    commit-message:
+      prefix: "python: "
+    # ifc-explorer is the sibling package in this repository, installed from
+    # its folder. The name is not on PyPI, so anyone could register it there,
+    # and Dependabot would then propose that stranger's release.
+    ignore:
+      - dependency-name: "ifc-explorer"
+    groups:
+      python-minor-and-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      python-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  # The actions the workflows use, whether named by tag or pinned to a commit.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -21,3 +74,6 @@ updates:
       day: "sunday"
     commit-message:
       prefix: "actions: "
+    groups:
+      actions:
+        patterns: ["*"]
