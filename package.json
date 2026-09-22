@@ -16,11 +16,11 @@
   },
   "overrides": {
     "nwsapi": "2.2.27",
-    "@babel/parser": "7.29.8",
+    "@babel/parser": "8.0.5",
     "is-core-module": "2.16.2"
   },
   "devDependencies": {
-    "@babel/parser": "7.29.8",
+    "@babel/parser": "8.0.5",
     "is-core-module": "2.16.2",
     "nwsapi": "2.2.27"
   }
