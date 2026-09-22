@@ -120,7 +120,7 @@
     "@testing-library/user-event": "14.6.1",
     "@types/react": "19.2.6",
     "@types/three": "0.185.4",
-    "jsdom": "26.1.0",
+    "jsdom": "30.0.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "three": "0.185.0",
