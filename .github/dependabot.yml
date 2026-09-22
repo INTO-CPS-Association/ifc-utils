@@ -31,6 +31,13 @@ updates:
       default-days: 10
     commit-message:
       prefix: "npm: "
+    # @babel/parser is pinned at the root only to fix what the Babel 7 packages
+    # under @emotion resolve. A major version of it would hand those packages a
+    # parser from Babel 8, whose syntax tree they were not written for. It moves
+    # to 8 when @emotion does, and not on its own.
+    ignore:
+      - dependency-name: "@babel/parser"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-minor-and-patch:
         applies-to: version-updates
