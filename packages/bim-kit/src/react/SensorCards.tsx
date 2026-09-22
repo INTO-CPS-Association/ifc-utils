@@ -86,10 +86,10 @@ export function SensorCards({
                   {reading === undefined ? 'Waiting' : `${reading.value.toFixed(DECIMALS)} ${unit}`}
                 </Typography>
               </Box>
-              <Typography variant="caption" color="text.secondary" display="block">
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                 {binding.label}
               </Typography>
-              <Typography variant="caption" color="text.secondary" display="block">
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                 {ageText(reading, feed)}
               </Typography>
               {alerts.length > 0 && (

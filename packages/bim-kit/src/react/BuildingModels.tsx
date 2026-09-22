@@ -537,9 +537,8 @@ export function BuildingModels({
               says what is on screen without a scroll back to the menu. */}
           <Stack
             direction="row"
-            alignItems="center"
             spacing={1}
-            sx={{ px: 1, pt: 1, pb: 0.5 }}
+            sx={{ alignItems: 'center', px: 1, pt: 1, pb: 0.5 }}
           >
             {/* From the listing, like the chip beside it: a model can be chosen
                 before its name has been read from its file, and the object picked

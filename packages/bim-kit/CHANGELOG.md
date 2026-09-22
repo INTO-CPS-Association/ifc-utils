@@ -4,6 +4,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- Under MUI 9, which DTaaS runs, the label and the age on each sensor card ran together on one line, and the model's name was not centred against its chip. MUI 9 removed the system props, so `display` on a `Typography` and `alignItems` on a `Stack` were dropped without a word. Both now sit in `sx`, and the package is built and tested against MUI 9.
+
 ### Changed
 
 - The model picker is as wide as the messages under it, so the picker, the notices and the drawing share one column.
