@@ -5,9 +5,9 @@
 # `pull_request`: that republishes on every commit and lets a pull request from
 # a fork start a publish, which is a supply chain surface for no benefit.
 #
-# A release publishes here only when its tag starts with bim-kit-v. The Python
-# packages have releases of their own, in python.yml, and without the prefix
-# each of those would try to publish bim-kit again.
+# A release publishes here only when its tag starts with bim-kit-v, so a
+# release made for anything else in this repository never publishes bim-kit
+# again under a version that already exists.
 #
 # Everything runs at the root, which is where the workspace is defined.
 name: npm packages
