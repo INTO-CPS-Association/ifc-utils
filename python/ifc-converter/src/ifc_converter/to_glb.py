@@ -17,7 +17,7 @@ one big mesh would produce a smaller file and would destroy the binding.
 
 Run it:
 
-    python -m ifc_explorer.to_glb model.ifc model.glb
+    ifc-to-glb model.ifc model.glb
 
 Exit codes match the rest of the package: 0 the file was written, 1 the model
 could not be read, 2 the arguments were rejected.
@@ -524,12 +524,17 @@ def glb_from(model):
     return _pack(gltf, blob)
 
 
+USAGE = "Usage: ifc-to-glb <file.ifc> <model.glb>"
+
+
 def main(argv=None):
     argv = argv if argv is not None else sys.argv[1:]
 
+    if argv and argv[0] in ("-h", "--help"):
+        print(USAGE)
+        return 0
     if len(argv) < 2:
-        print("Usage: python -m ifc_explorer.to_glb <file.ifc> <model.glb>",
-              file=sys.stderr)
+        print(USAGE, file=sys.stderr)
         return 2
 
     source = Path(argv[0]).expanduser().resolve()

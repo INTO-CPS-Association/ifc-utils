@@ -2,8 +2,8 @@
 
 Run it like this:
 
-    python -m ifc_explorer ../data/ifc/substation_ok.ifc
-    python -m ifc_explorer ../data/ifc/substation_ok.ifc IfcSensor
+    ifc-explorer model.ifc
+    ifc-explorer model.ifc IfcSensor
 
 This file only reads arguments and prints. All the IFC work lives in
 explorer.py, so a different output format is a change here and nowhere else.
@@ -98,11 +98,17 @@ def print_elements(model, ifc_class):
                 print(f"      {pset_name}.{key} = {value}")
 
 
+USAGE = "Usage: ifc-explorer <file.ifc> [IfcClass]"
+
+
 def main(argv=None):
     argv = argv if argv is not None else sys.argv[1:]
 
+    if argv and argv[0] in ("-h", "--help"):
+        print(USAGE)
+        return 0
     if not argv:
-        print("Usage: python -m ifc_explorer <file.ifc> [IfcClass]", file=sys.stderr)
+        print(USAGE, file=sys.stderr)
         return EXIT_BAD_INPUT
 
     try:

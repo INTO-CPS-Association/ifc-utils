@@ -275,3 +275,13 @@ def _longest_object(model):
         if not iterator.next():
             break
     return longest
+
+
+@pytest.mark.parametrize("flag", ["-h", "--help"])
+def test_help_names_the_installed_command(flag, capsys):
+    """The usage line names the command the package installs, which is what the
+    README tells a person to type."""
+    from ifc_explorer.__main__ import main
+
+    assert main([flag]) == 0
+    assert capsys.readouterr().out.startswith("Usage: ifc-explorer <file.ifc>")

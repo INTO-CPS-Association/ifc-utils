@@ -26,7 +26,7 @@ edits it by hand.
 
 Run it:
 
-    python -m ifc_explorer.to_metadata model.ifc model.json
+    ifc-to-metadata model.ifc model.json
 
 Exit codes match the rest of the package: 0 the file was written, 1 the model
 could not be read, 2 the arguments were rejected.
@@ -233,12 +233,17 @@ def metadata_from(model, source_path):
     }
 
 
+USAGE = "Usage: ifc-to-metadata <file.ifc> <out.json>"
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
 
+    if argv and argv[0] in ("-h", "--help"):
+        print(USAGE)
+        return 0
     if len(argv) != 2:
-        print("Usage: python -m ifc_explorer.to_metadata <file.ifc> <out.json>",
-              file=sys.stderr)
+        print(USAGE, file=sys.stderr)
         return 2
 
     source, destination = Path(argv[0]), Path(argv[1])

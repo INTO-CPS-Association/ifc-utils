@@ -11,7 +11,7 @@ GlobalIds change and a hand-written file goes quietly out of date.
 
 Run it:
 
-    python -m ifc_explorer.to_manifest model.ifc manifest.yaml
+    ifc-to-manifest model.ifc manifest.yaml
 
 What it cannot know, and therefore leaves for a person to fill in, is marked
 with TODO in the output. See the notes at the bottom of this file.
@@ -292,12 +292,17 @@ def _option(argv, name):
     return argv[argv.index(name) + 1] if name in argv[:-1] else None
 
 
+USAGE = "Usage: ifc-to-manifest <file.ifc> <manifest.yaml>"
+
+
 def main(argv=None):
     argv = argv if argv is not None else sys.argv[1:]
 
+    if argv and argv[0] in ("-h", "--help"):
+        print(USAGE)
+        return 0
     if len(argv) < 2:
-        print("Usage: python -m ifc_explorer.to_manifest <file.ifc> <manifest.yaml>",
-              file=sys.stderr)
+        print(USAGE, file=sys.stderr)
         return 2
 
     source = Path(argv[0]).expanduser().resolve()
