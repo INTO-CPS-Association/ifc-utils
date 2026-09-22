@@ -6,8 +6,10 @@ Nothing here writes a file. Producing geometry, a property tree or a manifest is
 
 ## Install
 
+The package is not published on PyPI, so it is installed from this repository, from its root. Do not `pip install ifc-explorer` from PyPI: the name is not registered there, and whatever is registered under it later is not this package.
+
 ```bash
-pip install ifc-explorer
+pip install -e python/ifc-explorer
 ```
 
 ## Use

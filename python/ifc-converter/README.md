@@ -6,8 +6,10 @@ Reading and reporting on a model is [`ifc-explorer`](../ifc-explorer), which thi
 
 ## Install
 
+The package is not published on PyPI, so it is installed from this repository, from its root, together with `ifc-explorer`, which it depends on and which is not on PyPI either. Do not `pip install ifc-converter` from PyPI: the name is not registered there, and whatever is registered under it later is not this package.
+
 ```bash
-pip install ifc-converter
+pip install -e python/ifc-explorer -e python/ifc-converter
 ```
 
 ## Use
