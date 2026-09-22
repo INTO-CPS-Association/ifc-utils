@@ -1,0 +1,89 @@
+# Test and publish the Python packages in this repository.
+#
+# Publishing happens on a release and on nothing else, for the same reason
+# npm.yml publishes only on one. A release names one package by its tag prefix,
+# ifc-explorer-v or ifc-converter-v, so a Python release never starts the npm
+# publish and a bim-kit release never starts this one. ifc-converter depends on
+# ifc-explorer, so a new ifc-explorer is released first.
+name: python packages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      # Pinned by commit, not by tag, because a tag can be moved to point at
+      # different code. These are the commits this organisation already uses.
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.12'
+      # A pip that can refuse recent uploads, so the ten-day rule covers the
+      # dependencies of dependencies too, which no pyproject.toml pins.
+      - run: python -m pip install pip==26.2.1
+      # From their folders, because ifc-explorer is not on PyPI until it is
+      # released, and ifc-converter needs it.
+      - run: >-
+          python -m pip install --uploaded-prior-to P10D
+          -e "python/ifc-explorer[test]" -e "python/ifc-converter[test]"
+      # From each package's folder, where its pyproject.toml names its tests.
+      - run: python -m pytest
+        working-directory: python/ifc-explorer
+      - run: python -m pytest
+        working-directory: python/ifc-converter
+
+  publish-pypi:
+    if: >-
+      github.event_name == 'release' &&
+      (startsWith(github.event.release.tag_name, 'ifc-explorer-v') ||
+       startsWith(github.event.release.tag_name, 'ifc-converter-v'))
+    needs: check
+    runs-on: ubuntu-latest
+    # PyPI trusted publishing, as npm.yml does for npmjs: no token is stored,
+    # the runner exchanges a short-lived identity for a one-time credential,
+    # and PyPI records where the release was built. The environment is the one
+    # the trusted publisher on PyPI names, and it can be given reviewers.
+    environment:
+      name: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.12'
+      # The tag names the package and its version. The tag comes from the
+      # release, so it is read through the environment and not pasted into the
+      # script, and the version in pyproject.toml has to match it, so a release
+      # cannot publish a version other than the one it names.
+      - id: package
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          name="${TAG%-v*}"
+          version="${TAG##*-v}"
+          declared=$(python -c "import tomllib; print(tomllib.load(open('python/$name/pyproject.toml', 'rb'))['project']['version'])")
+          if [ "$declared" != "$version" ]; then
+            echo "The tag says $version and python/$name/pyproject.toml says $declared." >&2
+            exit 1
+          fi
+          echo "dir=python/$name" >> "$GITHUB_OUTPUT"
+      # The licence goes inside the package, because a wheel is all a person
+      # installing it receives. It is copied at build time and ignored by git,
+      # as bim-kit does, so there is one licence file to keep and not three.
+      - run: cp LICENSE.md "${{ steps.package.outputs.dir }}/LICENSE.md"
+      - run: python -m pip install pip==26.2.1
+      - run: python -m pip install --uploaded-prior-to P10D build==1.6.1
+      - run: python -m build "${{ steps.package.outputs.dir }}"
+      # v1.14.2, pinned by commit.
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33
+        with:
+          packages-dir: ${{ steps.package.outputs.dir }}/dist

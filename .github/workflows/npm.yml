@@ -5,6 +5,10 @@
 # `pull_request`: that republishes on every commit and lets a pull request from
 # a fork start a publish, which is a supply chain surface for no benefit.
 #
+# A release publishes here only when its tag starts with bim-kit-v. The Python
+# packages have releases of their own, in python.yml, and without the prefix
+# each of those would try to publish bim-kit again.
+#
 # Everything runs at the root, which is where the workspace is defined.
 name: npm packages
 
@@ -42,7 +46,7 @@ jobs:
   # to run yarn install. npmjs needs none. Publishing to both means the
   # organisation keeps its own copy and a consumer needs nothing.
   publish-github:
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' && startsWith(github.event.release.tag_name, 'bim-kit-v')
     needs: check
     runs-on: ubuntu-latest
     permissions:
@@ -70,7 +74,7 @@ jobs:
   # workflow file. A stored token would be a credential that can leak, which is
   # what this avoids.
   publish-npmjs:
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' && startsWith(github.event.release.tag_name, 'bim-kit-v')
     needs: check
     runs-on: ubuntu-latest
     permissions:
