@@ -35,6 +35,8 @@ Write for the person who joins in six months with no context. Prefer the direct 
 
 ## Releasing
 
-A release publishes. [The workflow](.github/workflows/npm.yml) builds, tests and publishes to the organisation's GitHub Packages registry when a GitHub release is published, and does not publish on a push or a pull request.
+A release publishes. [The workflow](.github/workflows/npm.yml) builds, tests and publishes `bim-kit` when a GitHub release is published whose tag starts with `bim-kit-v`, and does not publish on a push or a pull request. It publishes to the organisation's GitHub Packages registry with the workflow's own token, and to npmjs with trusted publishing, so no npm token is stored in the repository and npm records where the package was built.
 
-Bump the version in the package's `package.json`, add an entry to its `CHANGELOG.md`, merge, then publish a release.
+Bump the version in the package's `package.json`, move the `Unreleased` entries of its `CHANGELOG.md` under the new version, merge, then publish a release tagged `bim-kit-v<version>`.
+
+Each release is also archived on Zenodo with a DOI, so a paper can cite the exact version it used. Zenodo takes the authors and the description from [CITATION.cff](CITATION.cff), and nothing else has to be kept in step with it. Archiving starts once an owner of the organisation turns the repository on in Zenodo's GitHub settings. Until then a release publishes to the registries and receives no DOI.

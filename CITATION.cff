@@ -1,0 +1,27 @@
+# How to cite this repository. GitHub shows it as "Cite this repository", and
+# Zenodo reads it when it archives a release, so this is the one place the
+# authors and the description are written. The licence is not declared here:
+# the INTO-CPS Association Public License has no SPDX identifier, which is the
+# only form the licence field accepts. LICENSE.md is the reference.
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "ifc-utils: IFC and BIM Utilities for the DTaaS Platform"
+abstract: >-
+  Packages that convert an IFC building model into geometry a browser can draw,
+  and read the manifest that binds a sensor to an object in the model. They
+  serve the Building Models page of the Digital Twin as a Service (DTaaS)
+  platform.
+authors:
+  - given-names: "Jady Pamella"
+    family-names: "Barbacena da Silva"
+    affiliation: "Aarhus University"
+    orcid: "https://orcid.org/0009-0006-4280-3364"
+repository-code: "https://github.com/INTO-CPS-Association/ifc-utils"
+url: "https://www.npmjs.com/package/@into-cps-association/bim-kit"
+keywords:
+  - IFC
+  - BIM
+  - digital twin
+  - DTaaS
+  - sensor binding

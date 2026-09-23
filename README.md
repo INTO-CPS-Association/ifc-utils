@@ -95,6 +95,10 @@ npm install @into-cps-association/bim-kit
 
 Heavy dependencies are peers, not dependencies: React, MUI and three.js are declared as optional peers so a host that already has them never receives a second copy, and a consumer that wants only the manifest logic never receives them at all. The core entry point imports nothing.
 
+## Citing
+
+GitHub shows a "Cite this repository" entry built from [CITATION.cff](CITATION.cff). Once releases are archived on Zenodo, each one has its own DOI, and a paper should cite the DOI of the version it used, which the release page links to.
+
 ## Licence
 
 INTO-CPS Association Public License, version 1.0, with GPL version 3. See [LICENSE.md](LICENSE.md).
