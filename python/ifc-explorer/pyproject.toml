@@ -19,7 +19,7 @@ classifiers = [
 # Pinned exactly. A geometry kernel changing under a converter is how a model
 # silently comes out a different size.
 dependencies = [
-  "ifcopenshell==0.8.5",
+  "ifcopenshell==0.9.0",
   "numpy==2.5.2",
 ]
 
