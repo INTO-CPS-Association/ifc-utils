@@ -1,10 +1,11 @@
 import type { ScopeRule, SubstrateAdapter } from '@into-cps-association/dtaas-sdk';
+import { ANCHOR_KIND } from './ids.js';
 
 type Fact = 'room' | 'storey';
 
 /** The room or storey the aec substrate copied onto an element from the property tree. */
 function factOf(adapter: SubstrateAdapter, ref: string, fact: Fact): string | undefined {
-  const element = adapter.resolve({ kind: 'ifc-guid', ref, signalPath: ref });
+  const element = adapter.resolve({ kind: ANCHOR_KIND, ref, signalPath: ref });
   const data = (element?.handle as { userData?: Record<string, unknown> } | undefined)?.userData;
   const value = data?.[fact];
   return typeof value === 'string' && value !== '' ? value : undefined;

@@ -59,6 +59,7 @@ mock.module(new URL('../dist/esm/react/BimCanvas.js', import.meta.url).href, {
 });
 
 const { BuildingModels } = await import('../dist/esm/react/BuildingModels.js');
+const { DirectoryPicker } = await import('../dist/esm/react/DirectoryPicker.js');
 
 /**
  * A workspace to answer the page's requests.
@@ -556,4 +557,35 @@ test('the floor picker sits on the toolbar row, right after its last button', as
   const floor = screen.getByRole('combobox', { name: /^Floor/ });
   assert.ok(toolbar.nextElementSibling.contains(floor));
   assert.equal(getComputedStyle(toolbar.parentElement).flexWrap, 'wrap');
+});
+
+test('a listing for a folder already left behind is not shown, even when it arrives last', async () => {
+  // Each folder's listing is held until the test lets it go, so the first
+  // folder can answer after the second, the way a slow server would.
+  workspace({ files: [] });
+  const pending = { old: deferred(), new: deferred() };
+  const list = (directory) => pending[directory].promise;
+  const { rerender } = show({ directory: 'old', list });
+  rerender(React.createElement(BuildingModels, { libraryUrl: LIBRARY, directory: 'new', list }));
+
+  await act(async () => pending.new.resolve([{ name: 'beta.ifc', path: 'new/beta.ifc' }]));
+  await screen.findByText(/1 IFC model/);
+  await act(async () => pending.old.resolve([{ name: 'alpha.ifc', path: 'old/alpha.ifc' }]));
+
+  const user = userEvent.setup();
+  const options = await menuOptions(user);
+  assert.equal(options.length, 1);
+  assert.match(options[0], /beta/);
+});
+
+test('a folder the picker cannot list says so inside the dialog', async () => {
+  const user = userEvent.setup();
+  const list = async () => {
+    throw new Error('permission denied');
+  };
+  render(React.createElement(DirectoryPicker, { list, value: 'common/models', onChange: () => {} }));
+
+  await user.click(screen.getByRole('button', { name: 'Folder: common/models' }));
+  const dialog = await screen.findByRole('dialog');
+  assert.ok(await within(dialog).findByText('Could not list common/models: permission denied'));
 });

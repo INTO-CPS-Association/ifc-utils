@@ -135,7 +135,7 @@ It declares:
 - An `ifc-guid` anchor kind, the `bim.ifc-to-glb` converter, the `bim.thermal-comfort` and `bim.co2` presets, and the `bim.room` and `bim.storey` scopes, which the client's common visualisation core merges with those of other kits.
 - `manifestToVisualisation`, which turns a binding manifest into a `visualisation.json` asset.
 
-The SDK, `react-router-dom` and `zod` are optional peers, needed only by a host that imports `./dtaas`. The other entry points work without them, so a host outside DTaaS keeps using `./react` as before.
+The SDK and `react-router-dom` are optional peers, needed only by a host that imports `./dtaas`, which also needs `zod` and React 19 or newer, since the SDK requires both. The other entry points work without the SDK and the router, so a host outside DTaaS keeps using `./react` as before.
 
 ## Develop
 

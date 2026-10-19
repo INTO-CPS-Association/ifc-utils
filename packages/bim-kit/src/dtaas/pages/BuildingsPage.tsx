@@ -47,7 +47,7 @@ function ModelsPanel({ route, directory, list }: Readonly<PanelProps>) {
   const libraryUrl = host.library.useBaseUrl();
   const [bindings, setBindings] = useState<Binding[]>([]);
   const { readings, feed } = useReadings(host.signals, bindings);
-  const onPersistGeometry = useMemo(() => persistGeometry(host, directory), [host, directory]);
+  const onPersistGeometry = useMemo(() => persistGeometry(host), [host]);
   if (!libraryUrl) return null;
   return (
     <BuildingModels

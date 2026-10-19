@@ -143,7 +143,7 @@ test('a folder chosen in the directory picker moves to its route', async () => {
   await user.click(await screen.findByRole('button', { name: 'Up' }));
   await user.click(await screen.findByRole('button', { name: 'projects' }));
   await user.click(await screen.findByRole('button', { name: 'aarhus' }));
-  await user.click(screen.getByRole('button', { name: 'Use this folder' }));
+  await user.click(screen.getByRole('button', { name: 'Use This Folder' }));
   assert.equal(location(), '/bim?dir=projects/aarhus');
 });
 

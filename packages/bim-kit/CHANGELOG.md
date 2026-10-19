@@ -2,13 +2,15 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package follows [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
 ## [0.2.0]
 
 ### Added
 
 - `./dtaas`, a new entry point exporting `extension`, the declaration the DTaaS client loads from its extension manifest. It is built with `defineExtension` from `@into-cps-association/dtaas-sdk` and ported from the `bim` example in that repository. It mounts the Buildings page at `/bim` and `/bim/models/:model`, reads the models folder from `?dir=`, then from `REACT_APP_EXT_BIM_MODELS_DIRECTORY`, then from the host's convention, and contributes an `ifc-guid` anchor kind, the `bim.ifc-to-glb` converter, the `bim.thermal-comfort` and `bim.co2` presets, and the `bim.room` and `bim.storey` scopes. It passes the SDK's conformance harness, which also checks that the kit opens no socket of its own.
 - `manifestToVisualisation`, exported from `./dtaas`, turns a binding manifest into a `visualisation.json` asset. A binding with no GlobalId or no live topic cannot be anchored, and it is returned with its reason instead of being dropped.
-- `BuildingModels` takes four optional props, so a host can own what the page used to decide for itself: `list` lists the folder through the host's own contents service, `selected` and `onSelect` put the chosen model in the host's route, and `onBindingsChange` reports the bindings of the model on screen, so the host subscribes to exactly those topics. Without them the page behaves as in 0.1.1. When `selected` names a model the folder does not hold, the page reports it, and a listing that arrives after the folder has changed is no longer shown.
+- `BuildingModels` takes four optional props, so a host can own what the page used to decide for itself: `list` lists the folder through the host's own contents service, `selected` and `onSelect` put the chosen model in the host's route, and `onBindingsChange` reports the bindings of the model on screen, so the host subscribes to exactly those topics. Without them the page behaves as in 0.1.1, apart from the fix to changing folder below. When `selected` names a model the folder does not hold, the page reports it.
 - `DirectoryPicker`, a folder browser that stays inside the library, and `exportGlb`, from `./react`. `normaliseLibraryPath` and `GLOBAL_ID_PATTERN`, from the package root.
 - `@into-cps-association/dtaas-sdk` and `react-router-dom` are optional peers, needed only by `./dtaas`.
 - The Buildings page heads itself Building Models and says what it is for, in the host's page shell, as the hand-wired DTaaS page did, so moving the page into the extension changes nothing a person sees.
@@ -16,6 +18,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- Changing folder starts the page again on the new folder. The menu goes back to loading, the chosen model is cleared, and a problem reported for the previous folder is no longer shown. Until the new listing arrived, the page used to keep the previous folder's models in the menu and its model on screen.
 - Under MUI 9, which DTaaS runs, the label and the age on each sensor card ran together on one line, and the model's name was not centred against its chip. MUI 9 removed the system props, so `display` on a `Typography` and `alignItems` on a `Stack` were dropped without a word. Both now sit in `sx`, and the package is built and tested against MUI 9.
 
 ### Changed

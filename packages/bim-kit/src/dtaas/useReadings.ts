@@ -12,6 +12,7 @@ import type { Sampled, SignalsService } from '@into-cps-association/dtaas-sdk';
 import { objectOf, type Binding } from '../binding.js';
 import type { FeedState, Reading } from '../readings.js';
 import { bindingsByTopic, topicsOf } from '../resolver.js';
+import { CHANNEL } from './ids.js';
 
 export interface LiveReadings {
   readonly readings: Map<string, Reading>;
@@ -37,7 +38,7 @@ function withSample(
 function storedReadings(signals: SignalsService, bindings: Binding[]): Map<string, Reading> {
   let readings = new Map<string, Reading>();
   bindingsByTopic(bindings).forEach((targets, topic) => {
-    const stored = signals.valueAt(topic, 'measured');
+    const stored = signals.valueAt(topic, CHANNEL);
     if (stored) readings = withSample(readings, targets, stored);
   });
   return readings;
@@ -69,7 +70,7 @@ function useReadings(signals: SignalsService, bindings: Binding[]): LiveReadings
   useEffect(() => {
     if (topics.length === 0) return undefined;
     const byTopic = bindingsByTopic(bindings);
-    return signals.subscribe(topics, 'measured', (sample) => setReadings(
+    return signals.subscribe(topics, CHANNEL, (sample) => setReadings(
       (previous) => withSample(previous, byTopic.get(sample.signalPath) ?? [], sample),
     ));
   }, [signals, bindings, topics, setReadings]);

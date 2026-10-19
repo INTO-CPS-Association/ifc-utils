@@ -15,14 +15,16 @@
 import type { VisualisationAsset } from '@into-cps-association/dtaas-sdk';
 import { displayOf, objectOf, topicOf, type Binding } from '../binding.js';
 import type { Manifest } from '../schema.js';
+import {
+  ANCHOR_KIND,
+  BIM_DOMAIN,
+  CHANNEL,
+  COLOR_SCHEME,
+  SUBSTRATE_ADAPTER,
+} from './ids.js';
 
 const SUBSTRATE_ID = 'building';
-const SUBSTRATE_ADAPTER = 'aec';
-const ANCHOR_KIND = 'ifc-guid';
-const COLOR_SCHEME = 'bim.cold-warm';
-const CHANNEL = 'measured';
 const SCHEMA_VERSION = '1.0';
-const DOMAIN = 'bim';
 
 export interface MigrateOptions {
   /** `visualisation.json` name. */
@@ -47,18 +49,6 @@ type Anchor = VisualisationAsset['anchors'][number];
 interface Anchored {
   readonly binding: Binding;
   readonly anchor: Anchor;
-}
-
-/** An anchored binding for a resolved GlobalId and live topic. */
-function anchorFor(
-  binding: Binding,
-  globalId: string,
-  topic: string,
-): Anchored {
-  return {
-    binding,
-    anchor: { signalPath: topic, kind: ANCHOR_KIND, ref: globalId },
-  };
 }
 
 /**
@@ -88,7 +78,8 @@ function classify(
     };
   }
 
-  return { anchor: anchorFor(binding, globalId, topic) };
+  const anchor = { signalPath: topic, kind: ANCHOR_KIND, ref: globalId };
+  return { anchor: { binding, anchor } };
 }
 
 function partition(bindings: Binding[]): {
@@ -141,11 +132,6 @@ function encodingsFor(anchored: Anchored[]): VisualisationAsset['encodings'] {
   });
 }
 
-/** The model geometry a substrate loads: the converted mesh, or the raw source. */
-function geometryOf(manifest: Manifest): string | undefined {
-  return manifest.model.geometry ?? manifest.model.source;
-}
-
 /**
  * Turn a validated manifest into a `visualisation.json` asset for the SDK.
  *
@@ -163,12 +149,12 @@ export function manifestToVisualisation(
   const asset: VisualisationAsset = {
     schemaVersion: SCHEMA_VERSION,
     name: options.name,
-    domain: DOMAIN,
+    domain: BIM_DOMAIN,
     layout: { type: 'single', panes: [SUBSTRATE_ID] },
     substrates: {
       [SUBSTRATE_ID]: {
         adapter: SUBSTRATE_ADAPTER,
-        source: geometryOf(manifest),
+        source: manifest.model.geometry ?? manifest.model.source,
       },
     },
     transports: transportsFor(topics, options.brokerUrl),

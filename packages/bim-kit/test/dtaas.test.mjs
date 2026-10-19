@@ -24,6 +24,7 @@ const { default: persistGeometry } = await import('../dist/esm/dtaas/persistGeom
 
 const PACKAGE = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const GLOBAL_ID = '0_sgz7bzz4Jh2ckU1ehFe$';
+const HOUSE = { name: 'house', ifcPath: 'common/models/house.ifc' };
 
 test('the extension passes the SDK static validation', () => {
   assert.deepEqual(validateExtension(extension), { valid: true, errors: [] });
@@ -61,6 +62,21 @@ test('an ifc-guid anchor accepts a GlobalId and refuses anything else', () => {
   assert.equal(kind.validateRef('wall-1'), false);
 });
 
+test('an ifc-guid anchor is resolved by the substrate adapter it is given', () => {
+  const [kind] = extension.visualisation.anchorKinds;
+  const anchor = { kind: 'ifc-guid', ref: GLOBAL_ID, signalPath: 'r204/temp' };
+  const element = { handle: {} };
+  const asked = [];
+  const adapter = {
+    resolve: (seen) => {
+      asked.push(seen);
+      return element;
+    },
+  };
+  assert.equal(kind.resolve(anchor, adapter), element);
+  assert.deepEqual(asked, [anchor]);
+});
+
 /** An adapter whose elements carry the room and storey the aec substrate copies onto them. */
 function adapterOf(facts) {
   return {
@@ -90,15 +106,22 @@ test('a room named __proto__ is an ordinary group and not a prototype', () => {
 test('a converted GLB is stored beside its IFC file through host.contents', async () => {
   const host = fakeHostServices({ extensionId: 'bim' });
   const glb = new Uint8Array([1, 2, 3]);
-  await persistGeometry(host, 'common/models')({ name: 'house' }, glb);
+  await persistGeometry(host)(HOUSE, glb);
   assert.deepEqual(host.contents.files.get('common/models/house.glb'), glb);
+});
+
+test('a GLB follows its IFC file, whatever the case of its suffix and wherever it sits', async () => {
+  const host = fakeHostServices({ extensionId: 'bim' });
+  const glb = new Uint8Array([4]);
+  await persistGeometry(host)({ name: 'tower', ifcPath: 'projects/aarhus/tower.IFC' }, glb);
+  assert.deepEqual(host.contents.files.get('projects/aarhus/tower.glb'), glb);
 });
 
 test('a GLB already beside the IFC file is never replaced', async () => {
   const host = fakeHostServices({ extensionId: 'bim' });
   const made = new Uint8Array([9]);
   await host.contents.put('common/models/house.glb', made);
-  await assert.rejects(persistGeometry(host, 'common/models')({ name: 'house' }, new Uint8Array([1])));
+  await assert.rejects(persistGeometry(host)(HOUSE, new Uint8Array([1])));
   assert.deepEqual(host.contents.files.get('common/models/house.glb'), made);
 });
 
@@ -108,6 +131,6 @@ test('a store the host refuses is logged and passed on to the page', async () =>
     extensionId: 'bim',
     overrides: { contents: { put: async () => { throw refused; } } },
   });
-  await assert.rejects(persistGeometry(host, 'common/models')({ name: 'house' }, new Uint8Array()), refused);
+  await assert.rejects(persistGeometry(host)(HOUSE, new Uint8Array()), refused);
   assert.ok(host.recorded.logs.some(({ level }) => level === 'warn'));
 });

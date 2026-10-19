@@ -45,7 +45,7 @@ interface FolderListProps {
 
 function FolderList({ browsing, folders, onEnter }: Readonly<FolderListProps>) {
   return (
-    <List dense>
+    <List>
       {browsing !== '' && (
         <ListItemButton onClick={() => onEnter(parentOf(browsing))}>
           <ListItemText primary="Up" />
@@ -83,7 +83,7 @@ function BrowseDialog(props: Readonly<BrowseDialogProps>) {
       </DialogContent>
       <DialogActions>
         <Button disabled={browsing === '' || loading} onClick={onUse}>
-          Use this folder
+          Use This Folder
         </Button>
       </DialogActions>
     </Dialog>

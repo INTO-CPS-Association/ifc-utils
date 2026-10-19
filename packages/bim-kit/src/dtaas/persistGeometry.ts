@@ -2,6 +2,13 @@ import type { HostServices } from '@into-cps-association/dtaas-sdk';
 import type { BimModel } from '../react/assets.js';
 
 /**
+ * The GLB path beside an IFC file. It comes from the model's own path, so the
+ * GLB lands beside its IFC file even when that path differs from the folder
+ * the page was given, and the next listing pairs the two.
+ */
+const glbPathOf = (model: BimModel): string => model.ifcPath.replace(/\.ifc$/i, '.glb');
+
+/**
  * Stores a browser conversion beside its IFC file, so the next visit loads it
  * instead of converting again. A failure is logged and passed on, so the page
  * can say the model will convert again next time.
@@ -10,12 +17,12 @@ import type { BimModel } from '../react/assets.js';
  * one made in it, and an administrator may have placed one since the page
  * listed the folder.
  */
-const persistGeometry = (host: HostServices, directory: string) => async (
+const persistGeometry = (host: HostServices) => async (
   model: BimModel,
   glb: Uint8Array,
 ): Promise<void> => {
   try {
-    await host.contents.put(`${directory}/${model.name}.glb`, glb, {
+    await host.contents.put(glbPathOf(model), glb, {
       mimeType: 'model/gltf-binary',
       overwrite: false,
     });
