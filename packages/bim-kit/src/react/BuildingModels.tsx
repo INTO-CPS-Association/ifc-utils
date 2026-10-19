@@ -47,13 +47,16 @@ import { ClassLegend, HeatLegend } from './Legend.js';
 import Toolbar from './Toolbar.js';
 import type { ViewerHandle } from './BimCanvas.js';
 import {
+  MAX_CONVERT_BYTES,
   MODELS_DIRECTORY,
   fileUrl,
   formatSize,
+  tooLargeToConvert,
   type BimModel,
   type LibraryEntry,
 } from './assets.js';
 import { readJson, type Problem } from './libraryJson.js';
+import { readManifest } from '../schema.js';
 import { useChosenModel } from './useChosenModel.js';
 import { useModelList } from './useModelList.js';
 
@@ -75,6 +78,13 @@ const NOT_STORED =
 const CONVERTS_HERE =
   'No converted geometry sits beside this model, so it is read from the IFC '
   + 'file in your browser. That takes a moment the first time.';
+
+/** Why a model is not drawn, when converting it would exhaust the tab. */
+function tooLargeMessage(model: BimModel): string {
+  return `${model.title} is ${formatSize(model.sizeBytes)}, and an IFC file above `
+    + `${formatSize(MAX_CONVERT_BYTES)} is not converted in the browser. Convert it `
+    + 'outside the browser and put the GLB beside it in the library to draw it here.';
+}
 
 /** Says whether a model already has geometry beside it, in one word. */
 function StateChip({ model }: Readonly<{ model: BimModel }>) {
@@ -207,6 +217,33 @@ export interface BuildingModelsProps {
 
 type SaveState = 'idle' | 'saving' | 'stored' | 'failed';
 
+/** What a manifest beside a model contributes to the page once it is checked. */
+type CheckedManifest =
+  | { ok: true; bindings: Binding[]; proposed: boolean }
+  | { ok: false; problem: Problem };
+
+/**
+ * Validate a manifest read from the library before any of it is used.
+ *
+ * The file is untrusted: its topics become subscriptions in the host, so a
+ * wildcard would subscribe to the whole broker, and a binding with no source
+ * would throw further down. A manifest that fails is refused whole, as
+ * SECURITY.md promises, instead of half applied.
+ *
+ * The bindings come from the raw value and not from the parsed one, because
+ * the schema strips the optional fields it does not list, such as `id` and
+ * `mountedOn`, which the sensor cards show.
+ */
+function checkManifest(raw: unknown): CheckedManifest {
+  const result = readManifest(raw);
+  if (!result.ok) {
+    const detail = result.problems.map(({ where, message }) => `${where}: ${message}`).join('. ');
+    return { ok: false, problem: { summary: 'The sensor manifest is not valid.', detail } };
+  }
+  const { bindings } = raw as { bindings: Binding[] };
+  return { ok: true, bindings, proposed: result.manifest.model.proposed === true };
+}
+
 /**
  * Tell the host the bindings in force whenever they change. The callback is
  * read when they change, so a new function on every host render is harmless.
@@ -319,20 +356,26 @@ export function BuildingModels({
   // of a failed request.
   useEffect(() => {
     // Cleared first, so switching to a model with no manifest does not keep
-    // showing the previous model's sensors.
+    // showing the previous model's sensors, or the previous manifest's problem.
     setBindings([]);
     setProposed(false);
     setNote(null);
+    setProblem(null);
     if (!chosen?.manifestPath || !libraryUrl) return undefined;
     let current = true;
 
     const url = fileUrl(libraryUrl, chosen.manifestPath);
     fetch(url, { credentials: 'include' })
-      .then((response) => readJson<{ bindings?: Binding[]; model?: { proposed?: boolean } }>(response, url))
-      .then((manifest) => {
+      .then((response) => readJson<unknown>(response, url))
+      .then((raw) => {
         if (!current) return;
-        setBindings(manifest.bindings ?? []);
-        setProposed(manifest.model?.proposed === true);
+        const checked = checkManifest(raw);
+        if (!checked.ok) {
+          setProblem(checked.problem);
+          return;
+        }
+        setBindings(checked.bindings);
+        setProposed(checked.proposed);
       })
       .catch((error: Error) => {
         if (current) {
@@ -373,6 +416,8 @@ export function BuildingModels({
   const { reload } = listing;
   // A folder that cannot be listed is the failure a person acts on first.
   const shownProblem = listing.problem ?? problem;
+  // Checked before the canvas mounts, because mounting it starts the download.
+  const tooLarge = chosen !== null && tooLargeToConvert(chosen);
   const onConverted = useCallback((glb: Uint8Array) => {
     if (!chosen || !onPersistGeometry) return;
     const model = chosen;
@@ -469,7 +514,7 @@ export function BuildingModels({
         </Alert>
       )}
 
-      {current && !current.geometryPath && !dismissed.has(CONVERTS_HERE) && (
+      {current && !current.geometryPath && !tooLarge && !dismissed.has(CONVERTS_HERE) && (
         <Alert severity="info" sx={{ mb: 2 }} onClose={() => dismiss(CONVERTS_HERE)}>
           {CONVERTS_HERE}
         </Alert>
@@ -542,21 +587,26 @@ export function BuildingModels({
               />
             </Box>
           )}
-          <Suspense fallback={<CircularProgress sx={{ m: 4 }} />}>
-            <BimCanvas
-              key={chosen.geometryPath ?? chosen.ifcPath}
-              url={fileUrl(libraryUrl, chosen.geometryPath ?? chosen.ifcPath)}
-              convert={!chosen.geometryPath}
-              bindings={bindings}
-              proposed={proposed}
-              tree={tree ?? undefined}
-              onReport={onReport}
-              onReady={onReady}
-              onHover={onHover}
-              onSelect={onSelect}
-              onConverted={onPersistGeometry ? onConverted : undefined}
-            />
-          </Suspense>
+          {tooLarge && (
+            <Alert severity="warning" sx={{ m: 1 }}>{tooLargeMessage(chosen)}</Alert>
+          )}
+          {!tooLarge && (
+            <Suspense fallback={<CircularProgress sx={{ m: 4 }} />}>
+              <BimCanvas
+                key={chosen.geometryPath ?? chosen.ifcPath}
+                url={fileUrl(libraryUrl, chosen.geometryPath ?? chosen.ifcPath)}
+                convert={!chosen.geometryPath}
+                bindings={bindings}
+                proposed={proposed}
+                tree={tree ?? undefined}
+                onReport={onReport}
+                onReady={onReady}
+                onHover={onHover}
+                onSelect={onSelect}
+                onConverted={onPersistGeometry ? onConverted : undefined}
+              />
+            </Suspense>
+          )}
           {handle && (
             <Box sx={{
               display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap', alignItems: 'flex-start',

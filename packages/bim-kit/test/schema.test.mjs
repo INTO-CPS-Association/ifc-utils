@@ -109,6 +109,14 @@ test('refuses a wildcard topic', () => {
   assert.match(result.problems[0].message, /wildcard/);
 });
 
+test('refuses a single-level wildcard topic', () => {
+  const result = readManifest(withBinding({
+    source: { live: { transport: 'mqtt', topic: 'swim/+/temperature' } },
+  }));
+  assert.equal(result.ok, false);
+  assert.match(result.problems[0].message, /wildcard/);
+});
+
 test('refuses a topic with a leading slash', () => {
   const result = readManifest(withBinding({
     source: { live: { transport: 'mqtt', topic: '/swim/x' } },

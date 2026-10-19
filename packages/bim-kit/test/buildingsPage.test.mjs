@@ -38,11 +38,18 @@ const MANIFEST = {
     display: { unit: '°C', ramp: [18, 26] },
   }],
 };
+// A manifest whose one topic is the MQTT wildcard for every topic.
+const WILD_MANIFEST = {
+  ...MANIFEST,
+  bindings: [{ ...MANIFEST.bindings[0], source: { live: { transport: 'mqtt', topic: '#' } } }],
+};
 const FILES = {
   'common/models/hospital-a.ifc': TEMPLATE,
   'common/models/hospital-a.manifest.json': JSON.stringify(MANIFEST),
   'common/models/office-b.ifc': TEMPLATE,
   'projects/aarhus/tower.ifc': TEMPLATE,
+  'projects/wild/wild.ifc': TEMPLATE,
+  'projects/wild/wild.manifest.json': JSON.stringify(WILD_MANIFEST),
 };
 
 /** Serves `files/<path>` the way a workspace does. The listing goes through `host.contents`. */
@@ -199,4 +206,19 @@ test('a connection that goes down marks the card not live and keeps the value', 
   act(() => host.signals.setConnection('down'));
   assert.ok(await screen.findByText(/not live/));
   assert.ok(screen.getByText('21.5 °C'));
+});
+
+test('a manifest with a wildcard topic is refused and nothing is subscribed', async () => {
+  const host = fakeHostServices({ extensionId: 'bim', files: FILES });
+  const subscribed = [];
+  const subscribe = host.signals.subscribe.bind(host.signals);
+  host.signals.subscribe = (topics, ...rest) => {
+    subscribed.push(...topics);
+    return subscribe(topics, ...rest);
+  };
+  renderWithHost(React.createElement(App), { host, route: '/bim/models/wild?dir=projects/wild' });
+
+  assert.ok(await screen.findByText('The sensor manifest is not valid.'));
+  await act(async () => {});
+  assert.deepEqual(subscribed, []);
 });

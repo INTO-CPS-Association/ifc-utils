@@ -12,7 +12,6 @@ test('a folder inside the library is kept, without a trailing slash', () => {
   const cases = [
     ['common/models', 'common/models'],
     ['projects/aarhus/', 'projects/aarhus'],
-    ['100% done', '100% done'],
     ['a b/[3D] c', 'a b/[3D] c'],
   ];
   for (const [raw, clean] of cases) assert.equal(normaliseLibraryPath(raw), clean, raw);
@@ -24,6 +23,12 @@ test('a folder that could leave the library is refused', () => {
     'a/%2E', 'a\u0000b', '..%2F..%2Fetc', 'a%2F..%2Fb', 'a%5Cb', null, undefined,
   ];
   for (const raw of cases) assert.equal(normaliseLibraryPath(raw), null, String(raw));
+});
+
+test('a folder with a character that changes the URL it is joined into is refused', () => {
+  // `?` and `#` would cut the path short, and `%` would be decoded again by the server.
+  const cases = ['a?b', 'models?dir=x', 'a#b', 'a/#', '100% done', 'a/%41'];
+  for (const raw of cases) assert.equal(normaliseLibraryPath(raw), null, raw);
 });
 
 test('the GlobalId pattern is the one the schema and the extension share', () => {

@@ -20,18 +20,30 @@ on:
     types: [published]
   workflow_dispatch:
 
+# Read only by default. A job that needs more, such as the publish jobs, asks
+# for it in its own permissions block, so a step that is compromised in any
+# other job holds a token that cannot write to the repository.
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       # Pinned by commit like the publish jobs below, so a moved tag cannot
-      # change what the check runs.
+      # change what the check runs. The token is not left in .git/config,
+      # where every later step, install scripts included, could read it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
-      # At the root, which is what links the workspaces to each other.
-      - run: npm ci
+      # At the root, which is what links the workspaces to each other. No
+      # dependency runs code at install time: nothing in the lock file needs an
+      # install script, and a hijacked release would use one first. The
+      # package's own prepack and prepublishOnly still run at npm publish.
+      - run: npm ci --ignore-scripts
       # Fails the build on a known high or critical advisory, instead of
       # leaving it to whoever remembers to look.
       - run: npm run audit
@@ -60,11 +72,13 @@ jobs:
       # cooldown to actions, a pin it proposes is merged once the release is ten
       # days old: checkout v7.0.1, setup-node v7.0.0, setup-python v7.0.0.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
           registry-url: 'https://npm.pkg.github.com'
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm publish --workspace packages/bim-kit
         env:
@@ -86,12 +100,14 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
       # Trusted publishing needs npm 11.5.1 or newer, and node 22 ships npm 10.
       - run: npm install -g npm@11.5.1
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm publish --workspace packages/bim-kit

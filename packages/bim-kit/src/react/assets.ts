@@ -230,6 +230,25 @@ export function uniqueNames(
   return titles;
 }
 
+/**
+ * The largest IFC file the page converts in the browser.
+ *
+ * Conversion holds the whole file and the geometry made from it in the tab's
+ * memory, so a file well past this size stalls or crashes the tab, and the
+ * library is shared, so anyone who can write to it could leave such a file.
+ */
+export const MAX_CONVERT_BYTES = 200 * 1024 * 1024;
+
+/**
+ * Whether a model would have to be converted here and is too large for it.
+ * A model with geometry beside it is not converted, and a listing that gives
+ * no size cannot tell, so both are left to draw.
+ */
+export function tooLargeToConvert(model: BimModel): boolean {
+  if (model.geometryPath || model.sizeBytes === undefined) return false;
+  return model.sizeBytes > MAX_CONVERT_BYTES;
+}
+
 /** How large a model is, for a page that has to admit a 24 MB download. */
 export function formatSize(bytes: number | undefined): string {
   if (bytes === undefined) return '';

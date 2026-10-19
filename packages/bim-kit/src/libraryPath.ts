@@ -10,28 +10,22 @@
 
 const UNSAFE = new Set(['', '.', '..']);
 
-const SEPARATOR = /[/\\\0]/;
-
-/** A segment as the server may read it, after one more round of decoding. */
-function decoded(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
-  }
-}
+// Separators and NUL could leave the library. `?` and `#` would end the path
+// part of the URL it is joined into, and `%` would let the server decode a
+// segment into something this never looked at, so all are refused outright
+// instead of decoded and checked.
+const FORBIDDEN = /[/\\\0?#%]/;
 
 function isUnsafe(segment: string): boolean {
-  const plain = decoded(segment);
-  return UNSAFE.has(segment) || UNSAFE.has(plain) || SEPARATOR.test(plain);
+  return UNSAFE.has(segment) || FORBIDDEN.test(segment);
 }
 
 /**
  * A user-supplied folder as a clean, library-relative path, or `null` when
  * it could leave the library.
  *
- * Percent-encoded dot segments and separators are caught too, because the
- * server may decode them again after this has looked at them.
+ * A folder holding `%`, `?` or `#` is refused as a whole, so a
+ * percent-encoded dot segment or separator never reaches the server.
  */
 export function normaliseLibraryPath(raw: string | null | undefined): string | null {
   if (!raw || raw.startsWith('/') || /[\\\0]/.test(raw)) return null;

@@ -19,6 +19,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- A sensor manifest is validated before use. A manifest that fails, including one with an MQTT wildcard topic, shows "The sensor manifest is not valid." with each problem and subscribes to nothing. SECURITY.md said manifests were validated, and the page did not do it.
+- A library path with `?`, `#` or `%` in a segment is refused.
+- An IFC model over 200 MB with no GLB beside it is not converted in the browser, and the page says so instead of downloading it.
 - Changing folder starts the page again on the new folder. The menu goes back to loading, the chosen model is cleared, and a problem reported for the previous folder is no longer shown. Until the new listing arrived, the page used to keep the previous folder's models in the menu and its model on screen.
 - Under MUI 9, which DTaaS runs, the label and the age on each sensor card ran together on one line, and the model's name was not centred against its chip. MUI 9 removed the system props, so `display` on a `Typography` and `alignItems` on a `Stack` were dropped without a word. Both now sit in `sx`, and the package is built and tested against MUI 9.
 

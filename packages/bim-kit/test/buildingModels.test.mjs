@@ -370,7 +370,7 @@ function withSidecars(manifest) {
 const MANIFEST = {
   model: { source: 'Building_1912_AK_v4.ifc', source_sha256: 'unknown', converter: 'test' },
   bindings: [{
-    selector: { globalId: 'w1' },
+    selector: { globalId: 'wallTemperature0000001' },
     label: 'Wall temperature',
     source: { live: { transport: 'mqtt', topic: 'swim/b/w1' } },
     display: { unit: '°C', ramp: [4, 16] },
@@ -399,6 +399,51 @@ test('a manifest that cannot be read says so', async () => {
   await choose(user, 'Building 1912 AK v4');
 
   assert.ok(await screen.findByText('The sensor manifest could not be read.'));
+});
+
+test('a manifest that fails validation says why and binds nothing', async () => {
+  // A binding with no source used to reach the resolver and throw there.
+  withSidecars({ ...MANIFEST, bindings: [{ ...MANIFEST.bindings[0], source: undefined }] });
+  const reported = [];
+  const user = userEvent.setup();
+  show({ onBindingsChange: (bindings) => reported.push(bindings) });
+
+  await screen.findByText(/1 IFC model/);
+  await choose(user, 'Building 1912 AK v4');
+
+  assert.ok(await screen.findByText('The sensor manifest is not valid.'));
+  assert.ok(screen.getByText(/bindings\[0\]\.source/));
+  assert.deepEqual(canvas.props.bindings, []);
+  assert.ok(reported.every((bindings) => bindings.length === 0));
+});
+
+test('a manifest with a wildcard topic is refused whole', async () => {
+  // A wildcard topic would become a subscription to every sensor on the broker.
+  const wild = { ...MANIFEST.bindings[0], source: { live: { transport: 'mqtt', topic: '#' } } };
+  withSidecars({ ...MANIFEST, bindings: [MANIFEST.bindings[0], wild] });
+  const user = userEvent.setup();
+  show();
+
+  await screen.findByText(/1 IFC model/);
+  await choose(user, 'Building 1912 AK v4');
+
+  assert.ok(await screen.findByText('The sensor manifest is not valid.'));
+  assert.ok(screen.getByText(/not a wildcard/));
+  assert.deepEqual(canvas.props.bindings, []);
+});
+
+test('an IFC file too large to convert in the browser is named and never downloaded', async () => {
+  const big = 201 * 1024 * 1024;
+  workspace({ files: [ifc('Building_1912_AK_v4.ifc', big)], heads: { 'Building_1912_AK_v4.ifc': TEMPLATE } });
+  const user = userEvent.setup();
+  show();
+
+  await screen.findByText(/1 IFC model/);
+  await user.click(screen.getByRole('combobox', { name: /^IFC Model/ }));
+  await user.click(await screen.findByRole('option', { name: /Building 1912 AK v4/ }));
+
+  assert.ok(await screen.findByText(/201\.0 MB, and an IFC file above 200\.0 MB is not converted/));
+  assert.equal(screen.queryByTestId('canvas'), null);
 });
 
 /** Two floors, a wall and a slab on each, as the scene view tests build them. */
