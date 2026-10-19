@@ -12,7 +12,15 @@ import type { Sampled, SignalsService } from '@into-cps-association/dtaas-sdk';
 import { objectOf, type Binding } from '../binding.js';
 import type { FeedState, Reading } from '../readings.js';
 import { bindingsByTopic, topicsOf } from '../resolver.js';
-import { CHANNEL } from './ids.js';
+import { CHANNEL, SIMULATED_CHANNEL } from './ids.js';
+
+/** The channels the page reads, the measured one last so that it wins. */
+const CHANNELS = [SIMULATED_CHANNEL, CHANNEL] as const;
+
+type Channel = (typeof CHANNELS)[number];
+
+/** The latest reading per GlobalId, kept apart for each channel. */
+type ByChannel = Readonly<Record<Channel, Map<string, Reading>>>;
 
 export interface LiveReadings {
   readonly readings: Map<string, Reading>;
@@ -34,14 +42,27 @@ function withSample(
   return next;
 }
 
-/** Each bound object's latest stored value, so a card is not blank until the next sample. */
-function storedReadings(signals: SignalsService, bindings: Binding[]): Map<string, Reading> {
+/** Each bound object's latest stored value on one channel. */
+function storedOn(signals: SignalsService, bindings: Binding[], channel: Channel) {
   let readings = new Map<string, Reading>();
   bindingsByTopic(bindings).forEach((targets, topic) => {
-    const stored = signals.valueAt(topic, CHANNEL);
+    const stored = signals.valueAt(topic, channel);
     if (stored) readings = withSample(readings, targets, stored);
   });
   return readings;
+}
+
+/** The stored values on both channels, so a card is not blank until the next sample. */
+function storedReadings(signals: SignalsService, bindings: Binding[]): ByChannel {
+  return {
+    [SIMULATED_CHANNEL]: storedOn(signals, bindings, SIMULATED_CHANNEL),
+    [CHANNEL]: storedOn(signals, bindings, CHANNEL),
+  };
+}
+
+/** One map for the page: a simulated value where no measured one exists. */
+function merged(byChannel: ByChannel): Map<string, Reading> {
+  return new Map([...byChannel[SIMULATED_CHANNEL], ...byChannel[CHANNEL]]);
 }
 
 /**
@@ -62,18 +83,25 @@ function useResetOnTopicsChange(signals: SignalsService, bindings: Binding[], to
   return [readings, setReadings] as const;
 }
 
-/** The latest measured value per GlobalId, and whether the feed behind them is live. */
+/**
+ * The latest value per GlobalId, measured where there is one and simulated
+ * otherwise, and whether the feed behind them is live.
+ */
 function useReadings(signals: SignalsService, bindings: Binding[]): LiveReadings {
   const topics = useMemo(() => topicsOf(bindings), [bindings]);
-  const [readings, setReadings] = useResetOnTopicsChange(signals, bindings, topics);
+  const [byChannel, setByChannel] = useResetOnTopicsChange(signals, bindings, topics);
   const feed = signals.connection.use(topics);
   useEffect(() => {
     if (topics.length === 0) return undefined;
     const byTopic = bindingsByTopic(bindings);
-    return signals.subscribe(topics, CHANNEL, (sample) => setReadings(
-      (previous) => withSample(previous, byTopic.get(sample.signalPath) ?? [], sample),
-    ));
-  }, [signals, bindings, topics, setReadings]);
+    const stops = CHANNELS.map((channel) => signals.subscribe(topics, channel, (sample) =>
+      setByChannel((previous) => ({
+        ...previous,
+        [channel]: withSample(previous[channel], byTopic.get(sample.signalPath) ?? [], sample),
+      }))));
+    return () => stops.forEach((stop) => stop());
+  }, [signals, bindings, topics, setByChannel]);
+  const readings = useMemo(() => merged(byChannel), [byChannel]);
   return { readings, feed };
 }
 

@@ -22,3 +22,10 @@ export const COLOR_SCHEME = 'bim.cold-warm';
 
 /** The signal channel a sensor's measured value arrives on. */
 export const CHANNEL = 'measured' as const;
+
+/**
+ * The channel a simulated value arrives on, such as the readings the BIM
+ * example of the DTaaS examples publishes. The page shows it for an object
+ * that has no measured value, so a simulation alone still colours a model.
+ */
+export const SIMULATED_CHANNEL = 'simulated' as const;

@@ -168,14 +168,28 @@ async function showHospitalA() {
   return host;
 }
 
-const emit = (host, value) => act(() => {
-  host.signals.emit({ twinId: 'h', signalPath: TOPIC, channel: 'measured', ts: Date.now(), value });
+const emit = (host, value, channel = 'measured') => act(() => {
+  host.signals.emit({ twinId: 'h', signalPath: TOPIC, channel, ts: Date.now(), value });
 });
 
 test('a reading pushed through host.signals reaches the sensor card of its binding', async () => {
   const host = await showHospitalA();
   emit(host, 21.5);
   assert.ok(await screen.findByText('21.5 °C'));
+});
+
+test('a simulated reading colours an object that has no measured one', async () => {
+  const host = await showHospitalA();
+  emit(host, 19.25, 'simulated');
+  assert.ok(await screen.findByText('19.3 °C'));
+});
+
+test('a measured reading wins over a simulated one for the same object', async () => {
+  const host = await showHospitalA();
+  emit(host, 21.5);
+  emit(host, 30, 'simulated');
+  await screen.findByText('21.5 °C');
+  assert.equal(screen.queryByText('30 °C'), null);
 });
 
 test('a connection that goes down marks the card not live and keeps the value', async () => {
