@@ -31,6 +31,7 @@ export {
   topicOf,
   displayOf,
   idOf,
+  GLOBAL_ID_PATTERN,
   type Binding,
   type Display,
   type Selector,
@@ -86,3 +87,5 @@ export {
   type Reading,
   type Zones,
 } from './readings.js';
+
+export { normaliseLibraryPath } from './libraryPath.js';

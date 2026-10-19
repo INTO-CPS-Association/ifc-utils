@@ -62,7 +62,8 @@ const MANIFEST = '.manifest.json';
  *
  * @deprecated The directory is the host's convention and not this package's,
  * so a host passes it to `BuildingModels` as `directory`. This default is kept
- * for compatibility with 0.1.0, which exported it, and goes in 0.2.0.
+ * for compatibility with 0.1.0, which exported it. Removing it breaks a host
+ * that still reads it, so it stays until a release that is allowed to break hosts.
  */
 export const MODELS_DIRECTORY = 'common/models';
 

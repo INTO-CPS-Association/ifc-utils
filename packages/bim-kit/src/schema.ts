@@ -17,12 +17,13 @@
  */
 
 import { z } from 'zod';
+import { GLOBAL_ID_PATTERN } from './binding.js';
 
 /** An IFC GlobalId: 22 characters of the base64 variant IFC uses. */
 const GlobalId = z
   .string()
   .regex(
-    /^[0-9A-Za-z_$]{22}$/,
+    GLOBAL_ID_PATTERN,
     'a GlobalId is 22 characters of digits, letters, underscore and dollar',
   );
 

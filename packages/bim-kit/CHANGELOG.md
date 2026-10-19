@@ -2,7 +2,17 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package follows [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.0]
+
+### Added
+
+- `./dtaas`, a new entry point exporting `extension`, the declaration the DTaaS client loads from its extension manifest. It is built with `defineExtension` from `@into-cps-association/dtaas-sdk` and ported from the `bim` example in that repository. It mounts the Buildings page at `/bim` and `/bim/models/:model`, reads the models folder from `?dir=`, then from `REACT_APP_EXT_BIM_MODELS_DIRECTORY`, then from the host's convention, and contributes an `ifc-guid` anchor kind, the `bim.ifc-to-glb` converter, the `bim.thermal-comfort` and `bim.co2` presets, and the `bim.room` and `bim.storey` scopes. It passes the SDK's conformance harness, which also checks that the kit opens no socket of its own.
+- `manifestToVisualisation`, exported from `./dtaas`, turns a binding manifest into a `visualisation.json` asset. A binding with no GlobalId or no live topic cannot be anchored, and it is returned with its reason instead of being dropped.
+- `BuildingModels` takes four optional props, so a host can own what the page used to decide for itself: `list` lists the folder through the host's own contents service, `selected` and `onSelect` put the chosen model in the host's route, and `onBindingsChange` reports the bindings of the model on screen, so the host subscribes to exactly those topics. Without them the page behaves as in 0.1.1. When `selected` names a model the folder does not hold, the page reports it, and a listing that arrives after the folder has changed is no longer shown.
+- `DirectoryPicker`, a folder browser that stays inside the library, and `exportGlb`, from `./react`. `normaliseLibraryPath` and `GLOBAL_ID_PATTERN`, from the package root.
+- `@into-cps-association/dtaas-sdk` and `react-router-dom` are optional peers, needed only by `./dtaas`.
+- The Buildings page heads itself Building Models and says what it is for, in the host's page shell, as the hand-wired DTaaS page did, so moving the page into the extension changes nothing a person sees.
+- A model converted in the browser is stored with `overwrite: false`, so a geometry an administrator placed beside the IFC file, which is better than one made in the browser, is never replaced.
 
 ### Fixed
 
@@ -12,6 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - The model picker is as wide as the messages under it, so the picker, the notices and the drawing share one column.
 - The floor picker sits on the toolbar's row, after its last button, and wraps to the next line only when the page is too narrow for both.
+- `MODELS_DIRECTORY` and the `directory` default stay in this release, although 0.1.1 said they would go in 0.2.0. Removing them would break a host that still reads them, and this release adds without breaking.
 
 ## [0.1.1]
 
