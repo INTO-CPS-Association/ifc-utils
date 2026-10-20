@@ -74,6 +74,7 @@
   "files": [
     "dist",
     "react",
+    "viewer",
     "schema",
     "dtaas",
     "LICENSE.md",
@@ -111,9 +112,6 @@
       "optional": true
     },
     "three": {
-      "optional": true
-    },
-    "zod": {
       "optional": true
     },
     "@mui/icons-material": {

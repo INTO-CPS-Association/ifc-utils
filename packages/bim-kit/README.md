@@ -10,7 +10,7 @@ It answers what [DTaaS issue 1762][issue] proposes, and the manifest is the piec
 
 ## What Is In It
 
-Six entry points, so a consumer takes what it needs and nothing else.
+Seven entry points, so a consumer takes what it needs and nothing else.
 
 | Entry point | What it holds | What it pulls in |
 | --- | --- | --- |
@@ -18,7 +18,8 @@ Six entry points, so a consumer takes what it needs and nothing else.
 | `./schema` | Validating a manifest a person wrote | `zod` |
 | `./converter` | IFC to geometry, in the browser | the inlined `web-ifc` WebAssembly |
 | `./viewer` | The three.js scene, the floor filter, the heatmap, the selection | `three` |
-| `./react` | The whole page as components | `react` and `@mui/material` |
+| `./react` | The whole page as components | `react`, `@mui/material` and `zod`, which validates a manifest before the page uses it |
+| `./react/canvas` | The 3D canvas alone, which `./react` loads lazily | `react` and `three` |
 | `./dtaas` | The extension the DTaaS client loads | `@into-cps-association/dtaas-sdk`, `react-router-dom` and `zod`, besides those of `./react` |
 
 The core entry point imports nothing at all, which is what lets manifest logic be tested in jsdom where WebGL, workers and WebAssembly do not exist. Everything heavier sits behind its own entry point and behind a dynamic import, so a host that never opens the page never downloads a renderer or a parser.
@@ -35,7 +36,7 @@ The core entry point imports nothing at all, which is what lets manifest logic b
 npm install @into-cps-association/bim-kit
 ```
 
-The core has no dependencies. The schema validator is a separate entry point because it needs `zod`, and `zod` is an optional peer: a manifest written by the converter has already been validated once, so most consumers never load it.
+The core has no dependencies. The schema validator is a separate entry point because it needs `zod`. `./react` validates every manifest it loads, so it needs `zod` too, and `zod` is a required peer from 0.2.0. A consumer of the core or of `./viewer` alone never loads it.
 
 ## Use
 
@@ -132,7 +133,7 @@ import { extension } from '@into-cps-association/bim-kit/dtaas';
 It declares:
 
 - The Buildings page, at `/bim` and `/bim/models/:model`, loaded lazily. The folder is read from `?dir=`, then from the `REACT_APP_EXT_BIM_MODELS_DIRECTORY` setting, then from the host's models folder, and a folder that could leave the library is refused before it is listed. Files are listed and stored through `host.contents`, and readings arrive through `host.signals`.
-- An `ifc-guid` anchor kind, the `bim.ifc-to-glb` converter, the `bim.thermal-comfort` and `bim.co2` presets, and the `bim.room` and `bim.storey` scopes, which the client's common visualisation core merges with those of other kits.
+- An `ifc-guid` anchor kind, the `bim.ifc-to-glb` converter, the `bim.thermal-comfort` and `bim.co2` presets, and the `bim.room` and `bim.storey` scopes, which a host's visualisation core can merge with those of other kits.
 - `manifestToVisualisation`, which turns a binding manifest into a `visualisation.json` asset.
 
 The SDK and `react-router-dom` are optional peers, needed only by a host that imports `./dtaas`, which also needs `zod` and React 19 or newer, since the SDK requires both. The other entry points work without the SDK and the router, so a host outside DTaaS keeps using `./react` as before.

@@ -38,7 +38,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
-          node-version: '22'
+          node-version: '24'
       # At the root, which is what links the workspaces to each other. No
       # dependency runs code at install time: nothing in the lock file needs an
       # install script, and a hijacked release would use one first. The
@@ -76,7 +76,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://npm.pkg.github.com'
       - run: npm ci --ignore-scripts
       - run: npm run build
@@ -104,9 +104,10 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
-      # Trusted publishing needs npm 11.5.1 or newer, and node 22 ships npm 10.
+      # Trusted publishing needs npm 11.5.1 or newer, pinned here instead of
+      # taking whichever npm the runner's Node ships.
       - run: npm install -g npm@11.5.1
       - run: npm ci --ignore-scripts
       - run: npm run build

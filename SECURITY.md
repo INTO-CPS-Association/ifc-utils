@@ -22,6 +22,6 @@ They read files a person uploaded and messages a broker delivered. Both are untr
 
 ## Supply Chain
 
-Dependencies are pinned to exact versions. No dependency or version published less than ten days ago is accepted, because most malicious releases are found and pulled within days of publication.
+Dependencies are pinned to exact versions. No dependency or version published less than ten days ago is accepted, because most malicious releases are found and pulled within days of publication. The one exception is a package of the INTO-CPS Association that this project depends on, such as `@into-cps-association/dtaas-sdk`. It may be taken the day it is published, after the integrity hash in the lock file is checked against the one the registry serves for that version.
 
 Publishing happens only from a GitHub release, through [the workflow](.github/workflows/npm.yml), using the short-lived token that GitHub Actions issues for that run. There is no long-lived publish token to leak.

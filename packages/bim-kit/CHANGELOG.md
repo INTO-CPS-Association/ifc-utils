@@ -21,6 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - A sensor manifest is validated before use. A manifest that fails, including one with an MQTT wildcard topic, shows "The sensor manifest is not valid." with each problem and subscribes to nothing. SECURITY.md said manifests were validated, and the page did not do it.
 - A library path with `?`, `#` or `%` in a segment is refused.
+- The stub `package.json` of `./viewer` is published, as those of `./react`, `./schema` and `./dtaas` are, so a resolver that predates `exports` finds the entry point. 0.1.1 built it and left it out of the package.
 - On the Per Sensor heatmap, a slab, roof or covering keeps its own colour. Each object takes the colour of the sensor that reaches its centre, and a slab spans every room, so the whole floor took one sensor's colour and hid the split the field sheet draws over it.
 - An IFC model over 200 MB with no GLB beside it is not converted in the browser, and the page says so instead of downloading it.
 - Changing folder starts the page again on the new folder. The menu goes back to loading, the chosen model is cleared, and a problem reported for the previous folder is no longer shown. Until the new listing arrived, the page used to keep the previous folder's models in the menu and its model on screen.
@@ -28,6 +29,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- `zod` is a required peer. `./react` now validates every manifest it loads, which needs `zod`, so a host of 0.1.1 that imported `./react` without `zod` has to add it. A package manager that installs peers does so on its own.
 - The model picker is as wide as the messages under it, so the picker, the notices and the drawing share one column.
 - The floor picker sits on the toolbar's row, after its last button, and wraps to the next line only when the page is too narrow for both.
 - `MODELS_DIRECTORY` and the `directory` default stay in this release, although 0.1.1 said they would go in 0.2.0. Removing them would break a host that still reads them, and this release adds without breaking.
