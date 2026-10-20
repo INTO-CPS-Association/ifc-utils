@@ -328,6 +328,22 @@ describe('the Per Sensor scope', () => {
     assert.equal(view.zoneFor('floor'), 's1');
   });
 
+  test('a floor under both sensors keeps its own colour, and the sheet shows the split', () => {
+    // A slab spans every room, so one colour taken from its centre would paint
+    // the whole floor as the room of one sensor. The walls still take theirs.
+    const view = twoZones();
+    const before = view.meshes.get('floor').material;
+    view.state.heat = 'sensor';
+    view.applyReadings([bind('s1'), bind('s2')], new Map([
+      ['s1', { value: 10, receivedAt: NOW }],
+      ['s2', { value: 30, receivedAt: NOW }],
+    ]), 'live', 30, NOW);
+    view.refreshMaterials();
+
+    assert.equal(view.meshes.get('floor').material, before);
+    assert.notEqual(view.meshes.get('s1').material, view.meshes.get('s2').material);
+  });
+
   test('it is offered when there is more than one sensor and not before', () => {
     const view = twoZones();
 
