@@ -16,6 +16,14 @@
  * and the piece that must never pull a renderer or a validator in behind it.
  */
 
+/**
+ * An IFC GlobalId: 22 characters of the base64 variant IFC uses.
+ *
+ * Kept here and not in the schema, because the DTaaS extension checks an
+ * anchor with it and must not pull zod in to do so.
+ */
+export const GLOBAL_ID_PATTERN = /^[0-9A-Za-z_$]{22}$/;
+
 /** How a binding names the object it applies to. Exactly one form is given. */
 export interface Selector {
   globalId?: string;

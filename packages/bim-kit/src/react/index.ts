@@ -14,6 +14,7 @@ export { FloorPicker, type FloorPickerProps } from './FloorPicker.js';
 export { Toolbar, type ToolbarProps } from './Toolbar.js';
 export { ObjectPanel, type ObjectPanelProps } from './ObjectPanel.js';
 export { HelpPanel, type HelpPanelProps } from './HelpPanel.js';
+export { DirectoryPicker, type DirectoryPickerProps } from './DirectoryPicker.js';
 
 // `BimCanvas` is deliberately not re-exported here. `BuildingModels` reaches
 // it through a dynamic import so three.js lands in its own chunk, and a static
@@ -34,3 +35,4 @@ export {
   type LibraryEntry,
 } from './assets.js';
 export { objectsOf, type BimObject } from './scene.js';
+export { exportGlb } from './exportGlb.js';

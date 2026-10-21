@@ -38,6 +38,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { idOf } from '../binding.js';
 import { resolveBindings } from '../resolver.js';
 import type { Binding } from '../binding.js';
+import { exportGlb } from './exportGlb.js';
 import { objectsOf } from './scene.js';
 import {
   SceneView, addOutlines, createFieldSheet, createGizmo, createGlow, type PropertyTree,
@@ -210,45 +211,6 @@ export interface BimCanvasProps {
    * about where the model's files live.
    */
   onConverted?: (glb: Uint8Array) => void;
-}
-
-/**
- * The subset of three's `GLTFExporter` this file uses.
- *
- * Typed here instead of importing the class, because the exporter is fetched
- * dynamically only when a conversion has to be stored, so its type must not
- * pull the module into the static graph.
- */
-type GltfExporter = {
-  parse(
-    input: Object3D,
-    onDone: (result: ArrayBuffer | object) => void,
-    onError: (error: unknown) => void,
-    options: { binary?: boolean; onlyVisible?: boolean },
-  ): void;
-};
-
-/**
- * Serialise a model to the bytes of a binary glTF.
- *
- * `binary: true` asks for a GLB, which arrives as an `ArrayBuffer`.
- * `onlyVisible: false` keeps every object, so a model exported while a floor
- * filter hides part of it still stores the whole building.
- */
-function exportGlb(
-  Exporter: new () => GltfExporter,
-  model: Object3D,
-): Promise<Uint8Array> {
-  return new Promise((resolve, reject) => {
-    new Exporter().parse(
-      model,
-      (result) => resolve(new Uint8Array(result as ArrayBuffer)),
-      (error) => reject(
-        error instanceof Error ? error : new Error('the geometry could not be exported'),
-      ),
-      { binary: true, onlyVisible: false },
-    );
-  });
 }
 
 /** What a page can do to the scene from outside. */
@@ -471,10 +433,7 @@ function BimCanvas({
         // time instead of loading a file that was never written.
         if (onConverted) {
           try {
-            const { GLTFExporter } = await import(
-              'three/examples/jsm/exporters/GLTFExporter.js'
-            );
-            const glb = await exportGlb(GLTFExporter as never, model);
+            const glb = await exportGlb(model);
             if (running) onConverted(glb);
           } catch {
             // Persistence is an optimisation, not a requirement for drawing.

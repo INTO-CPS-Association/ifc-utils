@@ -295,6 +295,11 @@ export class SceneView {
   /** The colour a heatmap gives one object, or null when it gives none. Null covers three cases that must all leave the object in its own colour: the heatmap is off, no sensor covers the object's zone, and the readings have gone stale. A heatmap of stale values is a confident wrong answer. */
   private heatOf(globalId: string) {
     if (!this.zones) return undefined;
+    // Per Sensor colours an object by the sensor that reaches its centre. A
+    // slab or a roof spans every room, so that would paint the whole floor as
+    // one sensor's room. The field sheet shows the split over the floor.
+    const ifcClass = this.meshes.get(globalId)?.userData.ifcClass as string | undefined;
+    if (this.state.heat === 'sensor' && ifcClass && LIDS.has(ifcClass)) return undefined;
     const zone = this.zoneFor(globalId);
     if (zone === undefined) return undefined;
     const mean = this.zones.meanByZone.get(zone);

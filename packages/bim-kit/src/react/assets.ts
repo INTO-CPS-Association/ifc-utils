@@ -62,7 +62,8 @@ const MANIFEST = '.manifest.json';
  *
  * @deprecated The directory is the host's convention and not this package's,
  * so a host passes it to `BuildingModels` as `directory`. This default is kept
- * for compatibility with 0.1.0, which exported it, and goes in 0.2.0.
+ * for compatibility with 0.1.0, which exported it. Removing it breaks a host
+ * that still reads it, so it stays until a release that is allowed to break hosts.
  */
 export const MODELS_DIRECTORY = 'common/models';
 
@@ -227,6 +228,25 @@ export function uniqueNames(
     if (name && counts.get(name) === 1) titles.set(file, name);
   });
   return titles;
+}
+
+/**
+ * The largest IFC file the page converts in the browser.
+ *
+ * Conversion holds the whole file and the geometry made from it in the tab's
+ * memory, so a file well past this size stalls or crashes the tab, and the
+ * library is shared, so anyone who can write to it could leave such a file.
+ */
+export const MAX_CONVERT_BYTES = 200 * 1024 * 1024;
+
+/**
+ * Whether a model would have to be converted here and is too large for it.
+ * A model with geometry beside it is not converted, and a listing that gives
+ * no size cannot tell, so both are left to draw.
+ */
+export function tooLargeToConvert(model: BimModel): boolean {
+  if (model.geometryPath || model.sizeBytes === undefined) return false;
+  return model.sizeBytes > MAX_CONVERT_BYTES;
 }
 
 /** How large a model is, for a page that has to admit a 24 MB download. */

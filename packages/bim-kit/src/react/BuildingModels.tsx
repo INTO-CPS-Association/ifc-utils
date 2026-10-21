@@ -47,16 +47,18 @@ import { ClassLegend, HeatLegend } from './Legend.js';
 import Toolbar from './Toolbar.js';
 import type { ViewerHandle } from './BimCanvas.js';
 import {
+  MAX_CONVERT_BYTES,
   MODELS_DIRECTORY,
-  contentsUrl,
   fileUrl,
   formatSize,
-  pairModels,
-  readIfcName,
-  uniqueNames,
+  tooLargeToConvert,
   type BimModel,
   type LibraryEntry,
 } from './assets.js';
+import { readJson, type Problem } from './libraryJson.js';
+import { readManifest } from '../schema.js';
+import { useChosenModel } from './useChosenModel.js';
+import { useModelList } from './useModelList.js';
 
 // Loaded only when a model is opened, so three.js stays out of the host's main
 // chunk. The host already gates bundle size, and a non-lazy three.js import
@@ -76,6 +78,13 @@ const NOT_STORED =
 const CONVERTS_HERE =
   'No converted geometry sits beside this model, so it is read from the IFC '
   + 'file in your browser. That takes a moment the first time.';
+
+/** Why a model is not drawn, when converting it would exhaust the tab. */
+function tooLargeMessage(model: BimModel): string {
+  return `${model.title} is ${formatSize(model.sizeBytes)}, and an IFC file above `
+    + `${formatSize(MAX_CONVERT_BYTES)} is not converted in the browser. Convert it `
+    + 'outside the browser and put the GLB beside it in the library to draw it here.';
+}
 
 /** Says whether a model already has geometry beside it, in one word. */
 function StateChip({ model }: Readonly<{ model: BimModel }>) {
@@ -157,7 +166,7 @@ export interface BuildingModelsProps {
    * Which directory under the library holds the models.
    *
    * The host's convention, so the host passes it. Left out, it falls back to
-   * the directory DTaaS uses, which is deprecated and goes in 0.2.0.
+   * the directory DTaaS uses, which is deprecated and goes in a later breaking release.
    */
   directory?: string;
   /**
@@ -184,41 +193,72 @@ export interface BuildingModelsProps {
    * version before this one.
    */
   onPersistGeometry?: (model: BimModel, glb: Uint8Array) => Promise<void>;
+  /**
+   * Lists `directory`. Absent, the page fetches
+   * `contentsUrl(libraryUrl, directory)` itself, as every version before
+   * 0.2.0 did. A host with its own contents service, such as DTaaS through
+   * `host.contents`, passes it here so the page reads the same files it does.
+   */
+  list?: (directory: string) => Promise<LibraryEntry[]>;
+  /**
+   * The file name, without `.ifc`, of the model to show. Given, the host owns
+   * the choice, for example through its route, and the menu only reports a
+   * pick through `onSelect`. Absent, the page remembers the last pick itself.
+   */
+  selected?: string;
+  /** Called with the file name, without `.ifc`, of the model a person picks. */
+  onSelect?: (name: string) => void;
+  /**
+   * Called with the bindings of the model on screen whenever they change, so
+   * a host can subscribe to exactly the topics the page draws.
+   */
+  onBindingsChange?: (bindings: Binding[]) => void;
+}
+
+type SaveState = 'idle' | 'saving' | 'stored' | 'failed';
+
+/** What a manifest beside a model contributes to the page once it is checked. */
+type CheckedManifest =
+  | { ok: true; bindings: Binding[]; proposed: boolean }
+  | { ok: false; problem: Problem };
+
+/**
+ * Validate a manifest read from the library before any of it is used.
+ *
+ * The file is untrusted: its topics become subscriptions in the host, so a
+ * wildcard would subscribe to the whole broker, and a binding with no source
+ * would throw further down. A manifest that fails is refused whole, as
+ * SECURITY.md promises, instead of half applied.
+ *
+ * The bindings come from the raw value and not from the parsed one, because
+ * the schema strips the optional fields it does not list, such as `id` and
+ * `mountedOn`, which the sensor cards show.
+ */
+function checkManifest(raw: unknown): CheckedManifest {
+  const result = readManifest(raw);
+  if (!result.ok) {
+    const detail = result.problems.map(({ where, message }) => `${where}: ${message}`).join('. ');
+    return { ok: false, problem: { summary: 'The sensor manifest is not valid.', detail } };
+  }
+  const { bindings } = raw as { bindings: Binding[] };
+  return { ok: true, bindings, proposed: result.manifest.model.proposed === true };
 }
 
 /**
- * Read a response as JSON, or say what actually came back.
- *
- * The library URL a host supplies is built from parts, and one of those parts
- * is usually the signed-in user. Whenever that part is wrong, missing, or not
- * known yet, the request still succeeds: it stops matching the workspace and
- * lands on the host application, which answers with its own HTML page and
- * HTTP 200. `response.json()` then reports "Unexpected token '<'", which
- * blames JSON for an address that was never the library.
- *
- * Both failures seen so far were this: first a name that had not arrived yet,
- * then a deployment serving a workspace under a different name than the one
- * signed in. So the message names the address and states that cause, because
- * the alternative is reading a parser error and looking in the wrong place.
+ * Tell the host the bindings in force whenever they change. The callback is
+ * read when they change, so a new function on every host render is harmless.
  */
-/** What failed, and the address and cause behind it. */
-interface Problem {
-  summary: string;
-  detail: string;
-}
-
-async function readJson<T>(response: Response, url: string): Promise<T> {
-  if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}`);
-
-  const type = response.headers.get('content-type') ?? '';
-  if (!type.includes('json')) {
-    throw new Error(
-      `The workspace returned a web page instead of data at ${url}. That `
-      + 'address carries the name of the signed-in user, and a workspace '
-      + 'served under a different name is what this looks like.',
-    );
-  }
-  return response.json() as Promise<T>;
+function useBindingsReport(
+  bindings: Binding[],
+  onBindingsChange: ((bindings: Binding[]) => void) | undefined,
+) {
+  const listener = useRef(onBindingsChange);
+  useEffect(() => {
+    listener.current = onBindingsChange;
+  });
+  useEffect(() => {
+    listener.current?.(bindings);
+  }, [bindings]);
 }
 
 /**
@@ -238,9 +278,18 @@ export function BuildingModels({
   readings = NO_READINGS,
   feed = 'down',
   onPersistGeometry,
+  list,
+  selected: selectedModel,
+  onSelect: onSelectModel,
+  onBindingsChange,
 }: Readonly<BuildingModelsProps>) {
-  const [models, setModels] = useState<BimModel[] | null>(null);
-  const [chosen, setChosen] = useState<BimModel | null>(null);
+  const listing = useModelList(libraryUrl, directory, list);
+  const { models } = listing;
+  const {
+    chosen, current, missing, choose,
+  } = useChosenModel({
+    models, directory, selected: selectedModel, onSelect: onSelectModel,
+  });
   const [problem, setProblem] = useState<Problem | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [bindings, setBindings] = useState<Binding[]>([]);
@@ -261,58 +310,17 @@ export function BuildingModels({
   // again, and choosing the same one back does not repeat what was dismissed.
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const dismiss = (text: string) => setDismissed((seen) => new Set(seen).add(text));
-  // Bumped after a conversion is stored, so the listing is read again and the
-  // just-written GLB is paired with its model. The model then reads as
-  // converted, and choosing it again loads the file instead of reconverting.
-  const [reload, setReload] = useState(0);
   // Where the last conversion is on its way to the library. A large model goes
   // up in dozens of pieces, and without this the page said nothing while it
   // happened, so a person who looked at the menu in the meantime saw the model
-  // still marked as unconverted and concluded the save had failed.
-  const [save, setSave] = useState<'idle' | 'saving' | 'stored' | 'failed'>('idle');
-
-  useEffect(() => {
-    if (!libraryUrl) return undefined;
-    let current = true;
-
-    const url = contentsUrl(libraryUrl, directory);
-    // The listing decides whether the page works, so its failure is reported.
-    // It is never taken from the browser cache: Jupyter sends it with
-    // Last-Modified and no Cache-Control, so a cached copy could be reused, and
-    // the listing read again after a save would miss the file just written.
-    fetch(url, { credentials: 'include', cache: 'no-store' })
-      .then((response) => readJson<{ content?: LibraryEntry[] }>(response, url))
-      .then((listing) => {
-        if (!current) return;
-        const entries = listing.content ?? [];
-        // Shown straight away under their file names, so the menu is usable
-        // while the names are read.
-        setModels(pairModels(entries));
-
-        // Then named from the files themselves, the start of each read in
-        // parallel. A name that cannot be read leaves the file name in place,
-        // so this never fails the page.
-        const ifcs = entries.filter((entry) => entry.name.toLowerCase().endsWith('.ifc'));
-        Promise.all(ifcs.map((entry) => readIfcName(libraryUrl, entry.path)))
-          .then((found) => {
-            if (!current) return;
-            const names = new Map(ifcs.map((entry, i) => [entry.name, found[i]]));
-            setModels(pairModels(entries, uniqueNames(names)));
-          });
-      })
-      .catch((error: Error) => {
-        if (!current) return;
-        setProblem({
-          summary: 'The shared library could not be listed.',
-          detail: error.message,
-        });
-        setModels([]);
-      });
-
-    return () => {
-      current = false;
-    };
-  }, [libraryUrl, directory, reload]);
+  // still marked as unconverted and concluded the save had failed. A save
+  // belongs to the model it was made for, so a model is never described by
+  // the save of the last one, however it came to be chosen.
+  const [saved, setSaved] = useState<{ model: BimModel | null; state: SaveState }>({
+    model: null, state: 'idle',
+  });
+  const save = saved.model === chosen ? saved.state : 'idle';
+  useBindingsReport(bindings, onBindingsChange);
 
   /**
    * The property tree beside the model, when there is one.
@@ -348,20 +356,26 @@ export function BuildingModels({
   // of a failed request.
   useEffect(() => {
     // Cleared first, so switching to a model with no manifest does not keep
-    // showing the previous model's sensors.
+    // showing the previous model's sensors, or the previous manifest's problem.
     setBindings([]);
     setProposed(false);
     setNote(null);
+    setProblem(null);
     if (!chosen?.manifestPath || !libraryUrl) return undefined;
     let current = true;
 
     const url = fileUrl(libraryUrl, chosen.manifestPath);
     fetch(url, { credentials: 'include' })
-      .then((response) => readJson<{ bindings?: Binding[]; model?: { proposed?: boolean } }>(response, url))
-      .then((manifest) => {
+      .then((response) => readJson<unknown>(response, url))
+      .then((raw) => {
         if (!current) return;
-        setBindings(manifest.bindings ?? []);
-        setProposed(manifest.model?.proposed === true);
+        const checked = checkManifest(raw);
+        if (!checked.ok) {
+          setProblem(checked.problem);
+          return;
+        }
+        setBindings(checked.bindings);
+        setProposed(checked.proposed);
       })
       .catch((error: Error) => {
         if (current) {
@@ -395,35 +409,30 @@ export function BuildingModels({
   // when that returns, read the directory again so the new GLB is paired with
   // its model. A host that supplies no way to store gets no callback, so the
   // canvas never exports and nothing here runs.
-  // The chosen model as the latest listing describes it. The canvas stays bound
-  // to `chosen`, because swapping that object after a save would change the
-  // canvas key and redraw the model already on screen. Everything the page says
-  // about the model reads from here instead, so it follows the save.
-  const current = chosen
-    ? models?.find((model) => model.ifcPath === chosen.ifcPath) ?? chosen
-    : null;
-
-  // A save belongs to the model it was made for. Choosing another one clears
-  // the message, so a model is never described by the save of the last one.
-  const choose = useCallback((model: BimModel) => {
-    setSave('idle');
-    setChosen(model);
-  }, []);
-
+  // The canvas stays bound to `chosen`, because swapping that object after a
+  // save would change the canvas key and redraw the model already on screen.
+  // Everything the page says about the model reads from `current` instead, so
+  // it follows the save.
+  const { reload } = listing;
+  // A folder that cannot be listed is the failure a person acts on first.
+  const shownProblem = listing.problem ?? problem;
+  // Checked before the canvas mounts, because mounting it starts the download.
+  const tooLarge = chosen !== null && tooLargeToConvert(chosen);
   const onConverted = useCallback((glb: Uint8Array) => {
     if (!chosen || !onPersistGeometry) return;
-    setSave('saving');
-    onPersistGeometry(chosen, glb)
+    const model = chosen;
+    setSaved({ model, state: 'saving' });
+    onPersistGeometry(model, glb)
       .then(() => {
-        setSave('stored');
-        setReload((n) => n + 1);
+        setSaved({ model, state: 'stored' });
+        reload();
       })
       .catch(() => {
         // The drawing is already on screen, so nothing is lost now. The page
         // says so, because the cost lands on the next visit, which reconverts.
-        setSave('failed');
+        setSaved({ model, state: 'failed' });
       });
-  }, [chosen, onPersistGeometry]);
+  }, [chosen, onPersistGeometry, reload]);
   const onReady = useCallback((ready: ViewerHandle) => {
     setHandle(ready);
     setSelected(null);
@@ -467,10 +476,10 @@ export function BuildingModels({
       {/* The headline says what failed, which is the part a person acts on.
           The address and the likely cause follow it, so a long diagnostic line
           does not have to be read before the failure is understood. */}
-      {problem && (
+      {shownProblem && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          <AlertTitle>{problem.summary}</AlertTitle>
-          {problem.detail}
+          <AlertTitle>{shownProblem.summary}</AlertTitle>
+          {shownProblem.detail}
         </Alert>
       )}
 
@@ -499,7 +508,13 @@ export function BuildingModels({
         )}
       </Box>
 
-      {current && !current.geometryPath && !dismissed.has(CONVERTS_HERE) && (
+      {missing && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          {`No model named ${selectedModel} in ${directory}`}
+        </Alert>
+      )}
+
+      {current && !current.geometryPath && !tooLarge && !dismissed.has(CONVERTS_HERE) && (
         <Alert severity="info" sx={{ mb: 2 }} onClose={() => dismiss(CONVERTS_HERE)}>
           {CONVERTS_HERE}
         </Alert>
@@ -572,21 +587,26 @@ export function BuildingModels({
               />
             </Box>
           )}
-          <Suspense fallback={<CircularProgress sx={{ m: 4 }} />}>
-            <BimCanvas
-              key={chosen.geometryPath ?? chosen.ifcPath}
-              url={fileUrl(libraryUrl, chosen.geometryPath ?? chosen.ifcPath)}
-              convert={!chosen.geometryPath}
-              bindings={bindings}
-              proposed={proposed}
-              tree={tree ?? undefined}
-              onReport={onReport}
-              onReady={onReady}
-              onHover={onHover}
-              onSelect={onSelect}
-              onConverted={onPersistGeometry ? onConverted : undefined}
-            />
-          </Suspense>
+          {tooLarge && (
+            <Alert severity="warning" sx={{ m: 1 }}>{tooLargeMessage(chosen)}</Alert>
+          )}
+          {!tooLarge && (
+            <Suspense fallback={<CircularProgress sx={{ m: 4 }} />}>
+              <BimCanvas
+                key={chosen.geometryPath ?? chosen.ifcPath}
+                url={fileUrl(libraryUrl, chosen.geometryPath ?? chosen.ifcPath)}
+                convert={!chosen.geometryPath}
+                bindings={bindings}
+                proposed={proposed}
+                tree={tree ?? undefined}
+                onReport={onReport}
+                onReady={onReady}
+                onHover={onHover}
+                onSelect={onSelect}
+                onConverted={onPersistGeometry ? onConverted : undefined}
+              />
+            </Suspense>
+          )}
           {handle && (
             <Box sx={{
               display: 'flex', gap: 2, mt: 1, flexWrap: 'wrap', alignItems: 'flex-start',

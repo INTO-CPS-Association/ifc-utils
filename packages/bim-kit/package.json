@@ -1,6 +1,6 @@
 {
   "name": "@into-cps-association/bim-kit",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Bind live sensor readings to the objects of a BIM model, by IFC GlobalId.",
   "keywords": [
     "ifc",
@@ -49,6 +49,10 @@
     "./converter": {
       "types": "./dist/esm/converter.d.ts",
       "default": "./dist/esm/converter.js"
+    },
+    "./dtaas": {
+      "types": "./dist/esm/dtaas/index.d.ts",
+      "default": "./dist/esm/dtaas/index.js"
     }
   },
   "typesVersions": {
@@ -61,13 +65,18 @@
       ],
       "viewer": [
         "./dist/esm/viewer/index.d.ts"
+      ],
+      "dtaas": [
+        "./dist/esm/dtaas/index.d.ts"
       ]
     }
   },
   "files": [
     "dist",
     "react",
+    "viewer",
     "schema",
+    "dtaas",
     "LICENSE.md",
     "CHANGELOG.md",
     "THIRD-PARTY-NOTICES.md"
@@ -83,10 +92,12 @@
     "audit": "npm audit --audit-level=high"
   },
   "peerDependencies": {
+    "@into-cps-association/dtaas-sdk": "^0.1.0",
     "@mui/icons-material": ">=5",
     "@mui/material": ">=5",
     "react": ">=18",
     "react-dom": ">=18",
+    "react-router-dom": ">=7",
     "three": ">=0.160.0",
     "zod": "^4.0.0"
   },
@@ -103,16 +114,20 @@
     "three": {
       "optional": true
     },
-    "zod": {
+    "@mui/icons-material": {
       "optional": true
     },
-    "@mui/icons-material": {
+    "@into-cps-association/dtaas-sdk": {
+      "optional": true
+    },
+    "react-router-dom": {
       "optional": true
     }
   },
   "devDependencies": {
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
+    "@into-cps-association/dtaas-sdk": "0.1.0",
     "@mui/icons-material": "9.4.0",
     "@mui/material": "9.4.0",
     "@testing-library/dom": "10.4.1",
@@ -123,6 +138,7 @@
     "jsdom": "30.0.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "react-router-dom": "7.18.4",
     "three": "0.186.0",
     "typescript": "7.0.2",
     "zod": "4.6.2"
