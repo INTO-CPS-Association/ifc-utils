@@ -8,7 +8,8 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { BoxGeometry, Mesh, MeshStandardMaterial, Vector3 } from 'three';
-import { buildField, sourceAt, CELL_M } from '../dist/esm/viewer/index.js';
+import { buildField, sourceAt, planAngle, CELL_M } from '../dist/esm/viewer/index.js';
+import { walkOwners } from '../dist/esm/viewer/walk.js';
 
 /** A box of the given size, centred on the given point, of the given IFC class. */
 function box(ifcClass, [x, y, z], [w, h, d]) {
@@ -109,5 +110,125 @@ describe('buildField', () => {
     const field = buildField(twoRooms(), [inLeft], 0);
 
     assert.equal(sourceAt(field, -50, -50), -1);
+  });
+});
+
+/**
+ * The same two rooms turned about the vertical by `angle`, around the origin.
+ *
+ * An IFC model is often placed at an angle like this, and the grid along the
+ * world axes drew its regions on a slant.
+ */
+function turned(plan, angle) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  for (const mesh of plan) {
+    const { x, z } = mesh.position;
+    mesh.position.x = x * cos - z * sin;
+    mesh.position.z = x * sin + z * cos;
+    mesh.rotation.y = -angle;
+    mesh.updateMatrixWorld(true);
+  }
+  return plan;
+}
+
+/** A point of the unturned plan, turned the same way. */
+function turnedPoint(angle, x, z) {
+  return [x * Math.cos(angle) - z * Math.sin(angle), x * Math.sin(angle) + z * Math.cos(angle)];
+}
+
+const ANGLE = Math.PI / 6;
+
+describe('a plan at an angle to the world axes', () => {
+  test('the walls of an orthogonal plan run along the world axes', () => {
+    assert.ok(Math.abs(planAngle(twoRooms())) < 1e-9);
+  });
+
+  test('the angle of a turned plan is measured from its walls', () => {
+    const angle = planAngle(turned(twoRooms(), ANGLE));
+
+    assert.ok(Math.abs(angle - ANGLE) < 1e-6, `measured ${angle}`);
+  });
+
+  test('a wall between two turned rooms still stops the field', () => {
+    const [lx, lz] = turnedPoint(ANGLE, 5, 5);
+    const [rx, rz] = turnedPoint(ANGLE, 15, 5);
+    const field = buildField(turned(twoRooms(), ANGLE), [new Vector3(lx, 1.2, lz)], 0);
+
+    assert.equal(sourceAt(field, lx, lz), 0);
+    assert.equal(sourceAt(field, rx, rz), -1);
+  });
+
+  test('a door in a turned plan lets it through', () => {
+    const [lx, lz] = turnedPoint(ANGLE, 5, 5);
+    const [rx, rz] = turnedPoint(ANGLE, 15, 5);
+    const field = buildField(turned(twoRooms({ door: true }), ANGLE), [new Vector3(lx, 1.2, lz)], 0);
+
+    assert.equal(sourceAt(field, rx, rz), 0);
+  });
+
+  test('each turned room is owned by its own sensor, up to its walls', () => {
+    // The skew showed most near the walls, so the points are 0.5 m from them.
+    const plan = turned(twoRooms(), ANGLE);
+    const sensors = [turnedPoint(ANGLE, 5, 5), turnedPoint(ANGLE, 15, 5)];
+    const field = buildField(plan, sensors.map(([x, z]) => new Vector3(x, 1.2, z)), 0);
+
+    for (const [x, z, owner] of [[9.5, 0.5, 0], [9.5, 9.5, 0], [10.5, 0.5, 1], [10.5, 9.5, 1]]) {
+      assert.equal(sourceAt(field, ...turnedPoint(ANGLE, x, z)), owner, `at ${x}, ${z}`);
+    }
+  });
+});
+
+describe('the walk in open space', () => {
+  /** An open room of the given size, walls only. */
+  function room(w, d) {
+    return [
+      box('IfcWall', [w / 2, 0, -0.1], [w + 0.4, 3, 0.2]),
+      box('IfcWall', [w / 2, 0, d + 0.1], [w + 0.4, 3, 0.2]),
+      box('IfcWall', [-0.1, 0, d / 2], [0.2, 3, d]),
+      box('IfcWall', [w + 0.1, 0, d / 2], [0.2, 3, d]),
+    ];
+  }
+
+  test('each cell goes to the nearest sensor in a straight line', () => {
+    // A walk along rows and columns only split open rooms along 45-degree
+    // lines and gave about one cell in twenty to the wrong sensor.
+    const sensors = [new Vector3(3, 1.2, 3), new Vector3(16, 1.2, 4), new Vector3(9, 1.2, 10)];
+    const field = buildField(room(20, 12), sensors, 0);
+    let wrong = 0;
+    let total = 0;
+    for (let x = 0.5; x < 20; x += 0.5) {
+      for (let z = 0.5; z < 12; z += 0.5) {
+        const distances = sensors.map((s) => Math.hypot(s.x - x, s.z - z));
+        const nearest = distances.indexOf(Math.min(...distances));
+        const owner = sourceAt(field, x, z);
+        total += 1;
+        // A cell on the dividing line can go either way.
+        if (owner !== nearest && distances[owner] - distances[nearest] > CELL_M) wrong += 1;
+      }
+    }
+    assert.ok(wrong / total < 0.01, `${wrong} of ${total} points went to a farther sensor`);
+  });
+});
+
+describe('walkOwners', () => {
+  test('a diagonal step does not slip between walls that touch at a corner', () => {
+    // 3 by 3 cells, the two cells beside the corner blocked.
+    const blocked = new Uint8Array([0, 1, 0, 1, 0, 0, 0, 0, 0]);
+    const owner = walkOwners(blocked, 3, 3, [{ cell: 0, source: 0, distance: 0 }]);
+
+    assert.equal(owner[4], -1);
+  });
+
+  test('a nearer seed wins a cell even when it is seeded later', () => {
+    // Two sources seed the same cell. The one listed second is nearer, so the
+    // cell and everything reached through it are its own.
+    const blocked = new Uint8Array(3);
+    const owner = walkOwners(blocked, 3, 1, [
+      { cell: 1, source: 0, distance: 2 },
+      { cell: 1, source: 1, distance: 0.5 },
+    ]);
+
+    assert.deepEqual([...owner], [1, 1, 1]);
   });
 });

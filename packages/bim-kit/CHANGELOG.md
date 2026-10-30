@@ -4,6 +4,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `planAngle`, `toGrid` and `fromGrid`, from `./viewer`, and `angle` on `Field`. `planAngle` measures the direction the walls of a plan run in, and the two others turn a point into the field's grid and back.
+
+### Fixed
+
+- On the Per Sensor heatmap, the floor of an open room is split halfway between its sensors. The walk stepped along rows and columns only, so the split ran along 45-degree lines and along rows, and about one point in twenty of an open room went to a farther sensor. It now steps along the diagonals as well, at their true length, which leaves under one point in a hundred off, and a diagonal step never passes between two walls that meet at a corner.
+- On the Per Sensor heatmap, a model placed at an angle to the world axes drew its regions on a slant. The grid ran along the world axes, so every wall blocked by a box wider than itself. The grid now follows the angle of the walls, and the field sheet is turned with it.
+
 ## [0.2.0]
 
 ### Added
