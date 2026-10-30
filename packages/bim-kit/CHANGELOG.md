@@ -4,6 +4,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `planAngle`, `toGrid` and `fromGrid`, from `./viewer`, and `angle` on `Field`. `planAngle` measures the direction the walls of a plan run in, and the two others turn a point into the field's grid and back.
+
+### Fixed
+
+- On the Per Sensor heatmap, a model placed at an angle to the world axes drew its regions on a slant. The grid ran along the world axes, so every wall blocked by a box wider than itself. The grid now follows the angle of the walls, and the field sheet is turned with it. The CleanTech One model of room 02-24 showed it.
+
 ## [0.2.0]
 
 ### Added

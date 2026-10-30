@@ -8,7 +8,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { BoxGeometry, Mesh, MeshStandardMaterial, Vector3 } from 'three';
-import { buildField, sourceAt, CELL_M } from '../dist/esm/viewer/index.js';
+import { buildField, sourceAt, planAngle, CELL_M } from '../dist/esm/viewer/index.js';
 
 /** A box of the given size, centred on the given point, of the given IFC class. */
 function box(ifcClass, [x, y, z], [w, h, d]) {
@@ -109,5 +109,71 @@ describe('buildField', () => {
     const field = buildField(twoRooms(), [inLeft], 0);
 
     assert.equal(sourceAt(field, -50, -50), -1);
+  });
+});
+
+/**
+ * The same two rooms turned about the vertical by `angle`, around the origin.
+ *
+ * The CleanTech One model of room 02-24 sits at an angle like this, and the
+ * grid along the world axes drew its regions on a slant.
+ */
+function turned(plan, angle) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  for (const mesh of plan) {
+    const { x, z } = mesh.position;
+    mesh.position.x = x * cos - z * sin;
+    mesh.position.z = x * sin + z * cos;
+    mesh.rotation.y = -angle;
+    mesh.updateMatrixWorld(true);
+  }
+  return plan;
+}
+
+/** A point of the unturned plan, turned the same way. */
+function turnedPoint(angle, x, z) {
+  return [x * Math.cos(angle) - z * Math.sin(angle), x * Math.sin(angle) + z * Math.cos(angle)];
+}
+
+const ANGLE = Math.PI / 6;
+
+describe('a plan at an angle to the world axes', () => {
+  test('the walls of an orthogonal plan run along the world axes', () => {
+    assert.ok(Math.abs(planAngle(twoRooms())) < 1e-9);
+  });
+
+  test('the angle of a turned plan is measured from its walls', () => {
+    const angle = planAngle(turned(twoRooms(), ANGLE));
+
+    assert.ok(Math.abs(angle - ANGLE) < 1e-6, `measured ${angle}`);
+  });
+
+  test('a wall between two turned rooms still stops the field', () => {
+    const [lx, lz] = turnedPoint(ANGLE, 5, 5);
+    const [rx, rz] = turnedPoint(ANGLE, 15, 5);
+    const field = buildField(turned(twoRooms(), ANGLE), [new Vector3(lx, 1.2, lz)], 0);
+
+    assert.equal(sourceAt(field, lx, lz), 0);
+    assert.equal(sourceAt(field, rx, rz), -1);
+  });
+
+  test('a door in a turned plan lets it through', () => {
+    const [lx, lz] = turnedPoint(ANGLE, 5, 5);
+    const [rx, rz] = turnedPoint(ANGLE, 15, 5);
+    const field = buildField(turned(twoRooms({ door: true }), ANGLE), [new Vector3(lx, 1.2, lz)], 0);
+
+    assert.equal(sourceAt(field, rx, rz), 0);
+  });
+
+  test('each turned room is owned by its own sensor, up to its walls', () => {
+    // The skew showed most near the walls, so the points are 0.5 m from them.
+    const plan = turned(twoRooms(), ANGLE);
+    const sensors = [turnedPoint(ANGLE, 5, 5), turnedPoint(ANGLE, 15, 5)];
+    const field = buildField(plan, sensors.map(([x, z]) => new Vector3(x, 1.2, z)), 0);
+
+    for (const [x, z, owner] of [[9.5, 0.5, 0], [9.5, 9.5, 0], [10.5, 0.5, 1], [10.5, 9.5, 1]]) {
+      assert.equal(sourceAt(field, ...turnedPoint(ANGLE, x, z)), owner, `at ${x}, ${z}`);
+    }
   });
 });

@@ -19,9 +19,14 @@
  * The idea of a grid over the plan instead of a colour per object comes from
  * ProBIM's `ExportHeatmap`, which samples a floor into cells and scores each.
  *
- * It approximates. An object blocks by its bounding box, so a wall at an angle
- * blocks more than it should, and every model this was built against is
- * orthogonal.
+ * The grid follows the building, not the world axes. A model is often placed
+ * at an angle to them, and a grid along the world axes then cuts every wall
+ * on a slant: a wall blocks by its box, so a slanted one blocks a wide band
+ * and the regions come out skewed. The angle of the walls is measured first
+ * and the plan is rasterised in that frame.
+ *
+ * It still approximates. A wall that is not parallel to the main walls blocks
+ * by its box in the building's frame, which is wider than the wall.
  */
 
 import { Box3, Vector3, type Mesh } from 'three';
@@ -52,10 +57,101 @@ export interface Field {
   nx: number;
   nz: number;
   cell: number;
+  /** Where the grid starts, in the grid's own frame (the world's when `angle` is 0). */
   minX: number;
   minZ: number;
   /** The height the plan was cut at, which a caller draws the sheet just above. */
   floorY: number;
+  /** How far the grid is turned about the vertical from the world X axis, in radians. */
+  angle: number;
+}
+
+/** A world point in the grid's frame: turned by `-angle` about the vertical. */
+export function toGrid(angle: number, x: number, z: number): [number, number] {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return [x * cos + z * sin, -x * sin + z * cos];
+}
+
+/** A point of the grid's frame back in the world: the inverse of `toGrid`. */
+export function fromGrid(angle: number, u: number, v: number): [number, number] {
+  return toGrid(-angle, u, v);
+}
+
+/** The world positions of a mesh's vertices, flattened onto the plan as [x, z] pairs. */
+function planPoints(mesh: Mesh): number[] {
+  const position = mesh.geometry.getAttribute('position');
+  const point = new Vector3();
+  const out: number[] = [];
+  for (let i = 0; i < position.count; i += 1) {
+    point.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld);
+    out.push(point.x, point.z);
+  }
+  return out;
+}
+
+/**
+ * The main axis of one wall on the plan and how elongated the wall is.
+ *
+ * The axis comes from the spread of the wall's vertices. The spread is the
+ * difference between the long and the short side, so a square column, which
+ * points nowhere, gets none.
+ */
+function wallAxis(points: number[]): { theta: number; spread: number } | null {
+  const n = points.length / 2;
+  if (n < 2) return null;
+  let meanX = 0;
+  let meanZ = 0;
+  for (let i = 0; i < points.length; i += 2) {
+    meanX += points[i] / n;
+    meanZ += points[i + 1] / n;
+  }
+  let xx = 0;
+  let zz = 0;
+  let xz = 0;
+  for (let i = 0; i < points.length; i += 2) {
+    const dx = points[i] - meanX;
+    const dz = points[i + 1] - meanZ;
+    xx += dx * dx;
+    zz += dz * dz;
+    xz += dx * dz;
+  }
+  return { theta: 0.5 * Math.atan2(2 * xz, xx - zz), spread: Math.hypot(xx - zz, 2 * xz) / n };
+}
+
+/**
+ * The direction the walls of a plan run in, in radians between -45 and 45 degrees.
+ *
+ * A long wall counts more than a short one. Directions are averaged on four
+ * times their angle, so walls at right angles to each other agree instead of
+ * cancelling out.
+ */
+export function planAngle(meshes: Mesh[]): number {
+  let sumCos = 0;
+  let sumSin = 0;
+  for (const mesh of meshes) {
+    if (!BLOCKS.has(mesh.userData.ifcClass as string)) continue;
+    const axis = wallAxis(planPoints(mesh));
+    if (axis === null) continue;
+    sumCos += axis.spread * Math.cos(4 * axis.theta);
+    sumSin += axis.spread * Math.sin(4 * axis.theta);
+  }
+  if (sumCos === 0 && sumSin === 0) return 0;
+  return Math.atan2(sumSin, sumCos) / 4;
+}
+
+/** A mesh's box in the grid's frame, from its vertices, with the world heights. */
+function gridBox(mesh: Mesh, angle: number, out: Box3): Box3 {
+  const world = new Box3().setFromObject(mesh);
+  const p = planPoints(mesh);
+  out.makeEmpty();
+  for (let i = 0; i < p.length; i += 2) {
+    const [u, v] = toGrid(angle, p[i], p[i + 1]);
+    out.expandByPoint(new Vector3(u, 0, v));
+  }
+  out.min.y = world.min.y;
+  out.max.y = world.max.y;
+  return out;
 }
 
 /**
@@ -73,8 +169,22 @@ export function buildField(
   const all = [...meshes];
   if (sources.length === 0 || all.length === 0) return null;
 
+  const angle = planAngle(all);
+  // The bounds come from the corners of each world box, turned into the
+  // grid's frame. That overestimates a little and costs eight points a mesh
+  // instead of every vertex of every mesh.
   const bounds = new Box3();
-  for (const mesh of all) bounds.expandByObject(mesh);
+  const world = new Box3();
+  for (const mesh of all) {
+    world.setFromObject(mesh);
+    if (world.isEmpty()) continue;
+    for (const x of [world.min.x, world.max.x]) {
+      for (const z of [world.min.z, world.max.z]) {
+        const [u, v] = toGrid(angle, x, z);
+        bounds.expandByPoint(new Vector3(u, 0, v));
+      }
+    }
+  }
   if (!Number.isFinite(bounds.min.x)) return null;
 
   const cell = CELL_M;
@@ -102,12 +212,12 @@ export function buildField(
   // into and not the other way round.
   for (const mesh of all) {
     if (!BLOCKS.has(mesh.userData.ifcClass as string)) continue;
-    box.setFromObject(mesh);
+    gridBox(mesh, angle, box);
     if (box.min.y < cut && box.max.y > cut) paint(1);
   }
   for (const mesh of all) {
     if (!OPENS.has(mesh.userData.ifcClass as string)) continue;
-    box.setFromObject(mesh);
+    gridBox(mesh, angle, box);
     paint(0);
   }
 
@@ -117,7 +227,7 @@ export function buildField(
   const owner = new Int16Array(nx * nz).fill(-1);
   const queue: number[] = [];
   sources.forEach((source, index) => {
-    const [cx, cz] = at(source.x, source.z);
+    const [cx, cz] = at(...toGrid(angle, source.x, source.z));
     for (let dx = -SEED_CELLS; dx <= SEED_CELLS; dx += 1) {
       for (let dz = -SEED_CELLS; dz <= SEED_CELLS; dz += 1) {
         const ix = cx + dx;
@@ -147,7 +257,7 @@ export function buildField(
     }
   }
 
-  return { owner, nx, nz, cell, minX, minZ, floorY };
+  return { owner, nx, nz, cell, minX, minZ, floorY, angle };
 }
 
 /**
@@ -159,8 +269,9 @@ export function buildField(
  * its own region and would colour nothing.
  */
 export function sourceAt(field: Field, x: number, z: number): number {
-  const cx = Math.floor((x - field.minX) / field.cell);
-  const cz = Math.floor((z - field.minZ) / field.cell);
+  const [u, v] = toGrid(field.angle, x, z);
+  const cx = Math.floor((u - field.minX) / field.cell);
+  const cz = Math.floor((v - field.minZ) / field.cell);
 
   for (let ring = 0; ring <= SEARCH_CELLS; ring += 1) {
     for (let dx = -ring; dx <= ring; dx += 1) {
