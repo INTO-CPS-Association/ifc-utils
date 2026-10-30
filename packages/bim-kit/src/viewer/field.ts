@@ -31,6 +31,8 @@
 
 import { Box3, Vector3, type Mesh } from 'three';
 
+import { walkOwners, type Seed } from './walk.js';
+
 /** How wide a cell is, in metres. A doorway is about 0.9 m, so this fits three. */
 export const CELL_M = 0.25;
 
@@ -221,41 +223,25 @@ export function buildField(
     paint(0);
   }
 
-  // One queue with every source seeded, so each cell ends up owned by the one
-  // whose walk reaches it first. That is the nearest source measured the way a
-  // person walks and not the way a laser points.
-  const owner = new Int16Array(nx * nz).fill(-1);
-  const queue: number[] = [];
+  // Every source is seeded round its own cell, at the distance of each seeded
+  // cell from the source, and the walk gives every cell to the source it
+  // reaches first. That is the nearest source measured the way a person walks
+  // and not the way a laser points.
+  const seeds: Seed[] = [];
   sources.forEach((source, index) => {
-    const [cx, cz] = at(...toGrid(angle, source.x, source.z));
+    const [u, v] = toGrid(angle, source.x, source.z);
+    const [cx, cz] = at(u, v);
     for (let dx = -SEED_CELLS; dx <= SEED_CELLS; dx += 1) {
       for (let dz = -SEED_CELLS; dz <= SEED_CELLS; dz += 1) {
         const ix = cx + dx;
         const iz = cz + dz;
         if (ix < 0 || iz < 0 || ix >= nx || iz >= nz) continue;
-        const i = iz * nx + ix;
-        if (blocked[i] || owner[i] !== -1) continue;
-        owner[i] = index;
-        queue.push(i);
+        seeds.push({ cell: iz * nx + ix, source: index, distance: Math.hypot(dx, dz) });
       }
     }
   });
-  if (queue.length === 0) return null;
-
-  for (let head = 0; head < queue.length; head += 1) {
-    const i = queue[head];
-    const ix = i % nx;
-    const iz = Math.floor(i / nx);
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const jx = ix + dx;
-      const jz = iz + dz;
-      if (jx < 0 || jz < 0 || jx >= nx || jz >= nz) continue;
-      const j = jz * nx + jx;
-      if (blocked[j] || owner[j] !== -1) continue;
-      owner[j] = owner[i];
-      queue.push(j);
-    }
-  }
+  const owner = walkOwners(blocked, nx, nz, seeds);
+  if (!owner.some((index) => index >= 0)) return null;
 
   return { owner, nx, nz, cell, minX, minZ, floorY, angle };
 }

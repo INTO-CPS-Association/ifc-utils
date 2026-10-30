@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 
 import { BoxGeometry, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import { buildField, sourceAt, planAngle, CELL_M } from '../dist/esm/viewer/index.js';
+import { walkOwners } from '../dist/esm/viewer/walk.js';
 
 /** A box of the given size, centred on the given point, of the given IFC class. */
 function box(ifcClass, [x, y, z], [w, h, d]) {
@@ -175,5 +176,59 @@ describe('a plan at an angle to the world axes', () => {
     for (const [x, z, owner] of [[9.5, 0.5, 0], [9.5, 9.5, 0], [10.5, 0.5, 1], [10.5, 9.5, 1]]) {
       assert.equal(sourceAt(field, ...turnedPoint(ANGLE, x, z)), owner, `at ${x}, ${z}`);
     }
+  });
+});
+
+describe('the walk in open space', () => {
+  /** An open room of the given size, walls only. */
+  function room(w, d) {
+    return [
+      box('IfcWall', [w / 2, 0, -0.1], [w + 0.4, 3, 0.2]),
+      box('IfcWall', [w / 2, 0, d + 0.1], [w + 0.4, 3, 0.2]),
+      box('IfcWall', [-0.1, 0, d / 2], [0.2, 3, d]),
+      box('IfcWall', [w + 0.1, 0, d / 2], [0.2, 3, d]),
+    ];
+  }
+
+  test('each cell goes to the nearest sensor in a straight line', () => {
+    // A walk along rows and columns only split open rooms along 45-degree
+    // lines and gave about one cell in twenty to the wrong sensor.
+    const sensors = [new Vector3(3, 1.2, 3), new Vector3(16, 1.2, 4), new Vector3(9, 1.2, 10)];
+    const field = buildField(room(20, 12), sensors, 0);
+    let wrong = 0;
+    let total = 0;
+    for (let x = 0.5; x < 20; x += 0.5) {
+      for (let z = 0.5; z < 12; z += 0.5) {
+        const distances = sensors.map((s) => Math.hypot(s.x - x, s.z - z));
+        const nearest = distances.indexOf(Math.min(...distances));
+        const owner = sourceAt(field, x, z);
+        total += 1;
+        // A cell on the dividing line can go either way.
+        if (owner !== nearest && distances[owner] - distances[nearest] > CELL_M) wrong += 1;
+      }
+    }
+    assert.ok(wrong / total < 0.01, `${wrong} of ${total} points went to a farther sensor`);
+  });
+});
+
+describe('walkOwners', () => {
+  test('a diagonal step does not slip between walls that touch at a corner', () => {
+    // 3 by 3 cells, the two cells beside the corner blocked.
+    const blocked = new Uint8Array([0, 1, 0, 1, 0, 0, 0, 0, 0]);
+    const owner = walkOwners(blocked, 3, 3, [{ cell: 0, source: 0, distance: 0 }]);
+
+    assert.equal(owner[4], -1);
+  });
+
+  test('a nearer seed wins a cell even when it is seeded later', () => {
+    // Two sources seed the same cell. The one listed second is nearer, so the
+    // cell and everything reached through it are its own.
+    const blocked = new Uint8Array(3);
+    const owner = walkOwners(blocked, 3, 1, [
+      { cell: 1, source: 0, distance: 2 },
+      { cell: 1, source: 1, distance: 0.5 },
+    ]);
+
+    assert.deepEqual([...owner], [1, 1, 1]);
   });
 });
