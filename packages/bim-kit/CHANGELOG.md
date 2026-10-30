@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
-- On the Per Sensor heatmap, a model placed at an angle to the world axes drew its regions on a slant. The grid ran along the world axes, so every wall blocked by a box wider than itself. The grid now follows the angle of the walls, and the field sheet is turned with it. The CleanTech One model of room 02-24 showed it.
+- On the Per Sensor heatmap, a model placed at an angle to the world axes drew its regions on a slant. The grid ran along the world axes, so every wall blocked by a box wider than itself. The grid now follows the angle of the walls, and the field sheet is turned with it.
 
 ## [0.2.0]
 

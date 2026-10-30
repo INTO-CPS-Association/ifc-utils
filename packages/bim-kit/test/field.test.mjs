@@ -115,8 +115,8 @@ describe('buildField', () => {
 /**
  * The same two rooms turned about the vertical by `angle`, around the origin.
  *
- * The CleanTech One model of room 02-24 sits at an angle like this, and the
- * grid along the world axes drew its regions on a slant.
+ * An IFC model is often placed at an angle like this, and the grid along the
+ * world axes drew its regions on a slant.
  */
 function turned(plan, angle) {
   const cos = Math.cos(angle);
