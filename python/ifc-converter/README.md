@@ -20,6 +20,20 @@ ifc-to-metadata model.ifc model.json      # the property tree
 ifc-to-manifest model.ifc model.yaml      # the binding manifest
 ```
 
+`ifc-to-manifest` also takes `--bucket NAME` for the history half of each binding, `--topic-prefix PREFIX` for the first segment of a generated topic and `--proxy-reference-pattern REGEX`, described below.
+
+## Sensors Held as Proxies
+
+`ifc-to-manifest` binds every `IfcSensor` in the model. A model exported from Revit often holds its sensors as `IfcBuildingElementProxy` instead. Such a model also holds many proxies that are not sensors, so a proxy is only bound when the caller says how to recognise one:
+
+```bash
+ifc-to-manifest room.ifc room.yaml --proxy-reference-pattern '\w[\w-]*-TRH-\d{4}'
+```
+
+The pattern is a Python regular expression. It is tried against the `Reference` in the element's `Pset_*Common` property set, then against its `Name`, on every element that is not an `IfcSensor`. The matched text becomes the binding's `id` and the last segment of its generated topic, so the pattern should match the whole device ID. Revit writes the `Name` as family, type and element id joined by colons, which is why the `Reference` is tried first.
+
+A binding found this way carries `foundBy: proxy reference pattern`, and the model section records the pattern as `proxy_reference_pattern`, so a reader can tell a sensor the model declares from one the caller picked out and can rerun the same selection.
+
 ## What Comes Out
 
 **The GlobalId survives.** Each object becomes its own glTF node and mesh carrying `globalId` in `extras`, because that is the key the viewer binds a sensor by, and it is the one identifier that survives a re-export. Merging objects would produce a smaller file and destroy the binding.

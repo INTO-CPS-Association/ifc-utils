@@ -37,6 +37,10 @@ still reads a manifest this writes:
                 sensor is nested under equipment and not where on it, so this
                 is written as TODO when it cannot be derived. A generated file
                 that hides its gaps is worse than one that names them.
+    foundBy     how the converter decided this element is a sensor, written
+                only when it was not an IfcSensor: a proxy matched by the
+                caller's pattern is a sensor on the caller's word, not the
+                model's.
 
 This module exists because the shape used to be written out by hand in three
 places, in two different forms: the generator produced the nested shape above
@@ -61,7 +65,7 @@ DEFAULT_BUCKET = None
 
 def binding(global_id, label, topic, unit, ramp,
             sensor_id=None, measurement=None, bucket=DEFAULT_BUCKET,
-            mounted_on=None, role=None):
+            mounted_on=None, role=None, found_by=None):
     """Build one binding, in the agreed shape.
 
     `live` and `history` are separate on purpose, which is the issue's design:
@@ -88,6 +92,8 @@ def binding(global_id, label, topic, unit, ramp,
         entry["mountedOn"] = mounted_on
     if role:
         entry["role"] = role
+    if found_by:
+        entry["foundBy"] = found_by
     return entry
 
 
