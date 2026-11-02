@@ -5,6 +5,7 @@ exactly what the generator depends on.
 """
 
 import hashlib
+import re
 
 import ifcopenshell
 import ifcopenshell.api
@@ -305,3 +306,116 @@ class TestGeneralRatherThanOneProject:
         generated = [b for b in manifest["bindings"] if b["topic"].startswith("campus/")]
 
         assert generated, "a generated topic should use the prefix given"
+
+
+# A device ID in the shape the NTU model of room 02-24 uses. The tests match
+# the whole ID, not a fragment of it, because the match becomes the binding id.
+DEVICE_PATTERN = re.compile(r"\w[\w-]*-TRH-\d{4}")
+
+
+@pytest.fixture
+def proxy_model():
+    """A room exported from Revit: its sensor is a proxy, not an IfcSensor.
+
+    IFC4, as the NTU model is. The sensor proxy carries its device ID in
+    Pset_BuildingElementProxyCommon.Reference and Revit's family:type:id as
+    its Name. A second proxy, a chair, matches nothing and must stay out.
+    """
+    model = ifcopenshell.file(schema="IFC4")
+    project = run(model, "root.create_entity", ifc_class="IfcProject", name="Room")
+    run(model, "unit.assign_unit", length={"is_metric": True, "raw": "METERS"})
+    building = run(model, "root.create_entity", ifc_class="IfcBuilding", name="CTO")
+    run(model, "aggregate.assign_object", products=[building], relating_object=project)
+
+    sensor = run(model, "root.create_entity", ifc_class="IfcBuildingElementProxy",
+                 name="S-room:S-room-seat48A-TRH-0001:3271529")
+    pset = run(model, "pset.add_pset", product=sensor, name="Pset_BuildingElementProxyCommon")
+    run(model, "pset.edit_pset", pset=pset, properties={"Reference": "S-room-seat48A-TRH-0001"})
+
+    run(model, "root.create_entity", ifc_class="IfcBuildingElementProxy", name="Chair:Chair:42")
+    return model
+
+
+def proxy_named(model, name):
+    return next(p for p in model.by_type("IfcBuildingElementProxy") if p.Name == name)
+
+
+class TestProxySensors:
+    """Sensors held as IfcBuildingElementProxy, read only when asked to."""
+
+    def test_no_pattern_reads_no_proxy(self, proxy_model):
+        # A model holds thousands of proxies, so none is taken as a sensor
+        # without the caller saying which.
+        assert to_manifest.manifest_from(proxy_model, "room.ifc")["bindings"] == []
+
+    def test_the_reference_is_matched_and_becomes_the_id(self, proxy_model):
+        manifest = to_manifest.manifest_from(proxy_model, "room.ifc",
+                                             proxy_pattern=DEVICE_PATTERN)
+        [binding] = manifest["bindings"]
+        sensor = proxy_named(proxy_model, "S-room:S-room-seat48A-TRH-0001:3271529")
+        assert binding["globalId"] == sensor.GlobalId
+        assert binding["id"] == "S-room-seat48A-TRH-0001"
+        assert binding["topic"].endswith("/S-room-seat48A-TRH-0001")
+
+    def test_the_name_is_matched_when_there_is_no_reference(self, proxy_model):
+        proxy = run(proxy_model, "root.create_entity", ifc_class="IfcBuildingElementProxy",
+                    name="S-room:S-room-cabin1-TRH-0003:3272953")
+        found = dict((e, tag) for e, tag in to_manifest.proxy_sensors(proxy_model, DEVICE_PATTERN))
+        assert found[proxy] == "S-room-cabin1-TRH-0003"
+
+    def test_a_reference_outside_the_common_set_is_ignored(self, proxy_model):
+        # Revit copies the Reference into other sets too. Only the common set
+        # is the one IFC defines for it.
+        proxy = run(proxy_model, "root.create_entity", ifc_class="IfcBuildingElementProxy",
+                    name="Lamp")
+        pset = run(proxy_model, "pset.add_pset", product=proxy,
+                   name="Pset_EnvironmentalImpactIndicators")
+        run(proxy_model, "pset.edit_pset", pset=pset,
+            properties={"Reference": "S-room-lamp-TRH-0009"})
+        assert to_manifest.common_reference(proxy) is None
+
+    def test_an_ifcsensor_is_not_bound_twice(self, proxy_model):
+        sensor = run(proxy_model, "root.create_entity", ifc_class="IfcSensor",
+                     name="S-room-wall-TRH-0002")
+        manifest = to_manifest.manifest_from(proxy_model, "room.ifc",
+                                             proxy_pattern=DEVICE_PATTERN)
+        ids = [b["globalId"] for b in manifest["bindings"]]
+        assert ids.count(sensor.GlobalId) == 1
+
+    def test_a_proxy_binding_says_how_it_was_found(self, proxy_model):
+        manifest = to_manifest.manifest_from(proxy_model, "room.ifc",
+                                             proxy_pattern=DEVICE_PATTERN)
+        parsed = yaml.safe_load(to_manifest.as_yaml(manifest))
+        assert parsed["bindings"][0]["foundBy"] == "proxy reference pattern"
+        # The pattern is provenance: rerunning with it gives the same file.
+        assert parsed["model"]["proxy_reference_pattern"] == DEVICE_PATTERN.pattern
+
+    def test_an_ifcsensor_binding_carries_no_found_by(self, model):
+        parsed = yaml.safe_load(to_manifest.as_yaml(to_manifest.manifest_from(model, "t.ifc")))
+        assert all("foundBy" not in b for b in parsed["bindings"])
+        assert "proxy_reference_pattern" not in parsed["model"]
+
+
+class TestProxyCommand:
+    def test_the_option_writes_the_proxy_binding(self, proxy_model, tmp_path):
+        source = tmp_path / "room.ifc"
+        proxy_model.write(str(source))
+        target = tmp_path / "room.yaml"
+
+        code = to_manifest.main([str(source), str(target),
+                                 "--proxy-reference-pattern", DEVICE_PATTERN.pattern])
+
+        assert code == 0
+        [binding] = yaml.safe_load(target.read_text())["bindings"]
+        assert binding["id"] == "S-room-seat48A-TRH-0001"
+
+    def test_an_invalid_pattern_is_refused(self, proxy_model, tmp_path, capsys):
+        source = tmp_path / "room.ifc"
+        proxy_model.write(str(source))
+
+        code = to_manifest.main([str(source), str(tmp_path / "room.yaml"),
+                                 "--proxy-reference-pattern", "("])
+
+        assert code == 2
+        assert "not a valid regex" in capsys.readouterr().err
+        assert not (tmp_path / "room.yaml").exists()

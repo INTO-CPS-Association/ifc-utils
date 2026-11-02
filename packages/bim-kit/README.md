@@ -122,6 +122,8 @@ bindings:
 
 Three optional fields are additions of this project instead of parts of the proposal, so a manifest written elsewhere still loads: `id`, the short tag a person says out loud; `mountedOn`, the equipment a sensor sits on; and `role`, which measurement point on that equipment, written as `TODO` when IFC cannot say.
 
+The Python converter writes one more, `foundBy`, on a binding whose element is not an `IfcSensor` and was picked out by the caller's pattern, as its [README](../../python/ifc-converter/README.md) describes. This package does not read it, and the schema drops it on load as it drops any field it does not know.
+
 ## The DTaaS Extension
 
 `./dtaas` exports `extension`, a declaration built with `defineExtension` from [`@into-cps-association/dtaas-sdk`](https://github.com/INTO-CPS-Association/dtaas-sdk). The DTaaS client lists it in its extension manifest and mounts it under `/bim`:

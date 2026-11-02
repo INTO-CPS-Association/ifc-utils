@@ -13,10 +13,17 @@ Run it:
 
     ifc-to-manifest model.ifc manifest.yaml
 
+A model exported from Revit often holds its sensors as
+IfcBuildingElementProxy instead of IfcSensor. Those are only read when the
+caller says how to recognise them, with a pattern for their device ID:
+
+    ifc-to-manifest model.ifc manifest.yaml --proxy-reference-pattern '\\w[\\w-]*-TRH-\\d{4}'
+
 What it cannot know, and therefore leaves for a person to fill in, is marked
 with TODO in the output. See the notes at the bottom of this file.
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -74,6 +81,18 @@ RECORDED_RANGE = ("RangeLow", "RangeHigh")
 RECORDED_PROPOSED = "Proposed"
 RECORDED_BASIS = "Basis"
 
+# Where a proxy that is a sensor carries its device ID. Revit writes the
+# element's Reference into the common property set of its class, such as
+# Pset_BuildingElementProxyCommon, and copies it into other sets too, so only
+# the common one is read: it is the one IFC defines for the purpose.
+REFERENCE = "Reference"
+
+# What a binding found through the pattern says about itself. A sensor read
+# from IfcSensor is a sensor because the model says so, and one read from a
+# proxy is a sensor because the caller's pattern says so. A reader deciding
+# how far to trust a binding needs to know which.
+FOUND_BY_PATTERN = "proxy reference pattern"
+
 
 def recorded(sensor, key):
     """A value the model itself records for a sensor, from any property set."""
@@ -84,7 +103,40 @@ def recorded(sensor, key):
     return None
 
 
-def topic_for(sensor, model, prefix=None):
+def common_reference(element):
+    """The Reference in the element's Pset_*Common set, or None."""
+    for name, properties in ifcopenshell.util.element.get_psets(element).items():
+        if name.startswith("Pset_") and name.endswith("Common"):
+            if properties.get(REFERENCE):
+                return str(properties[REFERENCE])
+    return None
+
+
+def proxy_sensors(model, pattern):
+    """Elements that are not IfcSensor but whose reference matches `pattern`.
+
+    Returns (element, tag) pairs, where the tag is the matched text. The
+    Reference is tried before the Name, because Revit writes the Name as
+    family:type:element id and the Reference holds the device ID alone.
+
+    Nothing is guessed. Without a pattern no proxy is read, since a model
+    holds thousands of proxies and only the caller knows which are sensors.
+    """
+    if pattern is None:
+        return []
+    found = []
+    for element in model.by_type("IfcElement"):
+        if element.is_a("IfcSensor"):
+            continue
+        for text in (common_reference(element), element.Name):
+            match = pattern.search(text) if text else None
+            if match:
+                found.append((element, match.group(0)))
+                break
+    return found
+
+
+def topic_for(sensor, model, prefix=None, tag=None):
     """Return the MQTT topic for a sensor.
 
     Prefers the topic already recorded in the model, whichever property set
@@ -96,7 +148,8 @@ def topic_for(sensor, model, prefix=None):
         prefix/Building/floor/room/location/measurement/id
 
     `prefix` defaults to the project's name, so a manifest is namespaced by the
-    thing it describes instead of by whoever wrote this converter.
+    thing it describes instead of by whoever wrote this converter. `tag` is the
+    last segment and defaults to the sensor's Name.
     """
     found = recorded(sensor, RECORDED_TOPIC)
     if found:
@@ -118,7 +171,7 @@ def topic_for(sensor, model, prefix=None):
         (space.Name if space else "TODO"),
         (host.Name if host else "TODO"),
         kind["measurement"],
-        sensor.Name or "TODO",
+        tag or sensor.Name or "TODO",
     ]
     return "/".join(str(p) for p in parts)
 
@@ -136,22 +189,28 @@ def ramp_of(sensor, fallback):
     return [float(low), float(high)]
 
 
-def binding_for(sensor, model, bucket=None, prefix=None):
-    """Build one manifest entry for one sensor."""
+def binding_for(sensor, model, bucket=None, prefix=None, tag=None):
+    """Build one manifest entry for one sensor.
+
+    `tag` replaces the sensor's Name as its short ID. A proxy found by pattern
+    passes the matched device ID, because its Name is Revit's long
+    family:type:element id and not what a person calls the sensor.
+    """
     kind = DISPLAY.get(sensor.PredefinedType or "", UNKNOWN)
     host = explorer.host_of(sensor)
     recorded_unit = recorded(sensor, RECORDED_UNIT)
+    tag = tag or sensor.Name
 
-    label = f"{host.Name} {kind['measurement']} {sensor.Name}" if host else (sensor.Name or "unnamed")
+    label = f"{host.Name} {kind['measurement']} {tag}" if host else (tag or "unnamed")
 
     return {
         "globalId": sensor.GlobalId,
         # The short tag a person says out loud, TS-01, which the IFC declares
         # as the sensor's Name. The viewer prints it on the card, and without
         # it the card would show a 22 character GlobalId instead.
-        "id": sensor.Name or "",
+        "id": tag or "",
         "label": label,
-        "topic": topic_for(sensor, model, prefix),
+        "topic": topic_for(sensor, model, prefix, tag),
         "bucket": bucket,
         "measurement": kind["measurement"],
         "unit": kind["unit"],
@@ -179,7 +238,14 @@ def proposal_of(sensors):
     return True, bases.pop() if len(bases) == 1 else None
 
 
-def manifest_from(model, source_path, bucket=None, prefix=None):
+def proxy_binding(element, tag, model, bucket=None, prefix=None):
+    """A binding for a proxy found by pattern, marked as found that way."""
+    entry = binding_for(element, model, bucket, prefix, tag)
+    entry["found_by"] = FOUND_BY_PATTERN
+    return entry
+
+
+def manifest_from(model, source_path, bucket=None, prefix=None, proxy_pattern=None):
     """Build the whole manifest for a model.
 
     `bucket` names the time series database that stores the readings. Left
@@ -188,9 +254,16 @@ def manifest_from(model, source_path, bucket=None, prefix=None):
 
     `prefix` is the first segment of a generated topic, defaulting to the
     project's own name.
+
+    `proxy_pattern` is a compiled regex. When given, elements that are not
+    IfcSensor are bound too when their reference matches it, see
+    `proxy_sensors`.
     """
     sensors = list(sensors_in(model))
-    proposed, basis = proposal_of(sensors)
+    proxies = proxy_sensors(model, proxy_pattern)
+    proposed, basis = proposal_of(sensors + [element for element, _ in proxies])
+    bindings = [binding_for(s, model, bucket, prefix) for s in sensors]
+    bindings += [proxy_binding(e, tag, model, bucket, prefix) for e, tag in proxies]
     manifest = {
         # The file name, not the path it happened to sit at when this ran.
         # A manifest sits beside its model, and an absolute path from one
@@ -200,8 +273,12 @@ def manifest_from(model, source_path, bucket=None, prefix=None):
         "converter": f"{CONVERTER} {CONVERTER_VERSION}",
         "schema": explorer.summary(model)["schema"],
         "metre_scale": explorer.metre_scale(model),
-        "bindings": [binding_for(s, model, bucket, prefix) for s in sensors],
+        "bindings": bindings,
     }
+    if proxy_pattern is not None:
+        # The pattern is part of how the file was made, so it is provenance:
+        # rerunning with it reproduces the same bindings.
+        manifest["proxy_reference_pattern"] = proxy_pattern.pattern
     if proposed:
         manifest["proposed"] = True
         if basis:
@@ -259,6 +336,7 @@ def as_yaml(manifest):
                 mounted_on=b["host"],
                 # Not derivable from IFC, and named instead of left silent.
                 role=TODO_ROLE,
+                found_by=b.get("found_by"),
             )
             for b in manifest["bindings"]
         ],
@@ -292,7 +370,23 @@ def _option(argv, name):
     return argv[argv.index(name) + 1] if name in argv[:-1] else None
 
 
-USAGE = "Usage: ifc-to-manifest <file.ifc> <manifest.yaml>"
+USAGE = (
+    "Usage: ifc-to-manifest <file.ifc> <manifest.yaml> [--bucket NAME] "
+    "[--topic-prefix PREFIX] [--proxy-reference-pattern REGEX]"
+)
+
+
+def _pattern(text):
+    """Compile the proxy pattern, or None when it is unset or invalid.
+
+    Returns a pair, so a caller can tell an unset pattern from a broken one.
+    """
+    if text is None:
+        return None, None
+    try:
+        return re.compile(text), None
+    except re.error as error:
+        return None, f"Cannot run: --proxy-reference-pattern is not a valid regex ({error})"
 
 
 def main(argv=None):
@@ -311,18 +405,24 @@ def main(argv=None):
     # else's deployment.
     bucket = _option(argv, "--bucket")
     prefix = _option(argv, "--topic-prefix")
+    pattern, problem = _pattern(_option(argv, "--proxy-reference-pattern"))
 
+    if problem:
+        print(problem, file=sys.stderr)
+        return 2
     if not source.is_file() or source.suffix.lower() != ".ifc":
         print("Cannot run: expected an existing .ifc file", file=sys.stderr)
         return 2
 
     model = explorer.open_model(source)
-    manifest = manifest_from(model, source, bucket=bucket, prefix=prefix)
+    manifest = manifest_from(model, source, bucket=bucket, prefix=prefix,
+                             proxy_pattern=pattern)
 
     if not manifest["bindings"]:
         # Worth saying out loud. Every AU building model has this problem, and
         # an empty manifest looks like a bug instead of a fact about the file.
-        print(f"No IfcSensor in {source.name}, so the manifest has no bindings",
+        found = "No IfcSensor" if pattern is None else "No IfcSensor and no matching proxy"
+        print(f"{found} in {source.name}, so the manifest has no bindings",
               file=sys.stderr)
 
     target.parent.mkdir(parents=True, exist_ok=True)

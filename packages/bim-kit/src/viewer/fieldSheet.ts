@@ -22,6 +22,7 @@ import {
 } from 'three';
 
 import { rampColour } from '../ramp.js';
+import { fromGrid } from './field.js';
 import type { SceneView } from './sceneView.js';
 
 /** How much of the floor the sheet hides. Enough to read, not enough to obscure. */
@@ -108,11 +109,18 @@ export function createFieldSheet(scene: Scene): FieldSheet {
       pen.putImageData(image, 0, 0);
       (mesh.material as MeshBasicMaterial).map!.needsUpdate = true;
 
-      mesh.position.set(
+      // The grid is laid out in the building's frame, so the sheet is turned
+      // by the same angle about the vertical and its centre turned back into
+      // the world. Y first, so the turn about the vertical applies to the
+      // sheet already laid flat.
+      mesh.rotation.order = 'YXZ';
+      mesh.rotation.y = -field.angle;
+      const [x, z] = fromGrid(
+        field.angle,
         field.minX + (field.nx * field.cell) / 2,
-        field.floorY + ABOVE_FLOOR_M,
         field.minZ + (field.nz * field.cell) / 2,
       );
+      mesh.position.set(x, field.floorY + ABOVE_FLOOR_M, z);
       mesh.visible = true;
     },
 
