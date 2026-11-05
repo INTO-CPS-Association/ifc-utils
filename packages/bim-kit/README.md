@@ -134,18 +134,46 @@ import { extension } from '@into-cps-association/bim-kit/dtaas';
 
 It declares:
 
-- The Buildings page, at `/bim` and `/bim/models/:model`, loaded lazily. The folder is read from `?dir=`, then from the `REACT_APP_EXT_BIM_MODELS_DIRECTORY` setting, then from the host's models folder, and a folder that could leave the library is refused before it is listed. Files are listed and stored through `host.contents`, and readings arrive through `host.signals`.
+- The Buildings page, at `/bim` and `/bim/models/:model`, loaded lazily. The folder is read from `?dir=`, then from the `REACT_APP_EXT_BIM_MODELS_DIRECTORY` setting, then from the host's models folder. A folder that could leave the library is refused before it is listed. Files are listed and stored through `host.contents` and readings arrive through `host.signals`. `REACT_APP_EXT_BIM_STALE_AFTER_S` sets how old a reading may be, in seconds, before the page stops counting it as current. Left out, it is 30 seconds.
 - An `ifc-guid` anchor kind, the `bim.ifc-to-glb` converter, the `bim.thermal-comfort` and `bim.co2` presets, and the `bim.room` and `bim.storey` scopes, which a host's visualisation core can merge with those of other kits.
 - `manifestToVisualisation`, which turns a binding manifest into a `visualisation.json` asset.
 
 The SDK and `react-router-dom` are optional peers, needed only by a host that imports `./dtaas`, which also needs `zod` and React 19 or newer, since the SDK requires both. The other entry points work without the SDK and the router, so a host outside DTaaS keeps using `./react` as before.
 
+## Alerts
+
+`alertsOf` lists what is wrong with one sensor, most urgent first, and the sensor cards show each alert as a chip. Every alert comes from data that already arrived. The range comes from the manifest and the unit and the kind come from the payload.
+
+- A reading counts as current while it is younger than the stale threshold and the feed is live. The threshold is `DEFAULT_STALE_AFTER_S`, 30 seconds. `alertsOf`, `isLive` and `ageText` take another value as their `staleAfter` argument. A host sets it for the whole page through the `staleAfter` prop of `BuildingModels`, in seconds. The cards, the markers and the heatmap all use it. On DTaaS the setting is `REACT_APP_EXT_BIM_STALE_AFTER_S`. An installation whose controller stamps its readings about 55 seconds late, as the first one does, sets it above that, for example to 90, or every reading arrives already stale.
+- A current value outside the manifest's `ramp` raises `Above Range` or `Below Range`.
+- A payload `unit` that differs from the manifest's `display.unit` raises `Unit Differs`. Both sides are compared after mapping SenML unit codes to the way a manifest writes them, so `Cel` matches `°C`. `displayUnit` exposes that map.
+- A value that was not measured raises a note named after what it is, such as `Simulated` or `Predicted`. The reading's `kind`, from the payload, is read first and its `channel` second. `kind: sample` and the DTaaS channel `measured` both count as measured. Any other word is shown as it arrived. On the DTaaS page every reading carries the channel it came on, so a simulated value is marked as simulated on its card.
+
+## Checking the Model File
+
+`source_sha256` in the manifest must be 64 hexadecimal characters or `unknown`. The Buildings page also computes the SHA-256 of the IFC file in the browser with Web Crypto and compares it with the manifest. When the page converts the IFC file, it hashes the bytes it already fetched. When it draws stored geometry, the hash of the geometry would never equal the hash of the IFC file it was made from, so the page fetches the IFC file once for the check. A file that differs raises a warning above the drawing that names the first characters of both hashes, since a re-export changes the GlobalIds and the sensors may then sit on the wrong objects. `unknown` in the manifest compares nothing and the page says so in one quiet line. A match says nothing. The page cannot compare when the browser offers no Web Crypto (it does only on HTTPS or on localhost) or when the IFC file is above the 200 MB the browser converts. It then says so in the same quiet line. `sha256Hex` and `compareSource` are exported from the package root.
+
+## Sensors on the Model
+
+Each sensor is a dot at the centre of its object, drawn over the walls in front of it, with a label that gives its short tag and its current value. A dot is at least 14 pixels across however far away the camera is. It takes the colour of its value on the manifest's ramp while the reading is current and is grey otherwise. The selected sensor is at least 24 pixels across and in the selection colour. Its label is outlined and bold. The labels take their colours from the host's theme, so they read in a light and in a dark theme.
+
+Clicking a sensor card selects its object and frames it, keeping the direction the camera looks from. The `s` key, Frame The Selection in the shortcut list, does the same for whatever is selected. `f` still fits the whole model.
+
+## Checking a Re-Export
+
+`scripts/check-reexport.mjs` takes a manifest and another export of the same building, as IFC or as GLB, resolves every binding against it with the package's own resolver and prints which bindings survive and which do not, with the resolver's reason. It also says whether the model is the file the manifest's hash names. It reads the built package, so run `npm run build` first. It exits with 1 when a binding is lost.
+
+```bash
+node scripts/check-reexport.mjs room.manifest.json room-reexported.ifc
+node scripts/check-reexport.mjs room.manifest.json room-reexported.glb --json
+```
+
 ## Develop
 
 ```bash
 npm install
-npm run build     # ESM, CommonJS and type declarations into dist/
-npm test          # typecheck, then the suite against dist/
+npm run build     # ES modules and type declarations into dist/esm/
+npm test          # build, which type checks, then the suite against dist/
 ```
 
 The tests import from `dist/`, not from `src/`. A test that passes on the source and fails on the artifact is a test that did not do its job.

@@ -86,7 +86,8 @@
   },
   "scripts": {
     "build": "node scripts/inline-wasm.mjs && tsc -p tsconfig.esm.json && node scripts/stubs.mjs",
-    "test": "node scripts/inline-wasm.mjs && tsc -p tsconfig.esm.json --noEmit && node --test --experimental-test-module-mocks 'test/*.test.mjs'",
+    "pretest": "npm run build",
+    "test": "node --test --experimental-test-module-mocks 'test/*.test.mjs'",
     "prepublishOnly": "npm run build",
     "prepack": "node scripts/licence.mjs",
     "audit": "npm audit --audit-level=high"

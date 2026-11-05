@@ -60,6 +60,9 @@ export {
   alertsOf,
   alertCounts,
   MEASURED_KIND,
+  MEASURED_CHANNEL,
+  displayUnit,
+  valueText,
   type Alert,
   type AlertLevel,
 } from './alerts.js';
@@ -89,3 +92,10 @@ export {
 } from './readings.js';
 
 export { normaliseLibraryPath } from './libraryPath.js';
+
+export {
+  sha256Hex,
+  compareSource,
+  UNKNOWN_HASH,
+  type SourceCheck,
+} from './sourceHash.js';

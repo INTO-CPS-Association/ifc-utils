@@ -31,6 +31,7 @@ function context(scene) {
     bindings: [],
     refresh: () => calls.push('refresh'),
     frame: () => calls.push('frame'),
+    frameSelection: () => calls.push('frameSelection'),
     look: (from) => calls.push(`look:${from}`),
     hovered: () => 'w1',
     toggleHelp: () => calls.push('help'),
@@ -145,4 +146,13 @@ test('an upper case key press still works', () => {
   handleKey({ key: 'T', target: { tagName: 'BODY' } }, ctx);
 
   assert.equal(scene.state.transparent, true);
+});
+
+test('the selection key frames the selection and is listed with the others', () => {
+  const { handled, calls } = press('s', view());
+  assert.equal(handled, true);
+  assert.deepEqual(calls, ['frameSelection']);
+  const entry = SHORTCUTS.find((e) => e.key === 's');
+  assert.equal(entry.label, 'Frame The Selection');
+  assert.equal(entry.on, undefined, 'framing is an action, so its button never lights up');
 });

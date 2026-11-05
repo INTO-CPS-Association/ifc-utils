@@ -91,11 +91,18 @@ export function resolveBindings<T extends SceneObject>(
 }
 
 function resolveOne<T extends SceneObject>(
-  selector: Selector,
+  selector: Selector | undefined,
   byGlobalId: Map<string, T>,
   byNodeName: Map<string, T[]>,
   byExpressId: Map<number, T>,
 ): { object: T } | { reason: string } {
+  // The schema refuses a binding without a selector, but a caller can still
+  // build one by hand. Reading a field off it would throw and lose every
+  // other binding, so it is reported like any other miss.
+  if (selector === undefined || selector === null) {
+    return { reason: 'the binding has no selector, so it names no object.' };
+  }
+
   if (selector.globalId !== undefined) {
     const object = byGlobalId.get(selector.globalId);
     return object

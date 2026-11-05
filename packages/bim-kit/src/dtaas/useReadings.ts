@@ -27,17 +27,23 @@ export interface LiveReadings {
   readonly feed: FeedState;
 }
 
-/** `previous` with one sample written onto every object its topic is bound to. */
+/**
+ * `previous` with one sample written onto every object its topic is bound to.
+ *
+ * The channel is kept on the reading, so a simulated value that reaches a
+ * card is still marked as simulated there.
+ */
 function withSample(
   previous: Map<string, Reading>,
   targets: readonly Binding[],
   { value, ts }: Sampled,
+  channel: Channel,
 ): Map<string, Reading> {
   if (typeof value !== 'number' || targets.length === 0) return previous;
   const next = new Map(previous);
   targets.forEach((binding) => {
     const globalId = objectOf(binding);
-    if (globalId !== undefined) next.set(globalId, { value, receivedAt: ts });
+    if (globalId !== undefined) next.set(globalId, { value, receivedAt: ts, channel });
   });
   return next;
 }
@@ -47,7 +53,7 @@ function storedOn(signals: SignalsService, bindings: Binding[], channel: Channel
   let readings = new Map<string, Reading>();
   bindingsByTopic(bindings).forEach((targets, topic) => {
     const stored = signals.valueAt(topic, channel);
-    if (stored) readings = withSample(readings, targets, stored);
+    if (stored) readings = withSample(readings, targets, stored, channel);
   });
   return readings;
 }
@@ -97,7 +103,9 @@ function useReadings(signals: SignalsService, bindings: Binding[]): LiveReadings
     const stops = CHANNELS.map((channel) => signals.subscribe(topics, channel, (sample) =>
       setByChannel((previous) => ({
         ...previous,
-        [channel]: withSample(previous[channel], byTopic.get(sample.signalPath) ?? [], sample),
+        [channel]: withSample(
+          previous[channel], byTopic.get(sample.signalPath) ?? [], sample, channel,
+        ),
       }))));
     return () => stops.forEach((stop) => stop());
   }, [signals, bindings, topics, setByChannel]);

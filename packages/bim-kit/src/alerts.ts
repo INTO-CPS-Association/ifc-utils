@@ -49,6 +49,52 @@ export interface Alert {
  */
 export const MEASURED_KIND = 'sample';
 
+/** The DTaaS signal channel for a value read off the instrument. */
+export const MEASURED_CHANNEL = 'measured';
+
+/**
+ * Every word that means "read off the instrument". `sample` is the older
+ * payload kind and stays accepted, so publishers that still send it do not
+ * start raising notes.
+ */
+const MEASURED_WORDS: ReadonlySet<string> = new Set([MEASURED_KIND, MEASURED_CHANNEL]);
+
+/**
+ * SenML unit codes (IANA SenML Units registry, RFC 8428 and RFC 8798) and how a
+ * manifest usually writes the same unit.
+ *
+ * A sensor that publishes SenML says `Cel` where the manifest says `°C`.
+ * Both name one unit, so they are compared after this map and not as raw
+ * text. Only the codes a manifest writes differently are listed. Every other
+ * code is compared as it arrived.
+ */
+const SENML_DISPLAY_UNITS: Readonly<Record<string, string>> = {
+  Cel: '°C',
+  'm3/s': 'm³/s',
+};
+
+/** A unit as a person reads it: `Cel` becomes `°C`, anything unknown stays. */
+export function displayUnit(unit: string): string {
+  return SENML_DISPLAY_UNITS[unit] ?? unit;
+}
+
+/** How many decimals a reading is shown to. More says a precision the sensor does not have. */
+const DECIMALS = 1;
+
+/**
+ * A reading as a card or a marker label prints it, such as `21.5 °C`, or
+ * `Waiting` when nothing has arrived.
+ *
+ * The payload's own unit wins. A difference from the manifest is one of the
+ * alerts, since silently trusting either is a wrong number in a building.
+ */
+export function valueText(binding: Binding, reading: Reading | undefined): string {
+  if (reading === undefined) return 'Waiting';
+  const unit = reading.unit !== undefined ? displayUnit(reading.unit) : displayOf(binding).unit;
+  const value = reading.value.toFixed(DECIMALS);
+  return unit ? `${value} ${unit}` : value;
+}
+
 /** The alerts that apply to one sensor, most urgent first. */
 export function alertsOf(
   binding: Binding,
@@ -87,7 +133,8 @@ export function alertsOf(
     }
   }
 
-  if (reading?.unit !== undefined && declared !== undefined && reading.unit !== declared) {
+  if (reading?.unit !== undefined && declared !== undefined
+      && displayUnit(reading.unit) !== displayUnit(declared)) {
     alerts.push({
       level: 'warn',
       label: 'Unit Differs',
@@ -96,12 +143,15 @@ export function alertsOf(
     });
   }
 
-  if (reading?.kind !== undefined && reading.kind !== MEASURED_KIND) {
+  // The payload's own kind wins over the channel it came on, since it is the
+  // more specific of the two.
+  const how = reading?.kind ?? reading?.channel;
+  if (how !== undefined && !MEASURED_WORDS.has(how)) {
     alerts.push({
       level: 'note',
-      label: titleOf(reading.kind),
-      detail: `The payload declares this value as ${reading.kind}, `
-        + `not as a ${MEASURED_KIND} read off the instrument.`,
+      label: titleOf(how),
+      detail: `The payload declares this value as ${how}, `
+        + 'not as a measured value read off the instrument.',
     });
   }
 

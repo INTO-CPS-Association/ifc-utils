@@ -7,11 +7,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - `planAngle`, `toGrid` and `fromGrid`, from `./viewer`, and `angle` on `Field`. `planAngle` measures the direction the walls of a plan run in, and the two others turn a point into the field's grid and back.
+- `displayUnit` and `MEASURED_CHANNEL`, from the package root, and an optional `channel` on `Reading`.
+- The Buildings page compares the manifest's `source_sha256` with the SHA-256 of the IFC file, computed in the browser with Web Crypto. A converted model is hashed from the bytes already fetched and a model drawn from stored geometry has its IFC file fetched once for the check. A different file raises a warning naming both hashes. `unknown` in the manifest is said in one quiet line. `sha256Hex`, `compareSource`, `UNKNOWN_HASH` and `SourceCheck` are exported from the package root. `BimCanvas` takes `onSourceBytes`.
+- `BuildingModels` and `SensorCards` take `staleAfter`, in seconds, so a host sets how old a reading may be before it stops counting as current. The default stays `DEFAULT_STALE_AFTER_S`, 30 seconds. The DTaaS extension reads it from `REACT_APP_EXT_BIM_STALE_AFTER_S`, for an installation whose controller stamps its readings late.
+- The `s` shortcut, Frame The Selection, puts the selected object in shot. Clicking a sensor card selects its object and frames it. `frameObject`, `frame` and `LOOK_FROM` are exported from `./viewer`. The viewer handle has `frameSelection` and `showReadings`.
+- Each sensor marker has a label with its short tag and its current value, in the host theme's colours.
+- `scripts/check-reexport.mjs`, which resolves every binding of a manifest against another export of the same building and prints which survive and which do not, with the reason.
+- `valueText`, from the package root, which prints a reading as the card and the marker label show it.
+
+### Changed
+
+- A sensor marker is at least 14 pixels across on screen whatever the distance. It has a dark ring and takes the colour of its current value on the ramp. The selected marker is at least 24 pixels across, in the selection colour, with its label outlined and bold. It was a grey sphere sized as a share of the model, a few pixels on a whole building. The selected one could not be told from the rest.
+- A card whose reading has no unit prints the value alone. It printed `undefined` after the number.
 
 ### Fixed
 
 - On the Per Sensor heatmap, the floor of an open room is split halfway between its sensors. The walk stepped along rows and columns only, so the split ran along 45-degree lines and along rows, and about one point in twenty of an open room went to a farther sensor. It now steps along the diagonals as well, at their true length, which leaves under one point in a hundred off, and a diagonal step never passes between two walls that meet at a corner.
 - On the Per Sensor heatmap, a model placed at an angle to the world axes drew its regions on a slant. The grid ran along the world axes, so every wall blocked by a box wider than itself. The grid now follows the angle of the walls, and the field sheet is turned with it.
+- `resolveBindings` reports a binding with no selector as unresolved, with its reason. It threw a `TypeError` before, which lost every other binding.
+- The alerts accept the DTaaS channel `measured` as well as the payload kind `sample` as a measured value and compare units after mapping SenML codes, so a payload in `Cel` raises no unit alert against a manifest in `°C`.
+- On the Buildings page of `./dtaas`, a simulated value is marked as simulated on its card. The channel was dropped on the way to the card, so a simulated value read as measured.
+- `npm test` builds before it runs the suite, since the tests import from `dist/`.
 
 ## [0.2.0]
 

@@ -17,3 +17,11 @@ export { addOutlines } from './outline.js';
 export { createGlow, GLOW_MARGIN_M, type Glow } from './glow.js';
 export { buildField, sourceAt, planAngle, toGrid, fromGrid, CELL_M, CUT_M, BLOCKS, OPENS, SEARCH_CELLS, type Field } from './field.js';
 export { createFieldSheet, type FieldSheet } from './fieldSheet.js';
+export {
+  frame, frameObject, LOOK_FROM, NEAR_PLANE, FAR_PLANE, MIN_FRAME_RADIUS_M, type Target,
+} from './framing.js';
+export {
+  createMarkers, markerScale, markerColour, labelText, worldPerPixel,
+  MARKER_MIN_PX, SELECTED_MARKER_MIN_PX, NO_READING_COLOUR, type MarkerSet,
+} from './markers.js';
+export { toScreen, LABEL_OFFSET_PX, type ScreenPoint } from './markerLabels.js';

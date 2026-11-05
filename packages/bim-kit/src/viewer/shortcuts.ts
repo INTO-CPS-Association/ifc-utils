@@ -19,6 +19,8 @@ export interface ShortcutContext {
   refresh: () => void;
   /** Put the whole model back in shot. */
   frame: () => void;
+  /** Put the selected object in shot. Does nothing when none is selected. */
+  frameSelection: () => void;
   /** Look from one of the six axes, or from the default corner. */
   look: (from: 'top' | 'front' | 'side' | 'corner') => void;
   /** What the cursor is over, so it can be hidden. */
@@ -107,6 +109,12 @@ export const SHORTCUTS: Shortcut[] = [
   { key: '2', label: 'Look From The Front', icon: 'front', run: ({ look }) => look('front') },
   { key: '3', label: 'Look From The Side', icon: 'side', run: ({ look }) => look('side') },
   { key: 'f', label: 'Fit The Whole Model', icon: 'fit', run: ({ frame }) => frame() },
+  {
+    key: 's',
+    label: 'Frame The Selection',
+    icon: 'focus',
+    run: ({ frameSelection }) => frameSelection(),
+  },
   {
     key: 'r',
     label: 'Reset Everything',

@@ -57,6 +57,19 @@ test('keeps the good bindings when one fails', () => {
   assert.equal(unresolved.length, 1);
 });
 
+test('reports a binding with no selector instead of throwing', () => {
+  // The schema refuses this shape, but a caller can build one by hand. A
+  // TypeError here would cost every other binding in the manifest.
+  const noSelector = { ...binding({ globalId: '0_sgz7bzz4Jh2ckU1ehFe$' }) };
+  delete noSelector.selector;
+  const { resolved, unresolved } = resolveBindings(
+    [noSelector, binding({ globalId: '0_sgz7bzz4Jh2ckU1ehFe$' })], SCENE);
+
+  assert.equal(resolved.length, 1);
+  assert.equal(unresolved.length, 1);
+  assert.match(unresolved[0].reason, /no selector/);
+});
+
 test('refuses a nodeName that two objects share', () => {
   // A name is not an identifier. Picking either would be a guess presented as
   // a fact.

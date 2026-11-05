@@ -21,6 +21,12 @@ import useModelRoute, { type ModelRoute } from '../useModelRoute.js';
 import useReadings from '../useReadings.js';
 
 /** The folder shown when the URL names none: this extension's setting, then the host's convention. */
+/** How old a reading may be before it is stale: this extension's setting, else the package default. */
+function useStaleAfter(): number | undefined {
+  const host = useHost();
+  return useMemo(() => host.config(configSchema).staleAfterS, [host]);
+}
+
 function useFallbackDirectory(): string {
   const host = useHost();
   return useMemo(
@@ -48,6 +54,7 @@ function ModelsPanel({ route, directory, list }: Readonly<PanelProps>) {
   const [bindings, setBindings] = useState<Binding[]>([]);
   const { readings, feed } = useReadings(host.signals, bindings);
   const onPersistGeometry = useMemo(() => persistGeometry(host), [host]);
+  const staleAfter = useStaleAfter();
   if (!libraryUrl) return null;
   return (
     <BuildingModels
@@ -60,6 +67,7 @@ function ModelsPanel({ route, directory, list }: Readonly<PanelProps>) {
       readings={readings}
       feed={feed}
       onPersistGeometry={onPersistGeometry}
+      staleAfter={staleAfter}
     />
   );
 }

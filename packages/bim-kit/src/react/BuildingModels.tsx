@@ -37,12 +37,16 @@ import {
   Typography,
 } from '@mui/material';
 import { displayOf, type Binding } from '../binding.js';
-import { zonesOf, type FeedState, type Reading } from '../readings.js';
+import {
+  zonesOf, DEFAULT_STALE_AFTER_S, type FeedState, type Reading,
+} from '../readings.js';
 import { handleKey, type PropertyTree, type SceneView } from '../viewer/index.js';
 import FloorPicker from './FloorPicker.js';
 import HelpPanel from './HelpPanel.js';
 import ObjectPanel from './ObjectPanel.js';
 import SensorCards from './SensorCards.js';
+import SourceCheckNotice from './SourceCheckNotice.js';
+import { useSourceCheck } from './useSourceCheck.js';
 import { ClassLegend, HeatLegend } from './Legend.js';
 import Toolbar from './Toolbar.js';
 import type { ViewerHandle } from './BimCanvas.js';
@@ -213,13 +217,20 @@ export interface BuildingModelsProps {
    * a host can subscribe to exactly the topics the page draws.
    */
   onBindingsChange?: (bindings: Binding[]) => void;
+  /**
+   * How old a reading may be, in seconds, before it stops counting as
+   * current on the cards, the markers and the heatmap. Defaults to
+   * `DEFAULT_STALE_AFTER_S`. An installation whose controller stamps its
+   * readings late, or publishes slowly, raises it.
+   */
+  staleAfter?: number;
 }
 
 type SaveState = 'idle' | 'saving' | 'stored' | 'failed';
 
 /** What a manifest beside a model contributes to the page once it is checked. */
 type CheckedManifest =
-  | { ok: true; bindings: Binding[]; proposed: boolean }
+  | { ok: true; bindings: Binding[]; proposed: boolean; sourceSha256: string }
   | { ok: false; problem: Problem };
 
 /**
@@ -241,7 +252,12 @@ function checkManifest(raw: unknown): CheckedManifest {
     return { ok: false, problem: { summary: 'The sensor manifest is not valid.', detail } };
   }
   const { bindings } = raw as { bindings: Binding[] };
-  return { ok: true, bindings, proposed: result.manifest.model.proposed === true };
+  return {
+    ok: true,
+    bindings,
+    proposed: result.manifest.model.proposed === true,
+    sourceSha256: result.manifest.model.source_sha256,
+  };
 }
 
 /**
@@ -282,6 +298,7 @@ export function BuildingModels({
   selected: selectedModel,
   onSelect: onSelectModel,
   onBindingsChange,
+  staleAfter = DEFAULT_STALE_AFTER_S,
 }: Readonly<BuildingModelsProps>) {
   const listing = useModelList(libraryUrl, directory, list);
   const { models } = listing;
@@ -296,6 +313,8 @@ export function BuildingModels({
   // A manifest a placement tool wrote marks itself proposed, so the page can
   // say so instead of presenting a guessed position as a survey.
   const [proposed, setProposed] = useState(false);
+  // The hash the manifest records for its IFC file, compared with the file.
+  const [sourceSha256, setSourceSha256] = useState<string | null>(null);
   const [tree, setTree] = useState<PropertyTree | null>(null);
   const [handle, setHandle] = useState<ViewerHandle | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -359,6 +378,7 @@ export function BuildingModels({
     // showing the previous model's sensors, or the previous manifest's problem.
     setBindings([]);
     setProposed(false);
+    setSourceSha256(null);
     setNote(null);
     setProblem(null);
     if (!chosen?.manifestPath || !libraryUrl) return undefined;
@@ -376,6 +396,7 @@ export function BuildingModels({
         }
         setBindings(checked.bindings);
         setProposed(checked.proposed);
+        setSourceSha256(checked.sourceSha256);
       })
       .catch((error: Error) => {
         if (current) {
@@ -395,15 +416,27 @@ export function BuildingModels({
   // messages is one repaint instead of one per message.
   useEffect(() => {
     if (!handle) return;
-    handle.view.applyReadings(bindings, readings, feed);
+    handle.view.applyReadings(bindings, readings, feed, staleAfter);
+    handle.showReadings?.(readings, feed, staleAfter);
     handle.drawField();
     handle.view.refreshMaterials();
     bump((n) => n + 1);
-  }, [handle, bindings, readings, feed]);
+  }, [handle, bindings, readings, feed, staleAfter]);
 
   const onReport = useCallback((message: string) => setNote(message), []);
   const onHover = useCallback((globalId: string | null) => { hovered.current = globalId; }, []);
   const onSelect = useCallback((globalId: string | null) => setSelected(globalId), []);
+  // A card picks its object the way a click on the model does and puts it in
+  // shot, since a sensor named on a card is often out of sight.
+  const focus = useCallback((globalId: string) => {
+    setSelected(globalId);
+    if (!handle) return;
+    handle.view.state.selected = globalId;
+    handle.view.refreshMaterials();
+    handle.frameSelection?.();
+    bump((n) => n + 1);
+  }, [handle]);
+  const source = useSourceCheck(chosen, libraryUrl, sourceSha256);
 
   // A conversion just finished in the canvas. Hand it to the host to store, and
   // when that returns, read the directory again so the new GLB is paired with
@@ -445,6 +478,7 @@ export function BuildingModels({
     bindings,
     refresh: () => { view.refresh(); handle?.drawField(); bump((n) => n + 1); },
     frame: () => handle?.frame(),
+    frameSelection: () => handle?.frameSelection?.(),
     look: (from: 'top' | 'front' | 'side' | 'corner') => handle?.look(from),
     hovered: () => hovered.current,
     toggleHelp: () => setHelpOpen((open) => !open),
@@ -507,6 +541,8 @@ export function BuildingModels({
           </>
         )}
       </Box>
+
+      <SourceCheckNotice check={source.check} />
 
       {missing && (
         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -604,6 +640,7 @@ export function BuildingModels({
                 onHover={onHover}
                 onSelect={onSelect}
                 onConverted={onPersistGeometry ? onConverted : undefined}
+                onSourceBytes={source.onSourceBytes}
               />
             </Suspense>
           )}
@@ -631,14 +668,15 @@ export function BuildingModels({
                   readings={readings}
                   feed={feed}
                   selected={selected}
-                  onSelect={setSelected}
+                  onSelect={focus}
+                  staleAfter={staleAfter}
                 />
                 {handle.view.state.heat !== 'off' && (
                   <HeatLegend
                     zones={zonesOf(bindings, readings, handle.view.state.heat,
-                      (id) => handle.view.zoneFor(id), feed)}
+                      (id) => handle.view.zoneFor(id), feed, staleAfter)}
                     unit={displayOf(bindings[0] ?? { display: {} } as Binding).unit}
-                    coloured={handle.view.liveCount(bindings, readings, feed)}
+                    coloured={handle.view.liveCount(bindings, readings, feed, staleAfter)}
                   />
                 )}
                 <ClassLegend view={handle.view} onChange={() => bump((n) => n + 1)} />

@@ -9,7 +9,9 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { alertsOf, alertCounts, MEASURED_KIND } from '../dist/esm/index.js';
+import {
+  alertsOf, alertCounts, displayUnit, MEASURED_KIND, MEASURED_CHANNEL,
+} from '../dist/esm/index.js';
 
 const NOW = 1_800_000_000_000;
 
@@ -91,6 +93,26 @@ describe('a unit the payload disagrees with', () => {
     assert.match(alerts[0].detail, /F.*C|C.*F/);
   });
 
+  test('a SenML code for the declared unit is not a disagreement', () => {
+    const celsius = { ...binding, display: { unit: '°C', ramp: [10, 50] } };
+
+    assert.deepEqual(alertsOf(celsius, reading(21, { unit: 'Cel' }), 'live', 30, NOW), []);
+  });
+
+  test('a SenML code for a different unit is still a disagreement', () => {
+    const celsius = { ...binding, display: { unit: '°C', ramp: [10, 50] } };
+    const alerts = alertsOf(celsius, reading(21, { unit: 'K' }), 'live', 30, NOW);
+
+    assert.deepEqual(labels(alerts), ['Unit Differs']);
+  });
+
+  test('displayUnit maps SenML codes and leaves unknown units as they are', () => {
+    assert.equal(displayUnit('Cel'), '°C');
+    assert.equal(displayUnit('m3/s'), 'm³/s');
+    assert.equal(displayUnit('%RH'), '%RH');
+    assert.equal(displayUnit('furlong'), 'furlong');
+  });
+
   test('a payload that declares no unit is not a disagreement', () => {
     const noUnit = { value: 21, receivedAt: NOW };
 
@@ -119,6 +141,23 @@ describe('a value that was not measured', () => {
     const alerts = alertsOf(binding, reading(21, { kind: 'simulation' }), 'live', 30, NOW);
 
     assert.deepEqual(labels(alerts), ['Simulation']);
+  });
+
+  test('the measured channel raises nothing', () => {
+    const alerts = alertsOf(binding, reading(21, { channel: MEASURED_CHANNEL }), 'live', 30, NOW);
+
+    assert.deepEqual(alerts, []);
+  });
+
+  test('the measured kind raises nothing, as sample does', () => {
+    assert.deepEqual(alertsOf(binding, reading(21, { kind: 'measured' }), 'live', 30, NOW), []);
+  });
+
+  test('a simulated channel is noted', () => {
+    const alerts = alertsOf(binding, reading(21, { channel: 'simulated' }), 'live', 30, NOW);
+
+    assert.deepEqual(labels(alerts), ['Simulated']);
+    assert.equal(alerts[0].level, 'note');
   });
 
   test('a payload with no kind says nothing about how the value was produced', () => {

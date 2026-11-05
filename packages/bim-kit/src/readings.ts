@@ -25,6 +25,12 @@ export interface Reading {
    * a number is instead of presenting all four as a measurement.
    */
   kind?: string;
+  /**
+   * The signal channel the value came on, in the words of the DTaaS contract:
+   * `measured`, `simulated`, `predicted` or `setpoint`. It answers the same
+   * question as `kind`, so the alerts read whichever of the two arrived.
+   */
+  channel?: string;
 }
 
 /** Whether the transport is connected, which no age can tell on its own. */

@@ -16,32 +16,28 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Box, CircularProgress, Typography } from '@mui/material';
+import { Alert, Box, CircularProgress, Typography, type Theme } from '@mui/material';
 import {
   AmbientLight,
-  Box3,
   Raycaster,
   Vector2,
   Color,
   DirectionalLight,
-  Mesh,
-  MeshBasicMaterial,
   Object3D,
   PerspectiveCamera,
   Scene,
-  SphereGeometry,
-  Vector3,
   WebGLRenderer,
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { idOf } from '../binding.js';
 import { resolveBindings } from '../resolver.js';
+import type { FeedState, Reading } from '../readings.js';
 import type { Binding } from '../binding.js';
 import { exportGlb } from './exportGlb.js';
 import { objectsOf } from './scene.js';
 import {
-  SceneView, addOutlines, createFieldSheet, createGizmo, createGlow, type PropertyTree,
+  FAR_PLANE, NEAR_PLANE, SceneView, addOutlines, createFieldSheet, createGizmo, createGlow,
+  createMarkers, frame, frameObject, type MarkerSet, type PropertyTree,
 } from '../viewer/index.js';
 
 // The same near-white the viewer this was taken from uses. A lighter one
@@ -53,73 +49,9 @@ const SUN_LIGHT = 0.9;
 
 const FIELD_OF_VIEW = 45;
 
-// The limits of the depth range, in metres. They are a floor for the near
-// plane and a ceiling for the far one, so a model far smaller than the ceiling
-// does not pay for depth it never uses. See `frame` for why that matters.
-const NEAR_PLANE = 0.1;
-const FAR_PLANE = 5000;
-
-// A marker is a fraction of the model, so it is the same size on a substation
-// and on a sixty metre building.
-const MARKER_SHARE_OF_MODEL = 0.006;
-
-/**
- * The colour of a sensor that has not reported.
- *
- * Deliberately off the ramp, so it cannot be mistaken for a value. Grey is the
- * same thing the card beside it says when it greys a stale reading.
- */
-const NO_READING_COLOUR = 0x9aa3ad;
-
-/**
- * Where the camera sits for each named view, as a direction from the centre.
- *
- * Named instead of written into each shortcut, so adding a fourth is a line
- * here and not a change to the table of keys.
- */
-const LOOK_FROM: Record<string, [number, number, number]> = {
-  top: [0, 1, 0.0001],
-  front: [0, 0, 1],
-  side: [1, 0, 0],
-  corner: [1, 0.6, 1],
-};
-
-/**
- * Put the whole model in shot.
- *
- * The distance is the radius of the bounding sphere over the sine of half the
- * field of view, which frames the model whatever its size. The metre is
- * clearance so the near face is not against the lens.
- */
-function frame(
-  camera: PerspectiveCamera,
-  controls: OrbitControls,
-  model: Object3D,
-  from: keyof typeof LOOK_FROM = 'corner',
-) {
-  const box = new Box3().setFromObject(model);
-  if (box.isEmpty()) return 1;
-
-  const centre = box.getCenter(new Vector3());
-  const radius = box.getSize(new Vector3()).length() / 2;
-  const distance = radius / Math.sin((camera.fov * Math.PI) / 360) + 1;
-
-  camera.position.copy(centre)
-    .add(new Vector3(...LOOK_FROM[from]).normalize().multiplyScalar(distance));
-  // Depth precision falls as the ratio of far to near grows, and an IFC model
-  // has coplanar faces everywhere a slab meets a wall or one storey is built on
-  // the next. Once precision runs out those faces cannot be ordered and they
-  // flicker against each other as the camera moves, which is the speckle that
-  // appears on zoom. The far plane used to be floored at FAR_PLANE, so a
-  // hundred metre building carried a five kilometre range and spent almost all
-  // of its depth buffer on empty space. It is a ceiling now, and both planes
-  // follow the model.
-  camera.near = Math.max(distance / 1000, NEAR_PLANE);
-  camera.far = Math.min(distance * 10, FAR_PLANE);
-  camera.updateProjectionMatrix();
-  controls.target.copy(centre);
-  controls.update();
-  return radius;
+/** "1 sensor", "2 sensors". Written out because "1 sensors" reads as a bug. */
+function plural(word: string, count: number): string {
+  return count === 1 ? word : `${word}s`;
 }
 
 /**
@@ -131,41 +63,19 @@ function frame(
  * markers where the manifest asked for six is worse than one that says which
  * two are missing.
  */
-/** "1 sensor", "2 sensors". Written out because "1 sensors" reads as a bug. */
-function plural(word: string, count: number): string {
-  return count === 1 ? word : `${word}s`;
+function addMarkers(model: Object3D, bindings: Binding[], radius: number, overlay: HTMLElement) {
+  const { resolved, unresolved } = resolveBindings(bindings, objectsOf(model));
+  const markers = createMarkers(model, resolved, overlay, radius);
+  return { markers, placed: resolved.length, missing: unresolved };
 }
 
-function addMarkers(model: Object3D, bindings: Binding[], radius: number) {
-  const { resolved, unresolved } = resolveBindings(bindings, objectsOf(model));
-  const size = Math.max(radius * MARKER_SHARE_OF_MODEL, 0.05);
-  const shape = new SphereGeometry(size, 16, 12);
-  const at = new Vector3();
-
-  for (const { binding, object } of resolved) {
-    // A marker is drawn in a colour that is not on the ramp at all. It used to
-    // sit at the cold end of the binding's own ramp, which reads as a
-    // measurement: a blue dot on a temperature ramp says four degrees, while
-    // the card beside it said no message had ever arrived. One of the two was
-    // lying and it was the dot.
-    //
-    // It stays this colour, because nothing recolours a marker yet: the
-    // readings repaint the objects and not the spheres. When the transport
-    // exists, this is where a marker starts following its own value.
-    const marker = new Mesh(shape, new MeshBasicMaterial({
-      color: NO_READING_COLOUR,
-      // Drawn over the geometry it sits on, or a sensor inside a wall is
-      // invisible from outside, which defeats the purpose of a marker.
-      depthTest: false,
-    }));
-    marker.renderOrder = 2;
-    marker.name = `marker:${idOf(binding)}`;
-    new Box3().setFromObject(object.node).getCenter(at);
-    marker.position.copy(at);
-    model.add(marker);
-  }
-
-  return { placed: resolved.length, missing: unresolved };
+/** A layer over the canvas for the marker labels, which never takes a click. */
+function createOverlay(parent: HTMLElement): HTMLElement {
+  const overlay = parent.ownerDocument.createElement('div');
+  overlay.setAttribute('style', 'position:absolute;inset:0;overflow:hidden;pointer-events:none');
+  overlay.dataset.testid = 'bim-labels';
+  parent.appendChild(overlay);
+  return overlay;
 }
 
 export interface BimCanvasProps {
@@ -211,6 +121,12 @@ export interface BimCanvasProps {
    * about where the model's files live.
    */
   onConverted?: (glb: Uint8Array) => void;
+  /**
+   * Handed the bytes of the IFC file when `convert` is true, as soon as they
+   * arrive and before they are converted, so the page can hash the file it
+   * actually loaded without downloading it a second time.
+   */
+  onSourceBytes?: (bytes: Uint8Array) => void;
 }
 
 /** What a page can do to the scene from outside. */
@@ -228,11 +144,38 @@ export interface ViewerHandle {
    * sheet is beside the model and not one of them.
    */
   drawField: () => void;
+  /** Put the selected object in shot. Does nothing when none is selected. */
+  frameSelection?: () => void;
+  /** Recolour the markers and rewrite their labels from the latest readings. */
+  showReadings?: (readings: Map<string, Reading>, feed: FeedState, staleAfter?: number) => void;
 }
+
+/** Size every marker and move every label for the frame about to be drawn. */
+function placeAll(markers: MarkerSet, view: SceneView, camera: PerspectiveCamera, parent: HTMLElement) {
+  // A sensor on a floor the floor filter hides is hidden with it, label and all.
+  const shown = (globalId: string) => view.meshes.get(globalId)?.visible ?? true;
+  markers.place(camera, parent.clientWidth, parent.clientHeight, view.state.selected, shown);
+}
+
+/**
+ * The holder of the canvas, which also carries the colours of the marker
+ * labels, taken from the host's theme so a label reads in a light and in a
+ * dark theme alike.
+ */
+const labelColours = (theme: Theme) => ({
+  position: 'relative',
+  width: '100%',
+  height: '100%',
+  overflow: 'hidden',
+  '--bim-label-bg': theme.palette.background.paper,
+  '--bim-label-fg': theme.palette.text.primary,
+  '--bim-label-border': theme.palette.text.secondary,
+  '--bim-label-accent': theme.palette.primary.main,
+}) as const;
 
 function BimCanvas({
   url, convert = false, bindings = [], proposed = false, tree,
-  onReport, onReady, onHover, onSelect, onConverted,
+  onReport, onReady, onHover, onSelect, onConverted, onSourceBytes,
 }: Readonly<BimCanvasProps>) {
   const holder = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
@@ -295,10 +238,16 @@ function BimCanvas({
     // to be, so a page that switches models does not leak a listener a visit.
     const cleanUp: Array<() => void> = [];
 
+    const overlay = createOverlay(parent);
+    // Set once a model is shown. The markers are sized and their labels moved
+    // on every frame, because both follow the camera.
+    let placeMarkers: (() => void) | null = null;
+
     let running = true;
     const tick = () => {
       if (!running) return;
       controls.update();
+      placeMarkers?.();
       renderer.render(scene, camera);
       gizmo.draw(renderer, camera);
       globalThis.requestAnimationFrame(tick);
@@ -315,7 +264,8 @@ function BimCanvas({
       if (!running) return;
       scene.add(model);
       const radius = frame(camera, controls, model);
-      const { placed, missing } = addMarkers(model, bindings, radius);
+      const { markers, placed, missing } = addMarkers(model, bindings, radius, overlay);
+      cleanUp.push(() => markers.dispose());
 
       // Everything the page drives the viewer through. The page owns the
       // interface and this owns the scene, and this is the only line between
@@ -337,11 +287,17 @@ function BimCanvas({
       // else.
       addOutlines(view.meshes.values());
       view.refresh();
+      placeMarkers = () => placeAll(markers, view, camera, parent);
       onReady?.({
         view,
         frame: () => frame(camera, controls, model),
         look: (from) => frame(camera, controls, model, from),
         drawField: () => sheet.draw(view),
+        frameSelection: () => {
+          const mesh = view.state.selected ? view.meshes.get(view.state.selected) : undefined;
+          if (mesh) frameObject(camera, controls, mesh, model);
+        },
+        showReadings: (readings, feed, staleAfter) => markers.showReadings(readings, feed, staleAfter),
       });
 
       /** Which object is under the pointer, or null. */
@@ -412,6 +368,7 @@ function BimCanvas({
         const response = await fetch(url, { credentials: 'include' });
         if (!response.ok) throw new Error(`the file returned HTTP ${response.status}`);
         const bytes = new Uint8Array(await response.arrayBuffer());
+        if (running) onSourceBytes?.(bytes);
 
         if (!running) return;
         setProgress('Converting');
@@ -455,6 +412,7 @@ function BimCanvas({
     return () => {
       running = false;
       for (const undo of cleanUp) undo();
+      overlay.remove();
       observer.disconnect();
       controls.dispose();
       scene.traverse((object) => {
@@ -470,7 +428,8 @@ function BimCanvas({
       renderer.forceContextLoss();
       parent.removeChild(renderer.domElement);
     };
-  }, [url, convert, bindings, proposed, tree, onReport, onReady, onHover, onSelect, onConverted]);
+  }, [url, convert, bindings, proposed, tree, onReport, onReady, onHover, onSelect, onConverted,
+    onSourceBytes]);
 
   return (
     <Box sx={{
@@ -484,7 +443,7 @@ function BimCanvas({
     >
       <Box
         ref={holder}
-        sx={{ width: '100%', height: '100%', overflow: 'hidden' }}
+        sx={labelColours}
         data-testid="bim-canvas"
       />
       {loading && !problem && (

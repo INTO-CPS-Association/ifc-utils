@@ -25,6 +25,7 @@ import ViewInArIcon from '@mui/icons-material/ViewInAr';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import CropSquareIcon from '@mui/icons-material/CropSquare';
+import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 
 const ICONS: Record<string, ReactElement> = {
   heatmap: <ThermostatIcon fontSize="small" />,
@@ -37,6 +38,7 @@ const ICONS: Record<string, ReactElement> = {
   front: <CropSquareIcon fontSize="small" />,
   side: <BlurOnIcon fontSize="small" />,
   fit: <CenterFocusStrongIcon fontSize="small" />,
+  focus: <FilterCenterFocusIcon fontSize="small" />,
   reset: <RestartAltIcon fontSize="small" />,
   fullscreen: <FullscreenIcon fontSize="small" />,
   help: <HelpOutlineIcon fontSize="small" />,

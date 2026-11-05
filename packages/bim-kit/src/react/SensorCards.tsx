@@ -7,9 +7,11 @@
  */
 
 import { Box, Card, CardActionArea, Chip, Stack, Tooltip, Typography } from '@mui/material';
-import { alertCounts, alertsOf } from '../alerts.js';
+import { alertCounts, alertsOf, valueText } from '../alerts.js';
 import { idOf, objectOf, type Binding } from '../binding.js';
-import { ageText, isLive, type FeedState, type Reading } from '../readings.js';
+import {
+  ageText, isLive, DEFAULT_STALE_AFTER_S, type FeedState, type Reading,
+} from '../readings.js';
 
 export interface SensorCardsProps {
   bindings: Binding[];
@@ -19,13 +21,15 @@ export interface SensorCardsProps {
   /** Which object is selected, so its card is marked. */
   selected: string | null;
   onSelect: (globalId: string) => void;
+  /**
+   * How old a reading may be, in seconds, before its card stops counting it
+   * as current. Defaults to `DEFAULT_STALE_AFTER_S`.
+   */
+  staleAfter?: number;
 }
 
-/** How many decimals a reading is shown to. More says a precision the sensor does not have. */
-const DECIMALS = 1;
-
 export function SensorCards({
-  bindings, readings, feed, selected, onSelect,
+  bindings, readings, feed, selected, onSelect, staleAfter = DEFAULT_STALE_AFTER_S,
 }: Readonly<SensorCardsProps>) {
   // Most architectural models declare no sensors, so this is the ordinary case
   // and not a failure. An explanation of it on every such model is a paragraph
@@ -34,7 +38,7 @@ export function SensorCards({
 
   // What a person wants to know before reading twenty cards is whether any of
   // them needs them. The counts say that in one line, and the cards say which.
-  const counts = alertCounts(bindings, readings, objectOf, feed);
+  const counts = alertCounts(bindings, readings, objectOf, feed, staleAfter);
 
   return (
     <Stack sx={{ gap: 0.75 }}>
@@ -59,12 +63,8 @@ export function SensorCards({
       {bindings.map((binding) => {
         const globalId = objectOf(binding);
         const reading = globalId ? readings.get(globalId) : undefined;
-        const live = isLive(reading, feed);
-        // The payload's own unit wins on the card. A difference from the
-        // manifest is one of the alerts below, since silently trusting either
-        // is a wrong number in a building.
-        const unit = reading?.unit ?? binding.display?.unit;
-        const alerts = alertsOf(binding, reading, feed);
+        const live = isLive(reading, feed, staleAfter);
+        const alerts = alertsOf(binding, reading, feed, staleAfter);
 
         return (
           <Card
@@ -83,14 +83,14 @@ export function SensorCards({
               <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
                 <Typography variant="subtitle2">{idOf(binding)}</Typography>
                 <Typography variant="subtitle2">
-                  {reading === undefined ? 'Waiting' : `${reading.value.toFixed(DECIMALS)} ${unit}`}
+                  {valueText(binding, reading)}
                 </Typography>
               </Box>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                 {binding.label}
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                {ageText(reading, feed)}
+                {ageText(reading, feed, staleAfter)}
               </Typography>
               {alerts.length > 0 && (
                 <Stack direction="row" sx={{ gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>

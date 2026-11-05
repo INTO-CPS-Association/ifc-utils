@@ -164,8 +164,8 @@ test('a conversion is stored beside its IFC file through the host, and the page 
 });
 
 /** hospital-a open and ready, with its one sensor card waiting for a reading. */
-async function showHospitalA() {
-  const { host } = show('/bim/models/hospital-a?dir=common/models');
+async function showHospitalA(env = {}) {
+  const { host } = show('/bim/models/hospital-a?dir=common/models', env);
   await screen.findByTestId('canvas');
   const view = new SceneView(new Group(), { storeys: [], objects: {} });
   await act(async () => canvas.props.onReady({
@@ -189,6 +189,20 @@ test('a simulated reading colours an object that has no measured one', async () 
   const host = await showHospitalA();
   emit(host, 19.25, 'simulated');
   assert.ok(await screen.findByText('19.3 °C'));
+});
+
+test('a simulated reading is marked as simulated on its card', async () => {
+  const host = await showHospitalA();
+  emit(host, 19.25, 'simulated');
+  await screen.findByText('19.3 °C');
+  assert.ok(screen.getByText('Simulated'));
+});
+
+test('a measured reading carries no simulated mark', async () => {
+  const host = await showHospitalA();
+  emit(host, 21.5);
+  await screen.findByText('21.5 °C');
+  assert.equal(screen.queryByText('Simulated'), null);
 });
 
 test('a measured reading wins over a simulated one for the same object', async () => {
@@ -221,4 +235,23 @@ test('a manifest with a wildcard topic is refused and nothing is subscribed', as
   assert.ok(await screen.findByText('The sensor manifest is not valid.'));
   await act(async () => {});
   assert.deepEqual(subscribed, []);
+});
+
+/** A measured reading stamped 45 s ago, as a controller with a late clock stamps it. */
+const emitLate = (host) => act(() => {
+  host.signals.emit({
+    twinId: 'h', signalPath: TOPIC, channel: 'measured', ts: Date.now() - 45_000, value: 21.5,
+  });
+});
+
+test('by default a reading stamped 45 s ago is shown as not live', async () => {
+  const host = await showHospitalA();
+  emitLate(host);
+  assert.ok(await screen.findByText(/45 s ago, not live/));
+});
+
+test('REACT_APP_EXT_BIM_STALE_AFTER_S raises the staleness limit of the page', async () => {
+  const host = await showHospitalA({ REACT_APP_EXT_BIM_STALE_AFTER_S: '90' });
+  emitLate(host);
+  assert.ok(await screen.findByText('updated 45 s ago'));
 });

@@ -44,6 +44,18 @@ test('the configuration is optional, and an empty directory is refused', () => {
   assert.equal(empty.success, false);
 });
 
+test('the staleness limit is read from REACT_APP_EXT_BIM_STALE_AFTER_S as a number', () => {
+  const result = readExtensionConfig('bim', configSchema, { REACT_APP_EXT_BIM_STALE_AFTER_S: '90' });
+  assert.deepEqual(result.success && result.data, { staleAfterS: 90 });
+});
+
+test('a staleness limit of zero, below zero or not a number is refused', () => {
+  for (const value of ['0', '-5', 'soon']) {
+    const result = readExtensionConfig('bim', configSchema, { REACT_APP_EXT_BIM_STALE_AFTER_S: value });
+    assert.equal(result.success, false, value);
+  }
+});
+
 test('every preset satisfies the SDK encoding preset schema', () => {
   for (const preset of presets) {
     assert.equal(encodingPresetSchema.safeParse(preset).success, true, preset.id);
