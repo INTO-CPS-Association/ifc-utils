@@ -35,6 +35,8 @@ import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import VerticalSplitIcon from '@mui/icons-material/VerticalSplit';
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
+import PaletteIcon from '@mui/icons-material/Palette';
+import WallpaperIcon from '@mui/icons-material/Wallpaper';
 
 const ICONS: Record<string, ReactElement> = {
   heatmap: <ThermostatIcon fontSize="small" />,
@@ -49,6 +51,8 @@ const ICONS: Record<string, ReactElement> = {
   vertical: <VerticalSplitIcon fontSize="small" />,
   cutBack: <RemoveIcon fontSize="small" />,
   cutForward: <AddIcon fontSize="small" />,
+  style: <PaletteIcon fontSize="small" />,
+  backdrop: <WallpaperIcon fontSize="small" />,
   hover: <HighlightAltIcon fontSize="small" />,
   hide: <VisibilityOffIcon fontSize="small" />,
   restore: <UndoIcon fontSize="small" />,

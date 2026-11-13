@@ -39,7 +39,7 @@ import { objectsOf } from './scene.js';
 import {
   FAR_PLANE, NEAR_PLANE, SceneView, addOutlines, castShadows, createFieldSheet, createFinish,
   createFlight, createGizmo, createGlow, createGrid, createMarkers, createMeasure, createSection,
-  createViewCube, frame, frameFrom, setParallel,
+  createViewCube, frame, frameFrom, setParallel, BACKDROPS,
   frameObject, lightFromRoom,
   prepareRenderer, snapshot, type MarkerSet, type PropertyTree, type SavedView,
 } from '../viewer/index.js';
@@ -345,6 +345,7 @@ function BimCanvas({
       wantsShadows = () => view.state.shadows;
       followState = () => {
         setParallel(camera, controls, view.state.parallel);
+        (scene.background as Color).setHex(BACKDROPS[view.state.backdrop]);
         grid.setVisible(view.state.grid);
         // Leaving the measuring mode takes the last measurement away with it,
         // and changing the mode starts a new one.

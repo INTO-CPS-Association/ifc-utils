@@ -116,7 +116,7 @@ test('hiding what is under the cursor hides it, and the next key brings it back'
 });
 
 test('an unbound key is left alone', () => {
-  assert.equal(press('z', view()).handled, false);
+  assert.equal(press('e', view()).handled, false);
 });
 
 test('a key with a modifier belongs to the browser, not to us', () => {

@@ -4,8 +4,12 @@
  * Kept apart from `./react` so a consumer that draws its own interface, or none at all, never pulls React and MUI in behind it. three.js is a peer dependency of this entry point and of `./react`, and of nothing else.
  */
 
-export { SceneView, CUT_STEP_M, type ObjectFacts, type PropertyTree, type ViewState } from './sceneView.js';
-export { Palette, SHELL, SELECTED_COLOUR, HOVERED_COLOUR } from './appearance.js';
+export {
+  SceneView, CUT_STEP_M, BACKDROPS, type Backdrop, type ObjectFacts, type PropertyTree, type ViewState,
+} from './sceneView.js';
+export {
+  Palette, SHELL, SELECTED_COLOUR, HOVERED_COLOUR, MONO_COLOUR, CLASS_COLOURS, type ModelStyle,
+} from './appearance.js';
 export {
   SHORTCUTS,
   handleKey,

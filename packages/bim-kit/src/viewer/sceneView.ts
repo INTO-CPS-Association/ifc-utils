@@ -15,7 +15,7 @@ import {
 } from '../readings.js';
 import { bandOf, bandsFrom, type Band } from '../storeys.js';
 import { type Glow } from './glow.js';
-import { Palette, SHELL } from './appearance.js';
+import { Palette, SHELL, CLASS_COLOURS, type ModelStyle } from './appearance.js';
 import { buildField, sourceAt, CUT_M, type Field } from './field.js';
 import type { MeasureMode } from './measure.js';
 import type { TreeEntry } from './modelTree.js';
@@ -83,7 +83,22 @@ export interface ViewState {
   heightShift: number;
   /** How far the vertical cut is moved from the middle of the model, in metres. */
   depthShift: number;
+  /** What the model is painted with, before any heatmap, highlight or ghost. */
+  style: ModelStyle;
+  /** The background behind the model. */
+  backdrop: Backdrop;
 }
+
+/** The backgrounds a person can choose. */
+export type Backdrop = 'light' | 'dim' | 'slate' | 'ink';
+
+/** The colour of each background, the light one the colour the viewer always had. */
+export const BACKDROPS: Record<Backdrop, number> = {
+  light: 0xe9edef,
+  dim: 0xc5ccd1,
+  slate: 0x56636b,
+  ink: 0x1d2327,
+};
 
 /** How far one press of j or k moves a cut, in metres. */
 export const CUT_STEP_M = 0.25;
@@ -139,6 +154,8 @@ export class SceneView {
     vertical: null,
     heightShift: 0,
     depthShift: 0,
+    style: 'shaded',
+    backdrop: 'light',
   };
 
   /** The middle of the model, where a vertical cut starts. */
@@ -203,6 +220,12 @@ export class SceneView {
   }
 
   classColours(): Map<string, string> {
+    if (this.state.style === 'classes') {
+      const order = [...this.classCounts().keys()].sort();
+      return new Map(order.map((ifcClass, index) => [
+        ifcClass, `#${CLASS_COLOURS[index % CLASS_COLOURS.length].toString(16).padStart(6, '0')}`,
+      ]));
+    }
     const seen = new Map<string, string>();
     for (const [globalId, mesh] of this.meshes) {
       const ifcClass = mesh.userData.ifcClass as string | undefined;
@@ -369,6 +392,26 @@ export class SceneView {
     return this.palette.heatOf(mean, this.zones.low, this.zones.high);
   }
 
+  /** The sorted classes of the model, so each keeps its colour in the colour by class style. */
+  private classOrder: string[] | null = null;
+
+  /** What an object is painted with in the style in force, before heat, highlight or ghost. */
+  private styled(globalId: string, mesh: Mesh) {
+    const own = this.palette.baseOf(globalId);
+    switch (this.state.style) {
+      case 'mono':
+        return this.palette.mono;
+      case 'wireframe':
+        return this.palette.wireOf(own);
+      case 'classes': {
+        this.classOrder ??= [...this.classCounts().keys()].sort();
+        return this.palette.classAt(this.classOrder.indexOf(String(mesh.userData.ifcClass ?? '')));
+      }
+      default:
+        return own;
+    }
+  }
+
   /** The one decision about what an object is painted with. */
   private materialFor(globalId: string, mesh: Mesh) {
     if (globalId === this.state.selected) return this.palette.selected;
@@ -384,7 +427,7 @@ export class SceneView {
     }
 
     const heat = this.heatOf(globalId);
-    const base = heat ?? this.palette.baseOf(globalId);
+    const base = heat ?? this.styled(globalId, mesh);
     const ifcClass = mesh.userData.ifcClass as string | undefined;
     if (this.state.transparent && ifcClass && SHELL.has(ifcClass)) {
       return this.palette.ghostOf(base);
@@ -592,6 +635,8 @@ export class SceneView {
       vertical: null,
       heightShift: 0,
       depthShift: 0,
+      style: 'shaded',
+      backdrop: 'light',
     };
     this.zones = null;
     this.refresh();

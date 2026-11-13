@@ -8,7 +8,8 @@
 
 import { type HeatScope } from '../readings.js';
 import type { Binding } from '../binding.js';
-import type { SceneView } from './sceneView.js';
+import type { Backdrop, SceneView } from './sceneView.js';
+import type { ModelStyle } from './appearance.js';
 import type { MeasureMode } from './measure.js';
 
 /** What a shortcut needs from the page to do its work. */
@@ -41,6 +42,20 @@ export interface Shortcut {
   /** What the toggle is currently set to, for a button that has more than two states. */
   badge?: (view: SceneView) => string | undefined;
 }
+
+const STYLE_LABELS: Record<ModelStyle, string> = {
+  shaded: 'Shaded',
+  mono: 'Single Colour',
+  classes: 'By Class',
+  wireframe: 'Wireframe',
+};
+
+const BACKDROP_LABELS: Record<Backdrop, string> = {
+  light: 'Light',
+  dim: 'Dim',
+  slate: 'Slate',
+  ink: 'Ink',
+};
 
 const MEASURE_LABELS: Record<MeasureMode, string> = {
   length: 'Length',
@@ -157,6 +172,30 @@ export const SHORTCUTS: Shortcut[] = [
     icon: 'shadows',
     run: ({ view, refresh }) => { view.state.shadows = !view.state.shadows; refresh(); },
     on: (view) => view.state.shadows,
+  },
+  {
+    key: 'y',
+    label: 'Style',
+    icon: 'style',
+    run: ({ view, refresh }) => {
+      const order = ['shaded', 'mono', 'classes', 'wireframe'] as const;
+      view.state.style = order[(order.indexOf(view.state.style) + 1) % order.length];
+      refresh();
+    },
+    on: (view) => view.state.style !== 'shaded',
+    badge: (view) => STYLE_LABELS[view.state.style],
+  },
+  {
+    key: 'z',
+    label: 'Background',
+    icon: 'backdrop',
+    run: ({ view, refresh }) => {
+      const order = ['light', 'dim', 'slate', 'ink'] as const;
+      view.state.backdrop = order[(order.indexOf(view.state.backdrop) + 1) % order.length];
+      refresh();
+    },
+    on: (view) => view.state.backdrop !== 'light',
+    badge: (view) => BACKDROP_LABELS[view.state.backdrop],
   },
   {
     key: 'h',
