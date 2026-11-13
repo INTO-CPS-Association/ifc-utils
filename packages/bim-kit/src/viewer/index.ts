@@ -30,6 +30,10 @@ export {
   type ViewCube,
 } from './viewCube.js';
 export {
+  createSketch, drawStroke, arrowHead, SKETCH_COLOUR, SKETCH_WIDTH_PX, ARROW_HEAD_PX,
+  type Sketch, type SketchTool, type Stroke, type Point, type Pen,
+} from './sketch.js';
+export {
   startWalking, stepWalk, walkKeyOf, EYE_HEIGHT_M, WALK_SPEED_M_S, TURN_SPEED_DEG_S, LOOK_AHEAD_M,
   type WalkKeys, type WalkControls,
 } from './walkMode.js';

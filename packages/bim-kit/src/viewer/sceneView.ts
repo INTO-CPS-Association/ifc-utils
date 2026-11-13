@@ -19,6 +19,7 @@ import { Palette, SHELL, CLASS_COLOURS, type ModelStyle } from './appearance.js'
 import { buildField, sourceAt, CUT_M, type Field } from './field.js';
 import type { MeasureMode } from './measure.js';
 import type { TreeEntry } from './modelTree.js';
+import type { SketchTool } from './sketch.js';
 
 /**
  * What the property tree says about one object.
@@ -89,6 +90,8 @@ export interface ViewState {
   backdrop: Backdrop;
   /** Whether the camera walks at eye height instead of orbiting. */
   walking: boolean;
+  /** The tool drawing on the view, or null when the mouse drives the model. */
+  sketching: SketchTool | null;
 }
 
 /** The backgrounds a person can choose. */
@@ -159,6 +162,7 @@ export class SceneView {
     style: 'shaded',
     backdrop: 'light',
     walking: false,
+    sketching: null,
   };
 
   /** The middle of the model, where a vertical cut starts. */
@@ -655,6 +659,7 @@ export class SceneView {
       style: 'shaded',
       backdrop: 'light',
       walking: false,
+      sketching: null,
     };
     this.zones = null;
     this.refresh();

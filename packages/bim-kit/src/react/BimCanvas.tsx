@@ -40,6 +40,7 @@ import {
   FAR_PLANE, NEAR_PLANE, SceneView, addOutlines, castShadows, createFieldSheet, createFinish,
   createFlight, createGizmo, createGlow, createGrid, createMarkers, createMeasure, createSection,
   createViewCube, frame, frameFrom, setParallel, BACKDROPS, startWalking, stepWalk, walkKeyOf,
+  createSketch,
   frameObject, lightFromRoom,
   prepareRenderer, snapshot, type MarkerSet, type PropertyTree, type SavedView,
 } from '../viewer/index.js';
@@ -342,6 +343,8 @@ function BimCanvas({
       cleanUp.push(() => grid.dispose());
       const measure = createMeasure(scene, overlay);
       cleanUp.push(() => measure.dispose());
+      const sketch = createSketch(overlay);
+      cleanUp.push(() => sketch.dispose());
       wantsShadows = () => view.state.shadows;
       // Walking: the arrow keys held, and whether the last frame was walking,
       // so the camera is set at eye height once, on the frame walking starts.
@@ -377,8 +380,13 @@ function BimCanvas({
         controls.enablePan = !view.state.walking;
         if (view.state.walking) stepWalk(camera, controls, held, seconds);
       };
+      let sketching: string | null = null;
       followState = () => {
         walkFrame();
+        if (view.state.sketching !== sketching) {
+          sketching = view.state.sketching;
+          sketch.setTool(view.state.sketching);
+        }
         setParallel(camera, controls, view.state.parallel);
         (scene.background as Color).setHex(BACKDROPS[view.state.backdrop]);
         grid.setVisible(view.state.grid);
@@ -436,6 +444,9 @@ function BimCanvas({
         (hitAt(event)?.object.userData.globalId as string | undefined) ?? null;
 
       const move = (event: PointerEvent) => {
+        // A pen stroke ends on the model, and the drawing is what the mouse
+        // is doing, so nothing under it is highlighted or picked.
+        if (view.state.sketching) return;
         const globalId = at(event);
         if (globalId === picked) return;
         picked = globalId;
@@ -444,6 +455,7 @@ function BimCanvas({
         onHover?.(globalId);
       };
       const click = (event: PointerEvent) => {
+        if (view.state.sketching) return;
         const box = parent.getBoundingClientRect();
         const from = cube.pick(event.clientX - box.left, event.clientY - box.top, box.width, box.height);
         if (from) {

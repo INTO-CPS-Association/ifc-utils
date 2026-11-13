@@ -10,6 +10,7 @@ import { type HeatScope } from '../readings.js';
 import type { Binding } from '../binding.js';
 import type { Backdrop, SceneView } from './sceneView.js';
 import type { ModelStyle } from './appearance.js';
+import type { SketchTool } from './sketch.js';
 import type { MeasureMode } from './measure.js';
 
 /** What a shortcut needs from the page to do its work. */
@@ -42,6 +43,12 @@ export interface Shortcut {
   /** What the toggle is currently set to, for a button that has more than two states. */
   badge?: (view: SceneView) => string | undefined;
 }
+
+const SKETCH_LABELS: Record<SketchTool, string> = {
+  pen: 'Pen',
+  arrow: 'Arrow',
+  box: 'Box',
+};
 
 const STYLE_LABELS: Record<ModelStyle, string> = {
   shaded: 'Shaded',
@@ -179,6 +186,18 @@ export const SHORTCUTS: Shortcut[] = [
     icon: 'walk',
     run: ({ view, refresh }) => { view.state.walking = !view.state.walking; refresh(); },
     on: (view) => view.state.walking,
+  },
+  {
+    key: 'n',
+    label: 'Draw On The View',
+    icon: 'sketch',
+    run: ({ view, refresh }) => {
+      const order = [null, 'pen', 'arrow', 'box'] as const;
+      view.state.sketching = order[(order.indexOf(view.state.sketching) + 1) % order.length];
+      refresh();
+    },
+    on: (view) => view.state.sketching !== null,
+    badge: (view) => (view.state.sketching === null ? undefined : SKETCH_LABELS[view.state.sketching]),
   },
   {
     key: 'y',
