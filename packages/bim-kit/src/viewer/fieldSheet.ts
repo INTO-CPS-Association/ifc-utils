@@ -120,7 +120,10 @@ export function createFieldSheet(scene: Scene): FieldSheet {
         field.minX + (field.nx * field.cell) / 2,
         field.minZ + (field.nz * field.cell) / 2,
       );
-      mesh.position.set(x, field.floorY + ABOVE_FLOOR_M, z);
+      // On the floor a person stands on, the base of the walls, and not at the
+      // floor band's lower edge, which sits a margin below it. There the slab
+      // hid the whole sheet.
+      mesh.position.set(x, view.floorLevel() + ABOVE_FLOOR_M, z);
       mesh.visible = true;
     },
 

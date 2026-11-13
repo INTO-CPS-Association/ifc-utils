@@ -44,11 +44,20 @@ export const BLOCKS = new Set([
   'IfcWall', 'IfcWallStandardCase', 'IfcColumn', 'IfcCurtainWall',
 ]);
 
+/**
+ * The ground and what grows on it. They are not part of the building: the
+ * field is not laid over them and no heat scope colours them.
+ */
+export const OUTSIDE = new Set(['IfcSite', 'IfcGeographicElement']);
+
 /** What opens it again, because a doorway is how one room reaches the next. */
 export const OPENS = new Set(['IfcDoor']);
 
 /** How far to look for an owned cell around a point inside a wall. A wall is 0.2 m and a cell 0.25 m, so three reaches through the thickest of them. */
 export const SEARCH_CELLS = 3;
+
+/** The least floor a sensor's room inside the walls may have before the walls count as enclosing it: one square metre. */
+export const MIN_ROOM_CELLS = Math.round(1 / (CELL_M * CELL_M));
 
 /** How many cells around a sensor are seeded, since a sensor sits on a wall and its own cell is usually inside it. */
 const SEED_CELLS = 2;
@@ -168,7 +177,9 @@ export function buildField(
   sources: Vector3[],
   floorY: number,
 ): Field | null {
-  const all = [...meshes];
+  // The site would stretch the grid over the whole plot, and a floor that
+  // walls do not close would then be painted out to its edges.
+  const all = [...meshes].filter((mesh) => !OUTSIDE.has(mesh.userData.ifcClass as string));
   if (sources.length === 0 || all.length === 0) return null;
 
   const angle = planAngle(all);
@@ -217,6 +228,9 @@ export function buildField(
     gridBox(mesh, angle, box);
     if (box.min.y < cut && box.max.y > cut) paint(1);
   }
+  // What lies outside the walls, found before the doors open them. Through
+  // the front door the walk reached the garden and painted the whole site.
+  const outside = outsideOf(blocked, nx, nz);
   for (const mesh of all) {
     if (!OPENS.has(mesh.userData.ifcClass as string)) continue;
     gridBox(mesh, angle, box);
@@ -240,10 +254,45 @@ export function buildField(
       }
     }
   });
-  const owner = walkOwners(blocked, nx, nz, seeds);
+  // The walk is kept inside the walls only when every sensor still has a
+  // room of its own there. Under a pitched roof the walls stand at the two
+  // gables and close nothing, and a sensor beside one was shut into the few
+  // cells between the wall and the eaves.
+  const inside = blocked.slice();
+  outside.forEach((out, cell) => { if (out) inside[cell] = 1; });
+  let owner = walkOwners(inside, nx, nz, seeds);
+  const room = new Array<number>(sources.length).fill(0);
+  owner.forEach((index) => { if (index >= 0) room[index] += 1; });
+  if (room.some((cells) => cells < MIN_ROOM_CELLS)) owner = walkOwners(blocked, nx, nz, seeds);
   if (!owner.some((index) => index >= 0)) return null;
 
   return { owner, nx, nz, cell, minX, minZ, floorY, angle };
+}
+
+/**
+ * The open cells joined to the edge of the grid, stepping between open cells
+ * along the rows and columns: the ground round the building, which the walls
+ * close off from the rooms.
+ */
+export function outsideOf(blocked: Uint8Array, nx: number, nz: number): Uint8Array {
+  const outside = new Uint8Array(nx * nz);
+  const queue: number[] = [];
+  const visit = (ix: number, iz: number) => {
+    if (ix < 0 || iz < 0 || ix >= nx || iz >= nz) return;
+    const cell = iz * nx + ix;
+    if (blocked[cell] || outside[cell]) return;
+    outside[cell] = 1;
+    queue.push(cell);
+  };
+  for (let ix = 0; ix < nx; ix += 1) { visit(ix, 0); visit(ix, nz - 1); }
+  for (let iz = 0; iz < nz; iz += 1) { visit(0, iz); visit(nx - 1, iz); }
+  for (let head = 0; head < queue.length; head += 1) {
+    const cell = queue[head];
+    const ix = cell % nx;
+    const iz = Math.floor(cell / nx);
+    visit(ix + 1, iz); visit(ix - 1, iz); visit(ix, iz + 1); visit(ix, iz - 1);
+  }
+  return outside;
 }
 
 /**

@@ -94,3 +94,30 @@ describe('the walking keys', () => {
     assert.equal(view.state.walking, false);
   });
 });
+
+describe('floorLevel', () => {
+  test('is the base of the walls on the floor in view, not the underside of its slab', () => {
+    const group = new Group();
+    const add = (id, ifcClass, y, height) => {
+      const mesh = new Mesh(new BoxGeometry(1, height, 1), new MeshStandardMaterial());
+      mesh.position.set(0, y + height / 2, 0);
+      mesh.userData.globalId = id;
+      mesh.userData.ifcClass = ifcClass;
+      group.add(mesh);
+    };
+    add('slab0', 'IfcSlab', -0.3, 0.3);
+    add('wall0', 'IfcWall', 0, 2.7);
+    add('slab1', 'IfcSlab', 2.7, 0.3);
+    add('wall1', 'IfcWallStandardCase', 3.0, 2.5);
+    group.updateMatrixWorld(true);
+    const view = new SceneView(group, {
+      storeys: [{ name: 'L0' }, { name: 'L1' }],
+      objects: {
+        slab0: { storey: 'L0' }, wall0: { storey: 'L0' }, slab1: { storey: 'L1' }, wall1: { storey: 'L1' },
+      },
+    });
+    assert.ok(Math.abs(view.floorLevel() - 0) < 1e-6);
+    view.state.storey = 'L1';
+    assert.ok(Math.abs(view.floorLevel() - 3.0) < 1e-6);
+  });
+});

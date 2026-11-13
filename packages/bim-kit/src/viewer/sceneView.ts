@@ -16,7 +16,7 @@ import {
 import { bandOf, bandsFrom, FLOOR_MARGIN_M, type Band } from '../storeys.js';
 import { type Glow } from './glow.js';
 import { Palette, SHELL, CLASS_COLOURS, type ModelStyle } from './appearance.js';
-import { buildField, sourceAt, CUT_M, type Field } from './field.js';
+import { buildField, sourceAt, CUT_M, OUTSIDE, type Field } from './field.js';
 import type { MeasureMode } from './measure.js';
 import type { TreeEntry } from './modelTree.js';
 import type { SketchTool } from './sketch.js';
@@ -391,6 +391,9 @@ export class SceneView {
     // slab or a roof spans every room, so that would paint the whole floor as
     // one sensor's room. The field sheet shows the split over the floor.
     const ifcClass = this.meshes.get(globalId)?.userData.ifcClass as string | undefined;
+    // The Building Mean painted the whole site, and Per Sensor painted it in
+    // the colour of whichever sensor reached its centre.
+    if (ifcClass && OUTSIDE.has(ifcClass)) return undefined;
     if (this.state.heat === 'sensor' && ifcClass && LIDS.has(ifcClass)) return undefined;
     const zone = this.zoneFor(globalId);
     if (zone === undefined) return undefined;
@@ -536,16 +539,24 @@ export class SceneView {
   }
 
   /**
-   * The height of the floor in view, where a person walking stands: the
-   * chosen floor, else the lowest one, else the base of the lowest wall.
+   * The height of the floor in view, where a person stands and the heat
+   * sheet lies: the base of the lowest wall on the chosen floor, or on the
+   * lowest floor when none is chosen.
+   *
+   * The walls and not the floor band, because a band starts below its own
+   * floor slab: on an upper floor the band's edge is the underside of the
+   * slab, and a sheet laid there was hidden inside it.
    */
   floorLevel(): number {
     const band = this.state.storey ? bandOf(this.bands, this.state.storey) : undefined;
     const floor = band ?? this.bands[0];
+    const isWall = (globalId: string) =>
+      String(this.meshes.get(globalId)?.userData.ifcClass ?? '').startsWith('IfcWall');
+    const inFloor = (base: number) => !floor || (base >= floor.from && base < floor.to);
+    const walls = [...this.base].filter(([globalId, base]) => isWall(globalId) && inFloor(base));
+    if (walls.length > 0) return Math.min(...walls.map(([, base]) => base));
     if (floor) return floor.from + FLOOR_MARGIN_M;
-    const walls = [...this.base].filter(([globalId]) =>
-      String(this.meshes.get(globalId)?.userData.ifcClass ?? '').startsWith('IfcWall'));
-    const lowest = Math.min(...(walls.length > 0 ? walls : [...this.base]).map(([, base]) => base));
+    const lowest = Math.min(...this.base.values());
     return Number.isFinite(lowest) ? lowest : 0;
   }
 

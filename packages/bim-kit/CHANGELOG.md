@@ -33,6 +33,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- Choosing a heat scope or a floor draws the heatmap at once. The zones were worked out again only when a reading came, so a sensor that reports once a minute left the heatmap blank for up to a minute after `m`.
+- The Per Sensor sheet lies on the floor a person stands on, the base of that floor's walls. It sat at the floor band's lower edge, under the floor slab, which hid all of it on an upper floor and part of it elsewhere.
+- The Per Sensor field stays inside the outer walls. Through the front door the walk reached the garden and coloured the whole site. When the walls do not give every sensor at least a square metre of its own, as under a pitched roof with walls only at the gables, the field is left open as before. The grid is laid over the building and not over the site. `outsideOf`, `MIN_ROOM_CELLS` and `OUTSIDE` are exported from `./viewer`.
+- No heat scope colours the site or a geographic element, which are not part of the building.
+
 - A click no longer picks an object above the section, which is not drawn.
 - The far plane of a framed view never cuts the model itself. It stayed at 5 km at most, which would cut the far side of a large site seen through the parallel view.
 

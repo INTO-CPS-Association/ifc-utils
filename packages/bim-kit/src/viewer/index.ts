@@ -52,7 +52,7 @@ export {
   SHADOW_MAP_PX, ROOM_LIGHT, GROUND_SHADOW_OPACITY, GROUND_MARGIN, GROUND_DROP_M, type Clipped,
 } from './look.js';
 export { createGlow, GLOW_MARGIN_M, type Glow } from './glow.js';
-export { buildField, sourceAt, planAngle, toGrid, fromGrid, CELL_M, CUT_M, BLOCKS, OPENS, SEARCH_CELLS, type Field } from './field.js';
+export { buildField, outsideOf, MIN_ROOM_CELLS, OUTSIDE, sourceAt, planAngle, toGrid, fromGrid, CELL_M, CUT_M, BLOCKS, OPENS, SEARCH_CELLS, type Field } from './field.js';
 export { createFieldSheet, type FieldSheet } from './fieldSheet.js';
 export {
   frame, frameFrom, frameObject, LOOK_FROM, NEAR_PLANE, FAR_PLANE, MIN_FRAME_RADIUS_M, type Target,

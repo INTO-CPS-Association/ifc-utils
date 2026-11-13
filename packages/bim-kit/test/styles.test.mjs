@@ -98,3 +98,51 @@ describe('the backgrounds', () => {
     assert.equal(view.state.backdrop, 'light');
   });
 });
+
+describe('what the heatmap colours', () => {
+  test('never the site, in any scope', () => {
+    const group = new Group();
+    const own = new MeshStandardMaterial({ color: 0x00aa00 });
+    for (const [id, ifcClass] of [['w1', 'IfcWall'], ['site', 'IfcSite'], ['tree', 'IfcGeographicElement']]) {
+      const mesh = new Mesh(new BoxGeometry(1, 1, 1), own);
+      mesh.userData.globalId = id;
+      mesh.userData.ifcClass = ifcClass;
+      group.add(mesh);
+    }
+    group.updateMatrixWorld(true);
+    const view = new SceneView(group);
+    const bindings = [{
+      selector: { globalId: 'w1' }, label: 'w1',
+      source: { live: { transport: 'mqtt', topic: 't/w1' } }, display: { unit: '°C', ramp: [18, 26] },
+    }];
+    view.state.heat = 'building';
+    view.applyReadings(bindings, new Map([['w1', { value: 25, receivedAt: Date.now() }]]), 'live');
+    view.refresh();
+    assert.notEqual(view.meshes.get('w1').material, own);
+    assert.equal(view.meshes.get('site').material, own);
+    assert.equal(view.meshes.get('tree').material, own);
+  });
+
+  test('wins over every style', () => {
+    const group = new Group();
+    const mesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial());
+    mesh.userData.globalId = 'w1';
+    mesh.userData.ifcClass = 'IfcWall';
+    group.add(mesh);
+    group.updateMatrixWorld(true);
+    const view = new SceneView(group);
+    const bindings = [{
+      selector: { globalId: 'w1' }, label: 'w1',
+      source: { live: { transport: 'mqtt', topic: 't/w1' } }, display: { unit: '°C', ramp: [18, 26] },
+    }];
+    view.state.heat = 'building';
+    view.applyReadings(bindings, new Map([['w1', { value: 25, receivedAt: Date.now() }]]), 'live');
+    view.refresh();
+    const heat = mesh.material.color.getHex();
+    for (const style of ['mono', 'classes', 'wireframe']) {
+      view.state.style = style;
+      view.refresh();
+      assert.equal(mesh.material.color.getHex(), heat, style);
+    }
+  });
+});

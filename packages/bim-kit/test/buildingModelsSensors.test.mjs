@@ -177,3 +177,21 @@ test('a host that raises the staleness limit keeps a 45 s old reading live every
   assert.ok(await screen.findByText('updated 45 s ago'));
   assert.ok(calls.shown.includes(90));
 });
+
+test('the heatmap shows the moment its scope is chosen, without waiting for the next reading', async () => {
+  const { list } = library({ hash: 'unknown' });
+  const readings = new Map([[SENSOR, { value: 25, receivedAt: Date.now() }]]);
+  show({ list, readings, feed: 'live' });
+  await screen.findByTestId('canvas');
+  await settle();
+  const { view } = await viewerReady();
+  const mesh = view.meshes.get(SENSOR);
+  const before = mesh.material;
+  // One sensor offers only the building mean, so m goes straight to it.
+  await act(async () => {
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'm' }));
+  });
+  assert.equal(view.state.heat, 'building');
+  assert.notEqual(view.heatZones, null);
+  assert.notEqual(mesh.material, before);
+});

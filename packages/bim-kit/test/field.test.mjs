@@ -8,7 +8,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { BoxGeometry, Mesh, MeshStandardMaterial, Vector3 } from 'three';
-import { buildField, sourceAt, planAngle, CELL_M } from '../dist/esm/viewer/index.js';
+import { buildField, sourceAt, planAngle, CELL_M, MIN_ROOM_CELLS } from '../dist/esm/viewer/index.js';
 import { walkOwners } from '../dist/esm/viewer/walk.js';
 
 /** A box of the given size, centred on the given point, of the given IFC class. */
@@ -230,5 +230,53 @@ describe('walkOwners', () => {
     ]);
 
     assert.deepEqual([...owner], [1, 1, 1]);
+  });
+});
+
+describe('the field stays inside the building', () => {
+  /** One room of 10 by 10 m with a front door, on a site of 40 by 40 m. */
+  function roomOnSite({ open = false } = {}) {
+    const meshes = [
+      box('IfcSite', [5, -1, 5], [40, 1, 40]),
+      box('IfcWall', [5, 0, -0.1], [10.4, 3, 0.2]),
+      box('IfcWall', [-0.1, 0, 5], [0.2, 3, 10]),
+      box('IfcWall', [10.1, 0, 5], [0.2, 3, 10]),
+      // The front door is cut into the front wall.
+      box('IfcDoor', [5, 0, 10.1], [1, 2.1, 0.4]),
+    ];
+    if (!open) meshes.push(box('IfcWall', [5, 0, 10.1], [10.4, 3, 0.2]));
+    return meshes;
+  }
+
+  test('does not leak through the front door onto the site', () => {
+    const field = buildField(roomOnSite(), [new Vector3(5, 1.2, 5)], 0);
+    assert.equal(sourceAt(field, 5, 5), 0);
+    // In front of the door and far out on the site, nothing.
+    assert.equal(sourceAt(field, 5, 11.5), -1);
+    assert.equal(sourceAt(field, 20, 20), -1);
+    assert.equal(sourceAt(field, -10, 5), -1);
+  });
+
+  test('is left open when the walls do not close round the sensor', () => {
+    // No front wall: the room has no inside, so the field is not lost.
+    const field = buildField(roomOnSite({ open: true }), [new Vector3(5, 1.2, 5)], 0);
+    assert.equal(sourceAt(field, 5, 5), 0);
+    // Out to the open side, and no further: the grid stops at the building.
+    assert.equal(sourceAt(field, 5, 9.8), 0);
+    assert.equal(sourceAt(field, 5, 14), -1);
+  });
+});
+
+describe('a floor that walls do not close', () => {
+  test('gives the sensor the floor and does not shut it into the gap beside its wall', () => {
+    // Two gable walls only, as under a pitched roof, on a site.
+    const meshes = [
+      box('IfcSite', [5, -1, 5], [40, 1, 40]),
+      box('IfcWall', [-0.1, 0, 5], [0.2, 3, 10]),
+      box('IfcWall', [10.1, 0, 5], [0.2, 3, 10]),
+    ];
+    const field = buildField(meshes, [new Vector3(0, 1.2, 5)], 0);
+    assert.equal(sourceAt(field, 5, 5), 0);
+    assert.ok([...field.owner].filter((o) => o === 0).length > MIN_ROOM_CELLS);
   });
 });

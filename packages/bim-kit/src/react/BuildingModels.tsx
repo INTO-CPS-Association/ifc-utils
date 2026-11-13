@@ -476,10 +476,24 @@ export function BuildingModels({
   }, []);
 
   /** Everything a shortcut needs, gathered in one place so the keyboard and the toolbar drive the viewer through exactly the same path. */
+  // The latest readings, so a change of heat scope or of floor between two
+  // readings is drawn at once and not when the next reading happens to come.
+  // A sensor that reports once a minute left the heatmap blank for a minute.
+  const latest = useRef({ readings, feed, staleAfter });
+  latest.current = { readings, feed, staleAfter };
+  /** Work the zones out again from the latest readings and repaint everything that shows them. */
+  const repaint = useCallback((view: SceneView) => {
+    const now = latest.current;
+    view.applyReadings(bindings, now.readings, now.feed, now.staleAfter);
+    view.refresh();
+    handle?.drawField();
+    bump((n) => n + 1);
+  }, [bindings, handle]);
+
   const shortcutContext = useCallback((view: SceneView) => ({
     view,
     bindings,
-    refresh: () => { view.refresh(); handle?.drawField(); bump((n) => n + 1); },
+    refresh: () => repaint(view),
     frame: () => handle?.frame(),
     frameSelection: () => handle?.frameSelection?.(),
     look: (from: 'top' | 'front' | 'side' | 'corner') => handle?.look(from),
@@ -489,7 +503,7 @@ export function BuildingModels({
       if (document.fullscreenElement) void document.exitFullscreen();
       else void document.documentElement.requestFullscreen?.();
     },
-  }), [handle, bindings]);
+  }), [handle, bindings, repaint]);
 
   // The keyboard reaches the viewer only while a model is open, so a page with
   // nothing loaded does not swallow keys that belong to the application.
@@ -620,8 +634,9 @@ export function BuildingModels({
                 current={handle.view.state.storey}
                 onChange={(storey) => {
                   handle.view.state.storey = storey;
-                  handle.view.refresh();
-                  bump((n) => n + 1);
+                  // The floor decides which sensors make the Per Sensor plan
+                  // and which zones Per Floor averages.
+                  repaint(handle.view);
                 }}
               />
 
