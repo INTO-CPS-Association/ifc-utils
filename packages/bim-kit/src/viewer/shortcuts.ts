@@ -87,6 +87,27 @@ export const SHORTCUTS: Shortcut[] = [
     on: (view) => view.state.sectioned,
   },
   {
+    key: 'g',
+    label: 'Grid',
+    icon: 'grid',
+    run: ({ view, refresh }) => { view.state.grid = !view.state.grid; refresh(); },
+    on: (view) => view.state.grid,
+  },
+  {
+    key: 'i',
+    label: 'Show The Selection Alone',
+    icon: 'isolate',
+    run: ({ view, refresh }) => { view.toggleIsolation(); refresh(); },
+    on: (view) => view.state.isolated !== null,
+  },
+  {
+    key: 'd',
+    label: 'Measure A Distance',
+    icon: 'measure',
+    run: ({ view, refresh }) => { view.state.measuring = !view.state.measuring; refresh(); },
+    on: (view) => view.state.measuring,
+  },
+  {
     key: 'h',
     label: 'Hover Highlight',
     icon: 'hover',

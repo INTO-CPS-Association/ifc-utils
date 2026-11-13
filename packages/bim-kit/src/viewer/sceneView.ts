@@ -65,6 +65,12 @@ export interface ViewState {
   highlightedClass: string | null;
   /** Whether the floor in view is cut at chest height, so it reads as a plan. */
   sectioned: boolean;
+  /** Whether the grid of metres under the model is drawn. */
+  grid: boolean;
+  /** The one object shown alone, or null when everything is shown. */
+  isolated: string | null;
+  /** Whether a click measures a distance instead of selecting. */
+  measuring: boolean;
 }
 
 /** Roofs, slabs and ceilings: the lid that stops a floor being seen into. */
@@ -110,6 +116,9 @@ export class SceneView {
     hoverHighlight: true,
     highlightedClass: null,
     sectioned: false,
+    grid: true,
+    isolated: null,
+    measuring: false,
   };
 
   constructor(model: Group, private readonly tree: PropertyTree = {}) {
@@ -395,6 +404,9 @@ export class SceneView {
       }
 
       if (visible && this.hiddenByHand.includes(globalId)) visible = false;
+      // Isolating shows the one object whatever the floor and the lid say,
+      // since a person who asked to see it alone asked to see it.
+      if (this.state.isolated !== null) visible = globalId === this.state.isolated;
       mesh.visible = visible;
     }
   }
@@ -421,6 +433,17 @@ export class SceneView {
     const bases = (walls.length > 0 ? walls : [...this.base]).map(([, base]) => base);
     const lowest = Math.min(...bases);
     return Number.isFinite(lowest) ? lowest + CUT_M : null;
+  }
+
+  /**
+   * Show the selected object alone, or everything again.
+   *
+   * With nothing selected and nothing isolated there is nothing to show
+   * alone, so it does nothing.
+   */
+  toggleIsolation(): void {
+    this.state.isolated = this.state.isolated === null ? this.state.selected : null;
+    this.refreshVisibility();
   }
 
   /** Both, for the common case of a state change that affects both. */
@@ -453,6 +476,9 @@ export class SceneView {
       selected: null,
       hovered: null,
       sectioned: false,
+      grid: true,
+      isolated: null,
+      measuring: false,
     };
     this.zones = null;
     this.refresh();

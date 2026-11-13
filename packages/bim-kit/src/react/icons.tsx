@@ -27,12 +27,18 @@ import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import CropSquareIcon from '@mui/icons-material/CropSquare';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import ContentCutIcon from '@mui/icons-material/ContentCut';
+import GridOnIcon from '@mui/icons-material/GridOn';
+import StraightenIcon from '@mui/icons-material/Straighten';
+import CenterFocusWeakIcon from '@mui/icons-material/CenterFocusWeak';
 
 const ICONS: Record<string, ReactElement> = {
   heatmap: <ThermostatIcon fontSize="small" />,
   transparency: <OpacityIcon fontSize="small" />,
   slabs: <LayersClearIcon fontSize="small" />,
   section: <ContentCutIcon fontSize="small" />,
+  grid: <GridOnIcon fontSize="small" />,
+  isolate: <CenterFocusWeakIcon fontSize="small" />,
+  measure: <StraightenIcon fontSize="small" />,
   hover: <HighlightAltIcon fontSize="small" />,
   hide: <VisibilityOffIcon fontSize="small" />,
   restore: <UndoIcon fontSize="small" />,

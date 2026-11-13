@@ -37,7 +37,8 @@ import { exportGlb } from './exportGlb.js';
 import { objectsOf } from './scene.js';
 import {
   FAR_PLANE, NEAR_PLANE, SceneView, addOutlines, castShadows, createFieldSheet, createFinish,
-  createGizmo, createGlow, createMarkers, createSection, frame, frameObject, lightFromRoom,
+  createGizmo, createGlow, createGrid, createMarkers, createMeasure, createSection, frame,
+  frameObject, lightFromRoom,
   prepareRenderer, type MarkerSet, type PropertyTree,
 } from '../viewer/index.js';
 
@@ -260,6 +261,9 @@ function BimCanvas({
     // so a toggle or a change of floor takes effect on the next one.
     let cutHeight: () => number | null = () => null;
     let shadows = false;
+    // Set once a model is shown: the grid and the measurement follow the
+    // view's state on every frame.
+    let followState: (() => void) | null = null;
 
     let running = true;
     const tick = () => {
@@ -271,6 +275,7 @@ function BimCanvas({
       // The shadow map is drawn without the cut, so with a cut on, the roof
       // that is not drawn would still throw its shadow into the rooms.
       sun.castShadow = shadows && cut === null;
+      followState?.();
       finish.render();
       // The cut is in world coordinates and the axes indicator is not in the
       // world, so the indicator is drawn without it.
@@ -316,6 +321,16 @@ function BimCanvas({
       addOutlines(view.meshes.values());
       cleanUp.push(castShadows(model, sun, scene));
       shadows = true;
+      const grid = createGrid(scene, model);
+      cleanUp.push(() => grid.dispose());
+      const measure = createMeasure(scene, overlay);
+      cleanUp.push(() => measure.dispose());
+      followState = () => {
+        grid.setVisible(view.state.grid);
+        // Leaving the measuring mode takes the last measurement away with it.
+        if (!view.state.measuring && measure.points.length > 0) measure.clear();
+        measure.place(camera, parent.clientWidth, parent.clientHeight);
+      };
       cutHeight = () => view.cutHeight();
       view.refresh();
       placeMarkers = () => placeAll(markers, view, camera, parent);
@@ -331,8 +346,8 @@ function BimCanvas({
         showReadings: (readings, feed, staleAfter) => markers.showReadings(readings, feed, staleAfter),
       });
 
-      /** Which object is under the pointer, or null. */
-      const at = (event: PointerEvent): string | null => {
+      /** The first visible surface under the pointer, or undefined. */
+      const hitAt = (event: PointerEvent) => {
         const box = parent.getBoundingClientRect();
         pointer.x = ((event.clientX - box.left) / box.width) * 2 - 1;
         pointer.y = -((event.clientY - box.top) / box.height) * 2 + 1;
@@ -340,8 +355,14 @@ function BimCanvas({
         // Only what is visible: a floor filter that hides a wall must also
         // stop that wall being clicked through the floor above it.
         const hits = ray.intersectObjects([...view.meshes.values()].filter((m) => m.visible), false);
-        return (hits[0]?.object.userData.globalId as string | undefined) ?? null;
+        // The section hides what is above the cut without changing
+        // `visible`, so a hit above it is a click on nothing drawn.
+        const cut = cutHeight();
+        return hits.find((hit) => cut === null || hit.point.y <= cut);
       };
+      /** Which object is under the pointer, or null. */
+      const at = (event: PointerEvent): string | null =>
+        (hitAt(event)?.object.userData.globalId as string | undefined) ?? null;
 
       const move = (event: PointerEvent) => {
         const globalId = at(event);
@@ -352,6 +373,11 @@ function BimCanvas({
         onHover?.(globalId);
       };
       const click = (event: PointerEvent) => {
+        if (view.state.measuring) {
+          const hit = hitAt(event);
+          if (hit) measure.addPoint(hit.point);
+          return;
+        }
         const globalId = at(event);
         view.state.selected = globalId;
         view.refreshMaterials();

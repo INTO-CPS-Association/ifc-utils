@@ -15,9 +15,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `scripts/check-reexport.mjs`, which resolves every binding of a manifest against another export of the same building and prints which survive and which do not, with the reason.
 - `valueText`, from the package root, which prints a reading as the card and the marker label show it.
 - The model is lit from a small built-in room as well as by the sun, throws shadows on itself and on a ground under it, and has ambient occlusion in its creases, so faces of one colour still differ and a wall reads as standing on a slab. All of it comes from three.js itself, which is already a peer dependency, so nothing is added to the package. `prepareRenderer`, `lightFromRoom`, `castShadows`, `createSection` and `createFinish` are exported from `./viewer`.
+- A grid of metres under the model, a stronger line every five, sized to the model and laid under its lowest object. The `g` shortcut turns it off and on. `createGrid` and `gridSpan` are exported from `./viewer`.
+- The `d` shortcut, Measure A Distance: each click puts a point on the surface under the cursor, the second draws a line with its length in metres and the third starts a new measurement. Each end has a dot, so the first click shows that a measurement has begun. `createMeasure` and `distanceText` are exported from `./viewer`.
+- The `i` shortcut, Show The Selection Alone, shows only the selected object and everything again on the second press. `SceneView` has `toggleIsolation()` and `state.isolated`.
 - The `x` shortcut, Cut The Floor At Chest Height, cuts the floor in view at the height the heatmap's plan is cut at, so the rooms read like a plan. `SceneView` has `state.sectioned` and `cutHeight()`.
 
 ### Changed
+
+- A click no longer picks an object above the section, which is not drawn.
 
 - A sensor marker is at least 14 pixels across on screen whatever the distance. It has a dark ring and takes the colour of its current value on the ramp. The selected marker is at least 24 pixels across, in the selection colour, with its label outlined and bold. It was a grey sphere sized as a share of the model, a few pixels on a whole building. The selected one could not be told from the rest.
 - A card whose reading has no unit prints the value alone. It printed `undefined` after the number.

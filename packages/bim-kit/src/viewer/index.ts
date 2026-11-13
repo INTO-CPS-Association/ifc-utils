@@ -15,6 +15,11 @@ export {
 export { createGizmo, cornerViewport, GIZMO_SIZE_PX, GIZMO_MARGIN_PX, type Gizmo } from './gizmo.js';
 export { addOutlines } from './outline.js';
 export {
+  createGrid, gridSpan, GRID_CELL_M, GRID_MAJOR_EVERY, GRID_MIN_SPAN_M, GRID_MARGIN, GRID_DROP_M,
+  type Grid,
+} from './grid.js';
+export { createMeasure, distanceText, END_DOT_PX, type Measure } from './measure.js';
+export {
   prepareRenderer, lightFromRoom, castShadows, createSection, createFinish,
   SHADOW_MAP_PX, ROOM_LIGHT, GROUND_SHADOW_OPACITY, GROUND_MARGIN, GROUND_DROP_M, type Clipped,
 } from './look.js';
