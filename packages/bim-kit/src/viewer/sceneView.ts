@@ -6,7 +6,7 @@
  * This owns no canvas, no camera and no renderer. It takes a group of meshes and answers what each should look like, so it can be driven by React, by plain JavaScript, or by a test.
  */
 
-import { Box3, type Group, Mesh, type Object3D, Vector3 } from 'three';
+import { Box3, type Group, Mesh, type Object3D, Plane, Vector3 } from 'three';
 
 import { displayOf, objectOf, type Binding } from '../binding.js';
 import {
@@ -75,7 +75,16 @@ export interface ViewState {
   parallel: boolean;
   /** Whether the sun throws shadows. */
   shadows: boolean;
+  /** A vertical cut through the middle of the model, across the X or the Z axis, or none. */
+  vertical: 'x' | 'z' | null;
+  /** How far the horizontal cut is moved from chest height, in metres. */
+  heightShift: number;
+  /** How far the vertical cut is moved from the middle of the model, in metres. */
+  depthShift: number;
 }
+
+/** How far one press of j or k moves a cut, in metres. */
+export const CUT_STEP_M = 0.25;
 
 /** Roofs, slabs and ceilings: the lid that stops a floor being seen into. */
 const LIDS = new Set(['IfcSlab', 'IfcRoof', 'IfcCovering']);
@@ -125,7 +134,13 @@ export class SceneView {
     measuring: false,
     parallel: false,
     shadows: true,
+    vertical: null,
+    heightShift: 0,
+    depthShift: 0,
   };
+
+  /** The middle of the model, where a vertical cut starts. */
+  private readonly middle = new Vector3();
 
   constructor(model: Group, private readonly tree: PropertyTree = {}) {
     const box = new Box3();
@@ -139,6 +154,8 @@ export class SceneView {
       box.setFromObject(mesh);
       if (Number.isFinite(box.min.y)) this.base.set(globalId, box.min.y);
     });
+    const whole = new Box3().setFromObject(model);
+    if (!whole.isEmpty()) whole.getCenter(this.middle);
 
     this.bands = bandsFrom(
       (tree.storeys ?? []).map((storey) => storey.name),
@@ -430,7 +447,7 @@ export class SceneView {
     if (!this.state.sectioned) return null;
     const band = this.state.storey ? bandOf(this.bands, this.state.storey) : undefined;
     const floor = band ?? this.bands[0];
-    if (floor) return floor.from + CUT_M;
+    if (floor) return floor.from + CUT_M + this.state.heightShift;
     // A model without storeys is cut above the lowest wall, since walls stand
     // on the floor. The lowest object is often the terrain or a foundation a
     // metre down, and a cut above that shows only the stubs of the walls.
@@ -438,7 +455,56 @@ export class SceneView {
       String(this.meshes.get(globalId)?.userData.ifcClass ?? '').startsWith('IfcWall'));
     const bases = (walls.length > 0 ? walls : [...this.base]).map(([, base]) => base);
     const lowest = Math.min(...bases);
-    return Number.isFinite(lowest) ? lowest + CUT_M : null;
+    return Number.isFinite(lowest) ? lowest + CUT_M + this.state.heightShift : null;
+  }
+
+  /**
+   * Every cut in force, as planes that keep what is on their positive side.
+   *
+   * The horizontal one keeps what is below it and the vertical one what is
+   * on the near side of the middle of the model, so a cut along X shows the
+   * building as a long section and one along Z as a cross section.
+   */
+  cutPlanes(): Plane[] {
+    const planes: Plane[] = [];
+    const height = this.cutHeight();
+    if (height !== null) planes.push(new Plane(new Vector3(0, -1, 0), height));
+    const { vertical, depthShift } = this.state;
+    if (vertical === 'x') planes.push(new Plane(new Vector3(-1, 0, 0), this.middle.x + depthShift));
+    if (vertical === 'z') planes.push(new Plane(new Vector3(0, 0, -1), this.middle.z + depthShift));
+    return planes;
+  }
+
+  /** The centre of each object, measured once, since the objects do not move. */
+  private readonly centres = new Map<string, Vector3>();
+
+  /**
+   * Whether an object is drawn: visible and, when a cut is in force, with its
+   * centre on the kept side. A sensor on an object the cut took away is not
+   * labelled over the empty space where it was.
+   */
+  isShown(globalId: string): boolean {
+    const mesh = this.meshes.get(globalId);
+    if (!mesh) return true;
+    if (!mesh.visible) return false;
+    if (!this.state.sectioned && this.state.vertical === null) return true;
+    let centre = this.centres.get(globalId);
+    if (!centre) {
+      centre = new Box3().setFromObject(mesh).getCenter(new Vector3());
+      this.centres.set(globalId, centre);
+    }
+    return this.keeps(centre);
+  }
+
+  /** Whether a point is on the kept side of every cut, so a click there lands on something drawn. */
+  keeps(point: Vector3): boolean {
+    return this.cutPlanes().every((plane) => plane.distanceToPoint(point) >= 0);
+  }
+
+  /** Move the vertical cut when there is one, the horizontal one otherwise, by `steps` steps. */
+  shiftCut(steps: number): void {
+    if (this.state.vertical !== null) this.state.depthShift += steps * CUT_STEP_M;
+    else if (this.state.sectioned) this.state.heightShift += steps * CUT_STEP_M;
   }
 
   /**
@@ -487,6 +553,9 @@ export class SceneView {
       measuring: false,
       parallel: false,
       shadows: true,
+      vertical: null,
+      heightShift: 0,
+      depthShift: 0,
     };
     this.zones = null;
     this.refresh();

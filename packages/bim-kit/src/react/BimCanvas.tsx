@@ -24,6 +24,7 @@ import {
   Color,
   DirectionalLight,
   Object3D,
+  type Plane,
   PerspectiveCamera,
   Scene,
   WebGLRenderer,
@@ -155,8 +156,9 @@ export interface ViewerHandle {
 
 /** Size every marker and move every label for the frame about to be drawn. */
 function placeAll(markers: MarkerSet, view: SceneView, camera: PerspectiveCamera, parent: HTMLElement) {
-  // A sensor on a floor the floor filter hides is hidden with it, label and all.
-  const shown = (globalId: string) => view.meshes.get(globalId)?.visible ?? true;
+  // A sensor on a floor the floor filter hides, or on an object a cut took
+  // away, is hidden with it, label and all.
+  const shown = (globalId: string) => view.isShown(globalId);
   markers.place(camera, parent.clientWidth, parent.clientHeight, view.state.selected, shown);
 }
 
@@ -265,9 +267,9 @@ function BimCanvas({
     // Set once a model is shown. The markers are sized and their labels moved
     // on every frame, because both follow the camera.
     let placeMarkers: (() => void) | null = null;
-    // Set once a model is shown: where the section cuts, read on every frame
-    // so a toggle or a change of floor takes effect on the next one.
-    let cutHeight: () => number | null = () => null;
+    // Set once a model is shown: where the cuts are, read on every frame so a
+    // toggle, a move or a change of floor takes effect on the next one.
+    let cutPlanes: () => Plane[] = () => [];
     let shadows = false;
     let wantsShadows = () => true;
     // Set once a model is shown: the grid and the measurement follow the
@@ -280,11 +282,11 @@ function BimCanvas({
       flight.step(performance.now());
       controls.update();
       placeMarkers?.();
-      const cut = cutHeight();
-      section.set(cut);
+      const cuts = cutPlanes();
+      section.setPlanes(cuts);
       // The shadow map is drawn without the cut, so with a cut on, the roof
       // that is not drawn would still throw its shadow into the rooms.
-      sun.castShadow = shadows && cut === null && wantsShadows();
+      sun.castShadow = shadows && cuts.length === 0 && wantsShadows();
       followState?.();
       finish.render();
       // The cut is in world coordinates and the axes indicator is not in the
@@ -344,7 +346,7 @@ function BimCanvas({
         if (!view.state.measuring && measure.points.length > 0) measure.clear();
         measure.place(camera, parent.clientWidth, parent.clientHeight);
       };
-      cutHeight = () => view.cutHeight();
+      cutPlanes = () => view.cutPlanes();
       view.refresh();
       placeMarkers = () => placeAll(markers, view, camera, parent);
       onReady?.({
@@ -368,10 +370,9 @@ function BimCanvas({
         // Only what is visible: a floor filter that hides a wall must also
         // stop that wall being clicked through the floor above it.
         const hits = ray.intersectObjects([...view.meshes.values()].filter((m) => m.visible), false);
-        // The section hides what is above the cut without changing
-        // `visible`, so a hit above it is a click on nothing drawn.
-        const cut = cutHeight();
-        return hits.find((hit) => cut === null || hit.point.y <= cut);
+        // A cut hides what is beyond it without changing `visible`, so a hit
+        // there is a click on nothing drawn.
+        return hits.find((hit) => view.keeps(hit.point));
       };
       /** Which object is under the pointer, or null. */
       const at = (event: PointerEvent): string | null =>

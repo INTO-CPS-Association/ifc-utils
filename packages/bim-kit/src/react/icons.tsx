@@ -32,6 +32,9 @@ import StraightenIcon from '@mui/icons-material/Straighten';
 import CenterFocusWeakIcon from '@mui/icons-material/CenterFocusWeak';
 import ViewQuiltIcon from '@mui/icons-material/ViewQuilt';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
+import VerticalSplitIcon from '@mui/icons-material/VerticalSplit';
+import RemoveIcon from '@mui/icons-material/Remove';
+import AddIcon from '@mui/icons-material/Add';
 
 const ICONS: Record<string, ReactElement> = {
   heatmap: <ThermostatIcon fontSize="small" />,
@@ -43,6 +46,9 @@ const ICONS: Record<string, ReactElement> = {
   measure: <StraightenIcon fontSize="small" />,
   parallel: <ViewQuiltIcon fontSize="small" />,
   shadows: <WbSunnyIcon fontSize="small" />,
+  vertical: <VerticalSplitIcon fontSize="small" />,
+  cutBack: <RemoveIcon fontSize="small" />,
+  cutForward: <AddIcon fontSize="small" />,
   hover: <HighlightAltIcon fontSize="small" />,
   hide: <VisibilityOffIcon fontSize="small" />,
   restore: <UndoIcon fontSize="small" />,

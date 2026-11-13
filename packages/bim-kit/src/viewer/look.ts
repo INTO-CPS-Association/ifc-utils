@@ -195,6 +195,11 @@ export function createSection(renderer: Clipped) {
     get height(): number | null {
       return current;
     },
+    /** Cut with any set of planes, such as a horizontal and a vertical cut together. */
+    setPlanes(planes: Plane[]): void {
+      current = null;
+      renderer.clippingPlanes = planes;
+    },
   };
 }
 

@@ -87,6 +87,31 @@ export const SHORTCUTS: Shortcut[] = [
     on: (view) => view.state.sectioned,
   },
   {
+    key: 'v',
+    label: 'Vertical Section',
+    icon: 'vertical',
+    run: ({ view, refresh }) => {
+      const order = [null, 'x', 'z'] as const;
+      view.state.vertical = order[(order.indexOf(view.state.vertical) + 1) % order.length];
+      view.state.depthShift = 0;
+      refresh();
+    },
+    on: (view) => view.state.vertical !== null,
+    badge: (view) => (view.state.vertical === null ? undefined : `Along ${view.state.vertical.toUpperCase()}`),
+  },
+  {
+    key: 'j',
+    label: 'Move The Cut Back',
+    icon: 'cutBack',
+    run: ({ view, refresh }) => { view.shiftCut(-1); refresh(); },
+  },
+  {
+    key: 'k',
+    label: 'Move The Cut Forward',
+    icon: 'cutForward',
+    run: ({ view, refresh }) => { view.shiftCut(1); refresh(); },
+  },
+  {
     key: 'g',
     label: 'Grid',
     icon: 'grid',
