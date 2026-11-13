@@ -18,6 +18,7 @@ import { type Glow } from './glow.js';
 import { Palette, SHELL } from './appearance.js';
 import { buildField, sourceAt, CUT_M, type Field } from './field.js';
 import type { MeasureMode } from './measure.js';
+import type { TreeEntry } from './modelTree.js';
 
 /**
  * What the property tree says about one object.
@@ -212,6 +213,31 @@ export class SceneView {
       if (colour?.color) seen.set(ifcClass, `#${colour.color.getHexString()}`);
     }
     return new Map([...seen].sort(([a], [b]) => a.localeCompare(b)));
+  }
+
+  /**
+   * Every object as the model tree lists it: its name and class from the
+   * property tree when it has one, from the geometry otherwise, and the floor
+   * its band puts it on.
+   */
+  entries(): TreeEntry[] {
+    return [...this.meshes].map(([globalId, mesh]) => {
+      const facts = this.factsOf(globalId);
+      const ifcClass = facts?.ifcClass ?? (mesh.userData.ifcClass as string | undefined) ?? 'IfcProduct';
+      const base = this.base.get(globalId);
+      const band = base === undefined ? undefined
+        : this.bands.find((candidate) => base >= candidate.from && base < candidate.to);
+      const values = Object.values(facts?.properties ?? {})
+        .flatMap((set) => Object.values(set ?? {}))
+        .map((value) => String(value));
+      return {
+        globalId,
+        name: facts?.name ?? (mesh.name || globalId),
+        ifcClass,
+        storey: facts?.storey ?? band?.names[0] ?? null,
+        values,
+      };
+    });
   }
 
   factsOf(globalId: string): ObjectFacts | undefined {

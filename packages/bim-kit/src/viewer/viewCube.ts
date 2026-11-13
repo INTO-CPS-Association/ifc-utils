@@ -82,7 +82,7 @@ function faceTexture(text: string): CanvasTexture | null {
   pen.font = '700 30px system-ui, sans-serif';
   pen.textAlign = 'center';
   pen.textBaseline = 'middle';
-  pen.fillText(text.toUpperCase(), 64, 66);
+  pen.fillText(text, 64, 66);
   const texture = new CanvasTexture(canvas);
   // Painted in sRGB like the page. Read as linear, the dark letters came out
   // a pale grey that could not be read on the pale face.

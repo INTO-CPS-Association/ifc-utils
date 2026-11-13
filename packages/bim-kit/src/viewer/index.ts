@@ -29,6 +29,9 @@ export {
   setParallel, backOff, PERSPECTIVE_FOV, PARALLEL_FOV, type Orbit,
 } from './projection.js';
 export {
+  groupEntries, matches, readableClass, NO_FLOOR, type TreeEntry, type TreeGroup, type GroupBy,
+} from './modelTree.js';
+export {
   createViewStore, isSavedView, nextViewName, snapshot, MAX_SAVED_VIEWS,
   type SavedView, type ViewStore, type KeyValueStore,
 } from './savedViews.js';

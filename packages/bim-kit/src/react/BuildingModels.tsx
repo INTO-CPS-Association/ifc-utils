@@ -43,6 +43,7 @@ import {
 import { handleKey, type PropertyTree, type SceneView } from '../viewer/index.js';
 import FloorPicker from './FloorPicker.js';
 import SavedViews from './SavedViews.js';
+import ModelTree from './ModelTree.js';
 import { createViewStore, nextViewName, type SavedView } from '../viewer/savedViews.js';
 import HelpPanel from './HelpPanel.js';
 import ObjectPanel from './ObjectPanel.js';
@@ -331,6 +332,8 @@ export function BuildingModels({
     return createViewStore(storage, `bim-kit:views:${libraryUrl}${chosen?.ifcPath ?? ''}`);
   }, [libraryUrl, chosen]);
   useEffect(() => setViews(viewStore.list()), [viewStore]);
+  // The objects of the model for the tree, read once per model.
+  const entries = useMemo(() => handle?.view.entries() ?? [], [handle]);
   const [selected, setSelected] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   // Bumped after anything changes the scene, so the toolbar and the floor
@@ -687,6 +690,14 @@ export function BuildingModels({
                   properties={selected ? handle.view.factsOf(selected)?.properties : undefined}
                   size={selected ? handle.view.sizeOf(selected) : undefined}
                 />
+                <Box sx={{ mt: 1 }}>
+                  <ModelTree
+                    entries={entries}
+                    floors={handle.view.storeys}
+                    selected={selected}
+                    onPick={focus}
+                  />
+                </Box>
               </Box>
               <Stack sx={{ flex: '1 1 260px', minWidth: 0, gap: 1 }}>
                 <SensorCards
