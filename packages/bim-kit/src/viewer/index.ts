@@ -14,6 +14,10 @@ export {
 } from './shortcuts.js';
 export { createGizmo, cornerViewport, GIZMO_SIZE_PX, GIZMO_MARGIN_PX, type Gizmo } from './gizmo.js';
 export { addOutlines } from './outline.js';
+export {
+  prepareRenderer, lightFromRoom, castShadows, createSection, createFinish,
+  SHADOW_MAP_PX, ROOM_LIGHT, GROUND_SHADOW_OPACITY, GROUND_MARGIN, GROUND_DROP_M, type Clipped,
+} from './look.js';
 export { createGlow, GLOW_MARGIN_M, type Glow } from './glow.js';
 export { buildField, sourceAt, planAngle, toGrid, fromGrid, CELL_M, CUT_M, BLOCKS, OPENS, SEARCH_CELLS, type Field } from './field.js';
 export { createFieldSheet, type FieldSheet } from './fieldSheet.js';

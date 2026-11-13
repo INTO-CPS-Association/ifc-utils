@@ -26,11 +26,13 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import CropSquareIcon from '@mui/icons-material/CropSquare';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
+import ContentCutIcon from '@mui/icons-material/ContentCut';
 
 const ICONS: Record<string, ReactElement> = {
   heatmap: <ThermostatIcon fontSize="small" />,
   transparency: <OpacityIcon fontSize="small" />,
   slabs: <LayersClearIcon fontSize="small" />,
+  section: <ContentCutIcon fontSize="small" />,
   hover: <HighlightAltIcon fontSize="small" />,
   hide: <VisibilityOffIcon fontSize="small" />,
   restore: <UndoIcon fontSize="small" />,

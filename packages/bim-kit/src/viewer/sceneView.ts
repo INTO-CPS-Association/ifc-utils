@@ -16,7 +16,7 @@ import {
 import { bandOf, bandsFrom, type Band } from '../storeys.js';
 import { type Glow } from './glow.js';
 import { Palette, SHELL } from './appearance.js';
-import { buildField, sourceAt, type Field } from './field.js';
+import { buildField, sourceAt, CUT_M, type Field } from './field.js';
 
 /**
  * What the property tree says about one object.
@@ -63,6 +63,8 @@ export interface ViewState {
    * front of a grey building. Picking the class in the legend answers it.
    */
   highlightedClass: string | null;
+  /** Whether the floor in view is cut at chest height, so it reads as a plan. */
+  sectioned: boolean;
 }
 
 /** Roofs, slabs and ceilings: the lid that stops a floor being seen into. */
@@ -107,6 +109,7 @@ export class SceneView {
     hovered: null,
     hoverHighlight: true,
     highlightedClass: null,
+    sectioned: false,
   };
 
   constructor(model: Group, private readonly tree: PropertyTree = {}) {
@@ -396,6 +399,30 @@ export class SceneView {
     }
   }
 
+  /**
+   * Where the section cuts, in metres, or null when it is off.
+   *
+   * At chest height above the floor in view, the same height the heatmap's
+   * plan is cut at (`field.ts`), so a doorway reads as a gap and a desk does
+   * not, and the section and the plan show the same rooms. With no floor
+   * chosen it cuts the lowest one, since a cut through the whole building at
+   * one height says nothing about the floors above it.
+   */
+  cutHeight(): number | null {
+    if (!this.state.sectioned) return null;
+    const band = this.state.storey ? bandOf(this.bands, this.state.storey) : undefined;
+    const floor = band ?? this.bands[0];
+    if (floor) return floor.from + CUT_M;
+    // A model without storeys is cut above the lowest wall, since walls stand
+    // on the floor. The lowest object is often the terrain or a foundation a
+    // metre down, and a cut above that shows only the stubs of the walls.
+    const walls = [...this.base].filter(([globalId]) =>
+      String(this.meshes.get(globalId)?.userData.ifcClass ?? '').startsWith('IfcWall'));
+    const bases = (walls.length > 0 ? walls : [...this.base]).map(([, base]) => base);
+    const lowest = Math.min(...bases);
+    return Number.isFinite(lowest) ? lowest + CUT_M : null;
+  }
+
   /** Both, for the common case of a state change that affects both. */
   refresh(): void {
     this.refreshVisibility();
@@ -425,6 +452,7 @@ export class SceneView {
       slabsHidden: false,
       selected: null,
       hovered: null,
+      sectioned: false,
     };
     this.zones = null;
     this.refresh();

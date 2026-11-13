@@ -36,16 +36,17 @@ import type { Binding } from '../binding.js';
 import { exportGlb } from './exportGlb.js';
 import { objectsOf } from './scene.js';
 import {
-  FAR_PLANE, NEAR_PLANE, SceneView, addOutlines, createFieldSheet, createGizmo, createGlow,
-  createMarkers, frame, frameObject, type MarkerSet, type PropertyTree,
+  FAR_PLANE, NEAR_PLANE, SceneView, addOutlines, castShadows, createFieldSheet, createFinish,
+  createGizmo, createGlow, createMarkers, createSection, frame, frameObject, lightFromRoom,
+  prepareRenderer, type MarkerSet, type PropertyTree,
 } from '../viewer/index.js';
 
 // The same near-white the viewer this was taken from uses. A lighter one
 // washes into the pale surfaces of a model and the silhouette disappears.
 const BACKGROUND = 0xe9edef;
 /** How strong the two lamps are. See where they are added for why. */
-const AMBIENT_LIGHT = 0.75;
-const SUN_LIGHT = 0.9;
+const AMBIENT_LIGHT = 0.25;
+const SUN_LIGHT = 1.8;
 
 const FIELD_OF_VIEW = 45;
 
@@ -188,17 +189,22 @@ function BimCanvas({
 
     const scene = new Scene();
     scene.background = new Color(BACKGROUND);
-    // Two lamps, and their strengths matter more than they look. At 2 each the
-    // sum clips every pale surface to white: a window frame, a plastered wall
-    // and a ceiling all came out the same flat white, so the model read as
-    // untextured instead of as lit. These are the values the viewer this was
-    // taken from uses, and they leave the light ones distinguishable.
+    // Two lamps and the room light of `lightFromRoom`, and their strengths
+    // matter more than they look. Too much in total clips every pale surface
+    // to the same flat white, so the model reads as untextured. The room
+    // light lifts the faces the sun misses, so the ambient lamp is low and
+    // the sun carries the contrast between faces.
     scene.add(new AmbientLight(0xffffff, AMBIENT_LIGHT));
     const sun = new DirectionalLight(0xffffff, SUN_LIGHT);
-    // Above, to one side and in front, so the three faces of a box are lit
-    // differently and an edge is visible without an outline.
-    sun.position.set(5, 10, 7);
+    // Above and behind, to the left of the default corner view. The faces a
+    // person sees are lit differently from each other, and the shadow of the
+    // building falls towards the viewer's side, where it can be seen. From in
+    // front the shadows fell behind the building and nothing showed.
+    sun.position.set(-6, 10, 3);
     scene.add(sun);
+    // The target is what the sun points at. It has to be in the scene for a
+    // move of it to change the direction the shadows fall in.
+    scene.add(sun.target);
 
     // 45 degrees, matching the viewer this was taken from. A wider lens bends
     // the walls of a room outwards and a building stops looking square.
@@ -213,6 +219,13 @@ function BimCanvas({
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
     parent.appendChild(renderer.domElement);
+    // Soft light from every side, shadows, occlusion in the creases and the
+    // section plane: what makes a model read as a building and not as flat
+    // colour. See `viewer/look.ts`.
+    prepareRenderer(renderer);
+    const dropRoomLight = lightFromRoom(renderer, scene);
+    const finish = createFinish(renderer, scene, camera);
+    const section = createSection(renderer);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -227,6 +240,7 @@ function BimCanvas({
       // `false` leaves the CSS size alone, which is what keeps the canvas
       // inside its box instead of the box growing to fit the canvas.
       renderer.setSize(clientWidth, clientHeight, false);
+      finish.setSize(clientWidth, clientHeight);
       camera.aspect = clientWidth / clientHeight;
       camera.updateProjectionMatrix();
     };
@@ -242,14 +256,28 @@ function BimCanvas({
     // Set once a model is shown. The markers are sized and their labels moved
     // on every frame, because both follow the camera.
     let placeMarkers: (() => void) | null = null;
+    // Set once a model is shown: where the section cuts, read on every frame
+    // so a toggle or a change of floor takes effect on the next one.
+    let cutHeight: () => number | null = () => null;
+    let shadows = false;
 
     let running = true;
     const tick = () => {
       if (!running) return;
       controls.update();
       placeMarkers?.();
-      renderer.render(scene, camera);
+      const cut = cutHeight();
+      section.set(cut);
+      // The shadow map is drawn without the cut, so with a cut on, the roof
+      // that is not drawn would still throw its shadow into the rooms.
+      sun.castShadow = shadows && cut === null;
+      finish.render();
+      // The cut is in world coordinates and the axes indicator is not in the
+      // world, so the indicator is drawn without it.
+      const planes = renderer.clippingPlanes;
+      renderer.clippingPlanes = [];
       gizmo.draw(renderer, camera);
+      renderer.clippingPlanes = planes;
       globalThis.requestAnimationFrame(tick);
     };
     tick();
@@ -286,6 +314,9 @@ function BimCanvas({
       // the teardown that walks the scene disposes them along with everything
       // else.
       addOutlines(view.meshes.values());
+      cleanUp.push(castShadows(model, sun, scene));
+      shadows = true;
+      cutHeight = () => view.cutHeight();
       view.refresh();
       placeMarkers = () => placeAll(markers, view, camera, parent);
       onReady?.({
@@ -412,6 +443,8 @@ function BimCanvas({
     return () => {
       running = false;
       for (const undo of cleanUp) undo();
+      finish.dispose();
+      dropRoomLight();
       overlay.remove();
       observer.disconnect();
       controls.dispose();

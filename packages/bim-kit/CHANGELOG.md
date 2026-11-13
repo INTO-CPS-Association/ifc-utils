@@ -14,6 +14,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Each sensor marker has a label with its short tag and its current value, in the host theme's colours.
 - `scripts/check-reexport.mjs`, which resolves every binding of a manifest against another export of the same building and prints which survive and which do not, with the reason.
 - `valueText`, from the package root, which prints a reading as the card and the marker label show it.
+- The model is lit from a small built-in room as well as by the sun, throws shadows on itself and on a ground under it, and has ambient occlusion in its creases, so faces of one colour still differ and a wall reads as standing on a slab. All of it comes from three.js itself, which is already a peer dependency, so nothing is added to the package. `prepareRenderer`, `lightFromRoom`, `castShadows`, `createSection` and `createFinish` are exported from `./viewer`.
+- The `x` shortcut, Cut The Floor At Chest Height, cuts the floor in view at the height the heatmap's plan is cut at, so the rooms read like a plan. `SceneView` has `state.sectioned` and `cutHeight()`.
 
 ### Changed
 

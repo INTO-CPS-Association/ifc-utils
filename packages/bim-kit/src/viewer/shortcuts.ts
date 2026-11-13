@@ -80,6 +80,13 @@ export const SHORTCUTS: Shortcut[] = [
     on: (view) => view.state.slabsHidden,
   },
   {
+    key: 'x',
+    label: 'Cut The Floor At Chest Height',
+    icon: 'section',
+    run: ({ view, refresh }) => { view.state.sectioned = !view.state.sectioned; refresh(); },
+    on: (view) => view.state.sectioned,
+  },
+  {
     key: 'h',
     label: 'Hover Highlight',
     icon: 'hover',
