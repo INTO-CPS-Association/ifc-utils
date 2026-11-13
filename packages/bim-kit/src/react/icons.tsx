@@ -37,6 +37,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
 import PaletteIcon from '@mui/icons-material/Palette';
 import WallpaperIcon from '@mui/icons-material/Wallpaper';
+import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
 
 const ICONS: Record<string, ReactElement> = {
   heatmap: <ThermostatIcon fontSize="small" />,
@@ -53,6 +54,7 @@ const ICONS: Record<string, ReactElement> = {
   cutForward: <AddIcon fontSize="small" />,
   style: <PaletteIcon fontSize="small" />,
   backdrop: <WallpaperIcon fontSize="small" />,
+  walk: <DirectionsWalkIcon fontSize="small" />,
   hover: <HighlightAltIcon fontSize="small" />,
   hide: <VisibilityOffIcon fontSize="small" />,
   restore: <UndoIcon fontSize="small" />,

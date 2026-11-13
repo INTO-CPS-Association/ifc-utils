@@ -174,6 +174,13 @@ export const SHORTCUTS: Shortcut[] = [
     on: (view) => view.state.shadows,
   },
   {
+    key: 'u',
+    label: 'Walk Through, With The Arrow Keys',
+    icon: 'walk',
+    run: ({ view, refresh }) => { view.state.walking = !view.state.walking; refresh(); },
+    on: (view) => view.state.walking,
+  },
+  {
     key: 'y',
     label: 'Style',
     icon: 'style',

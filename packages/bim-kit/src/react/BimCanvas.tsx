@@ -39,7 +39,7 @@ import { objectsOf } from './scene.js';
 import {
   FAR_PLANE, NEAR_PLANE, SceneView, addOutlines, castShadows, createFieldSheet, createFinish,
   createFlight, createGizmo, createGlow, createGrid, createMarkers, createMeasure, createSection,
-  createViewCube, frame, frameFrom, setParallel, BACKDROPS,
+  createViewCube, frame, frameFrom, setParallel, BACKDROPS, startWalking, stepWalk, walkKeyOf,
   frameObject, lightFromRoom,
   prepareRenderer, snapshot, type MarkerSet, type PropertyTree, type SavedView,
 } from '../viewer/index.js';
@@ -343,7 +343,42 @@ function BimCanvas({
       const measure = createMeasure(scene, overlay);
       cleanUp.push(() => measure.dispose());
       wantsShadows = () => view.state.shadows;
+      // Walking: the arrow keys held, and whether the last frame was walking,
+      // so the camera is set at eye height once, on the frame walking starts.
+      const held = { forward: false, back: false, left: false, right: false };
+      let wasWalking = false;
+      let lastStep = performance.now();
+      const onArrow = (down: boolean) => (event: KeyboardEvent) => {
+        const which = walkKeyOf(event.key);
+        if (!which || !view.state.walking) return;
+        held[which] = down;
+        // The page would scroll on an arrow key otherwise.
+        event.preventDefault();
+      };
+      const arrowDown = onArrow(true);
+      const arrowUp = onArrow(false);
+      globalThis.addEventListener('keydown', arrowDown);
+      globalThis.addEventListener('keyup', arrowUp);
+      cleanUp.push(() => {
+        globalThis.removeEventListener('keydown', arrowDown);
+        globalThis.removeEventListener('keyup', arrowUp);
+      });
+      const walkFrame = () => {
+        const now = performance.now();
+        const seconds = Math.min((now - lastStep) / 1000, 0.1);
+        lastStep = now;
+        if (view.state.walking && !wasWalking) {
+          flight.cancel();
+          startWalking(camera, controls, view.floorLevel());
+        }
+        wasWalking = view.state.walking;
+        // Zoom and pan would carry the eye through walls and off the floor.
+        controls.enableZoom = !view.state.walking;
+        controls.enablePan = !view.state.walking;
+        if (view.state.walking) stepWalk(camera, controls, held, seconds);
+      };
       followState = () => {
+        walkFrame();
         setParallel(camera, controls, view.state.parallel);
         (scene.background as Color).setHex(BACKDROPS[view.state.backdrop]);
         grid.setVisible(view.state.grid);

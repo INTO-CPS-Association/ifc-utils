@@ -30,6 +30,10 @@ export {
   type ViewCube,
 } from './viewCube.js';
 export {
+  startWalking, stepWalk, walkKeyOf, EYE_HEIGHT_M, WALK_SPEED_M_S, TURN_SPEED_DEG_S, LOOK_AHEAD_M,
+  type WalkKeys, type WalkControls,
+} from './walkMode.js';
+export {
   setParallel, backOff, PERSPECTIVE_FOV, PARALLEL_FOV, type Orbit,
 } from './projection.js';
 export {

@@ -13,7 +13,7 @@ import {
   DEFAULT_STALE_AFTER_S, availableScopes, isLive, zoneOf, zonesOf,
   type FeedState, type HeatScope, type Reading, type Zones,
 } from '../readings.js';
-import { bandOf, bandsFrom, type Band } from '../storeys.js';
+import { bandOf, bandsFrom, FLOOR_MARGIN_M, type Band } from '../storeys.js';
 import { type Glow } from './glow.js';
 import { Palette, SHELL, CLASS_COLOURS, type ModelStyle } from './appearance.js';
 import { buildField, sourceAt, CUT_M, type Field } from './field.js';
@@ -87,6 +87,8 @@ export interface ViewState {
   style: ModelStyle;
   /** The background behind the model. */
   backdrop: Backdrop;
+  /** Whether the camera walks at eye height instead of orbiting. */
+  walking: boolean;
 }
 
 /** The backgrounds a person can choose. */
@@ -156,6 +158,7 @@ export class SceneView {
     depthShift: 0,
     style: 'shaded',
     backdrop: 'light',
+    walking: false,
   };
 
   /** The middle of the model, where a vertical cut starts. */
@@ -529,6 +532,20 @@ export class SceneView {
   }
 
   /**
+   * The height of the floor in view, where a person walking stands: the
+   * chosen floor, else the lowest one, else the base of the lowest wall.
+   */
+  floorLevel(): number {
+    const band = this.state.storey ? bandOf(this.bands, this.state.storey) : undefined;
+    const floor = band ?? this.bands[0];
+    if (floor) return floor.from + FLOOR_MARGIN_M;
+    const walls = [...this.base].filter(([globalId]) =>
+      String(this.meshes.get(globalId)?.userData.ifcClass ?? '').startsWith('IfcWall'));
+    const lowest = Math.min(...(walls.length > 0 ? walls : [...this.base]).map(([, base]) => base));
+    return Number.isFinite(lowest) ? lowest : 0;
+  }
+
+  /**
    * Every cut in force, as planes that keep what is on their positive side.
    *
    * The horizontal one keeps what is below it and the vertical one what is
@@ -637,6 +654,7 @@ export class SceneView {
       depthShift: 0,
       style: 'shaded',
       backdrop: 'light',
+      walking: false,
     };
     this.zones = null;
     this.refresh();
