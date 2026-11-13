@@ -41,7 +41,7 @@ import {
   createFlight, createGizmo, createGlow, createGrid, createMarkers, createMeasure, createSection,
   createViewCube, frame, frameFrom, setParallel,
   frameObject, lightFromRoom,
-  prepareRenderer, type MarkerSet, type PropertyTree,
+  prepareRenderer, snapshot, type MarkerSet, type PropertyTree, type SavedView,
 } from '../viewer/index.js';
 
 // The same near-white the viewer this was taken from uses. A lighter one
@@ -152,6 +152,10 @@ export interface ViewerHandle {
   frameSelection?: () => void;
   /** Recolour the markers and rewrite their labels from the latest readings. */
   showReadings?: (readings: Map<string, Reading>, feed: FeedState, staleAfter?: number) => void;
+  /** The view on screen, under a name, to save and come back to. */
+  captureView?: (name: string) => SavedView;
+  /** Put back the floor, lens and cuts of a saved view and fly to its camera. */
+  showView?: (saved: SavedView) => void;
 }
 
 /** Size every marker and move every label for the frame about to be drawn. */
@@ -342,8 +346,11 @@ function BimCanvas({
       followState = () => {
         setParallel(camera, controls, view.state.parallel);
         grid.setVisible(view.state.grid);
-        // Leaving the measuring mode takes the last measurement away with it.
-        if (!view.state.measuring && measure.points.length > 0) measure.clear();
+        // Leaving the measuring mode takes the last measurement away with it,
+        // and changing the mode starts a new one.
+        if (view.state.measuring === null) {
+          if (measure.points.length > 0) measure.clear();
+        } else measure.setMode(view.state.measuring);
         measure.place(camera, parent.clientWidth, parent.clientHeight);
       };
       cutPlanes = () => view.cutPlanes();
@@ -359,6 +366,20 @@ function BimCanvas({
           if (mesh) flight.fly(() => frameObject(camera, controls, mesh, model));
         },
         showReadings: (readings, feed, staleAfter) => markers.showReadings(readings, feed, staleAfter),
+        captureView: (name) => snapshot(name, camera.position, controls.target, view.state),
+        showView: (saved) => {
+          const { name: _name, position, target, ...state } = saved;
+          Object.assign(view.state, state);
+          view.refresh();
+          // The lens first, so the flight ends where the view was saved and
+          // the next frame finds the lens already right.
+          setParallel(camera, controls, saved.parallel);
+          flight.fly(() => {
+            camera.position.set(...position);
+            controls.target.set(...target);
+            controls.update();
+          });
+        },
       });
 
       /** The first visible surface under the pointer, or undefined. */

@@ -9,6 +9,7 @@
 import { type HeatScope } from '../readings.js';
 import type { Binding } from '../binding.js';
 import type { SceneView } from './sceneView.js';
+import type { MeasureMode } from './measure.js';
 
 /** What a shortcut needs from the page to do its work. */
 export interface ShortcutContext {
@@ -40,6 +41,12 @@ export interface Shortcut {
   /** What the toggle is currently set to, for a button that has more than two states. */
   badge?: (view: SceneView) => string | undefined;
 }
+
+const MEASURE_LABELS: Record<MeasureMode, string> = {
+  length: 'Length',
+  area: 'Area',
+  angle: 'Angle',
+};
 
 const SCOPE_LABELS: Record<HeatScope, string> = {
   off: 'Off',
@@ -127,10 +134,15 @@ export const SHORTCUTS: Shortcut[] = [
   },
   {
     key: 'd',
-    label: 'Measure A Distance',
+    label: 'Measure A Length, An Area Or An Angle',
     icon: 'measure',
-    run: ({ view, refresh }) => { view.state.measuring = !view.state.measuring; refresh(); },
-    on: (view) => view.state.measuring,
+    run: ({ view, refresh }) => {
+      const order = [null, 'length', 'area', 'angle'] as const;
+      view.state.measuring = order[(order.indexOf(view.state.measuring) + 1) % order.length];
+      refresh();
+    },
+    on: (view) => view.state.measuring !== null,
+    badge: (view) => (view.state.measuring === null ? undefined : MEASURE_LABELS[view.state.measuring]),
   },
   {
     key: 'o',

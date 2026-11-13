@@ -28,7 +28,14 @@ export {
 export {
   setParallel, backOff, PERSPECTIVE_FOV, PARALLEL_FOV, type Orbit,
 } from './projection.js';
-export { createMeasure, distanceText, END_DOT_PX, type Measure } from './measure.js';
+export {
+  createViewStore, isSavedView, nextViewName, snapshot, MAX_SAVED_VIEWS,
+  type SavedView, type ViewStore, type KeyValueStore,
+} from './savedViews.js';
+export {
+  createMeasure, distanceText, polygonArea, angleAt, measureText, END_DOT_PX, MAX_POINTS, CLOSE_M,
+  type Measure, type MeasureMode,
+} from './measure.js';
 export {
   prepareRenderer, lightFromRoom, castShadows, createSection, createFinish,
   SHADOW_MAP_PX, ROOM_LIGHT, GROUND_SHADOW_OPACITY, GROUND_MARGIN, GROUND_DROP_M, type Clipped,

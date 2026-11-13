@@ -128,6 +128,25 @@ describe('what a cut hides', () => {
   });
 });
 
+describe('what the plan cut keeps', () => {
+  test('a wall the cut runs through stays shown, an object wholly above it does not', () => {
+    const group = new Group();
+    const add = (id, y, height) => {
+      const mesh = new Mesh(new BoxGeometry(1, height, 1), new MeshStandardMaterial());
+      mesh.position.set(0, y + height / 2, 0);
+      mesh.userData.globalId = id;
+      mesh.userData.ifcClass = id === 'wall' ? 'IfcWall' : 'IfcBeam';
+      group.add(mesh);
+    };
+    add('wall', 0, 2.7);
+    add('beam', 2.4, 0.3);
+    group.updateMatrixWorld(true);
+    const scene = new SceneView(group);
+    scene.state.sectioned = true;
+    assert.deepEqual([scene.isShown('wall'), scene.isShown('beam')], [true, false]);
+  });
+});
+
 describe('createSection with planes', () => {
   test('puts every plane on the renderer and takes them away with an empty list', () => {
     const renderer = { clippingPlanes: [] };

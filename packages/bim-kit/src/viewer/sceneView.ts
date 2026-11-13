@@ -17,6 +17,7 @@ import { bandOf, bandsFrom, type Band } from '../storeys.js';
 import { type Glow } from './glow.js';
 import { Palette, SHELL } from './appearance.js';
 import { buildField, sourceAt, CUT_M, type Field } from './field.js';
+import type { MeasureMode } from './measure.js';
 
 /**
  * What the property tree says about one object.
@@ -69,8 +70,8 @@ export interface ViewState {
   grid: boolean;
   /** The one object shown alone, or null when everything is shown. */
   isolated: string | null;
-  /** Whether a click measures a distance instead of selecting. */
-  measuring: boolean;
+  /** What a click measures instead of selecting, or null when it selects. */
+  measuring: MeasureMode | null;
   /** Whether the view draws with parallel lines, for reading plans and elevations. */
   parallel: boolean;
   /** Whether the sun throws shadows. */
@@ -131,7 +132,7 @@ export class SceneView {
     sectioned: false,
     grid: true,
     isolated: null,
-    measuring: false,
+    measuring: null,
     parallel: false,
     shadows: true,
     vertical: null,
@@ -475,25 +476,34 @@ export class SceneView {
     return planes;
   }
 
-  /** The centre of each object, measured once, since the objects do not move. */
-  private readonly centres = new Map<string, Vector3>();
+  /** The box around each object, measured once, since the objects do not move. */
+  private readonly boxes = new Map<string, Box3>();
 
   /**
-   * Whether an object is drawn: visible and, when a cut is in force, with its
-   * centre on the kept side. A sensor on an object the cut took away is not
-   * labelled over the empty space where it was.
+   * Whether an object is drawn: visible and, when a cut is in force, with some
+   * part of it on the kept side. A wall the plan cut runs through is still
+   * drawn up to the cut, so its sensor stays. A sensor on an object a cut took
+   * away entirely is not labelled over the empty space where it was.
    */
   isShown(globalId: string): boolean {
     const mesh = this.meshes.get(globalId);
     if (!mesh) return true;
     if (!mesh.visible) return false;
-    if (!this.state.sectioned && this.state.vertical === null) return true;
-    let centre = this.centres.get(globalId);
-    if (!centre) {
-      centre = new Box3().setFromObject(mesh).getCenter(new Vector3());
-      this.centres.set(globalId, centre);
+    const planes = this.cutPlanes();
+    if (planes.length === 0) return true;
+    let box = this.boxes.get(globalId);
+    if (!box) {
+      box = new Box3().setFromObject(mesh);
+      this.boxes.set(globalId, box);
     }
-    return this.keeps(centre);
+    const { min, max } = box;
+    // The corner of the box farthest along each plane's normal is the one
+    // most on the kept side. If even that one is beyond the plane, all of it is.
+    return planes.every((plane) => plane.distanceToPoint(new Vector3(
+      plane.normal.x >= 0 ? max.x : min.x,
+      plane.normal.y >= 0 ? max.y : min.y,
+      plane.normal.z >= 0 ? max.z : min.z,
+    )) >= 0);
   }
 
   /** Whether a point is on the kept side of every cut, so a click there lands on something drawn. */
@@ -550,7 +560,7 @@ export class SceneView {
       sectioned: false,
       grid: true,
       isolated: null,
-      measuring: false,
+      measuring: null,
       parallel: false,
       shadows: true,
       vertical: null,

@@ -14,8 +14,8 @@ import {
   BoxGeometry, Group, Mesh, MeshStandardMaterial, PerspectiveCamera, Scene, Vector3,
 } from 'three';
 import {
-  GRID_DROP_M, GRID_MIN_SPAN_M, SHORTCUTS, SceneView, createGrid, createMeasure,
-  distanceText, gridSpan,
+  CLOSE_M, GRID_DROP_M, GRID_MIN_SPAN_M, SHORTCUTS, SceneView, angleAt, createGrid,
+  createMeasure, distanceText, gridSpan, measureText, polygonArea,
 } from '../dist/esm/viewer/index.js';
 
 function box(globalId, y, size = [8, 3, 4]) {
@@ -152,17 +152,17 @@ describe('createMeasure', () => {
     camera.position.set(0, 0, 10);
     camera.lookAt(0, 0, 0);
     camera.updateMatrixWorld();
-    const dots = [...overlay.querySelectorAll('[data-bim-measure-end]')];
-    assert.equal(dots.length, 2);
+    const dots = () => [...overlay.querySelectorAll('[data-bim-measure-end]')];
+    assert.equal(dots().length, 0);
     measure.addPoint(new Vector3(0, 0, 0));
     measure.place(camera, 200, 200);
-    assert.deepEqual(dots.map((dot) => dot.style.display), ['block', 'none']);
-    assert.match(dots[0].style.transform, /^translate\(100px, 100px\)/);
+    assert.deepEqual(dots().map((dot) => dot.style.display), ['block']);
+    assert.match(dots()[0].style.transform, /^translate\(100px, 100px\)/);
     measure.addPoint(new Vector3(1, 0, 0));
     measure.place(camera, 200, 200);
-    assert.deepEqual(dots.map((dot) => dot.style.display), ['block', 'block']);
+    assert.deepEqual(dots().map((dot) => dot.style.display), ['block', 'block']);
     measure.clear();
-    assert.deepEqual(dots.map((dot) => dot.style.display), ['none', 'none']);
+    assert.deepEqual(dots().map((dot) => dot.style.display), ['none', 'none']);
   });
 
   test('clears and gives everything back on dispose', () => {
@@ -229,17 +229,92 @@ describe('the grid and measure toggles', () => {
     scene.toggleIsolation();
     assert.deepEqual(
       [scene.state.grid, scene.state.measuring, scene.state.isolated],
-      [false, true, 'w1'],
+      [false, 'length', 'w1'],
     );
     scene.reset();
     assert.deepEqual(
       [scene.state.grid, scene.state.measuring, scene.state.isolated],
-      [true, false, null],
+      [true, null, null],
     );
   });
 
   test('every new shortcut has a key of its own', () => {
     const keys = SHORTCUTS.map((shortcut) => shortcut.key);
     assert.equal(new Set(keys).size, keys.length);
+  });
+});
+
+describe('measuring an area and an angle', () => {
+  const v = (x, y, z) => new Vector3(x, y, z);
+
+  test('the area of a polygon, whichever way it faces', () => {
+    const floor = [v(0, 0, 0), v(4, 0, 0), v(4, 0, 3), v(0, 0, 3)];
+    assert.ok(Math.abs(polygonArea(floor) - 12) < 1e-9);
+    const wall = [v(0, 0, 0), v(2, 0, 0), v(2, 3, 0), v(0, 3, 0)];
+    assert.ok(Math.abs(polygonArea(wall) - 6) < 1e-9);
+    assert.equal(polygonArea([v(0, 0, 0), v(1, 0, 0)]), 0);
+  });
+
+  test('the angle at a corner, in degrees', () => {
+    assert.ok(Math.abs(angleAt(v(1, 0, 0), v(0, 0, 0), v(0, 0, 1)) - 90) < 1e-9);
+    assert.ok(Math.abs(angleAt(v(1, 0, 0), v(0, 0, 0), v(1, 0, 1)) - 45) < 1e-9);
+    assert.equal(angleAt(v(0, 0, 0), v(0, 0, 0), v(1, 0, 0)), 0);
+  });
+
+  test('says nothing until there are enough points', () => {
+    assert.equal(measureText('length', [v(0, 0, 0)]), null);
+    assert.equal(measureText('angle', [v(0, 0, 0), v(1, 0, 0)]), null);
+    assert.equal(measureText('area', [v(0, 0, 0), v(1, 0, 0)]), null);
+    assert.equal(measureText('angle', [v(1, 0, 0), v(0, 0, 0), v(0, 0, 1)]), '90.0°');
+  });
+
+  function setUp() {
+    const scene = new Scene();
+    const overlay = document.createElement('div');
+    document.body.appendChild(overlay);
+    return { scene, overlay, measure: createMeasure(scene, overlay) };
+  }
+
+  test('an area grows with each point and closes on a click back at the first', () => {
+    const { scene, measure } = setUp();
+    measure.setMode('area');
+    for (const point of [v(0, 0, 0), v(4, 0, 0), v(4, 0, 3)]) measure.addPoint(point);
+    assert.equal(measure.text, '6.00 m²');
+    measure.addPoint(v(0, 0, 3));
+    assert.equal(measure.text, '12.00 m²');
+    assert.equal(measure.complete, false);
+    measure.addPoint(v(CLOSE_M / 2, 0, 0));
+    assert.equal(measure.complete, true);
+    assert.equal(measure.points.length, 4);
+    // The outline is drawn closed, back to the first point.
+    assert.equal(scene.getObjectByName('measure').geometry.drawRange.count, 5);
+    measure.addPoint(v(9, 0, 9));
+    assert.equal(measure.points.length, 1);
+  });
+
+  test('an angle takes three points and starts again on the fourth', () => {
+    const { measure } = setUp();
+    measure.setMode('angle');
+    for (const point of [v(1, 0, 0), v(0, 0, 0), v(0, 0, 1)]) measure.addPoint(point);
+    assert.deepEqual([measure.complete, measure.text], [true, '90.0°']);
+    measure.addPoint(v(5, 5, 5));
+    assert.equal(measure.points.length, 1);
+  });
+
+  test('changing the mode takes the current measurement away', () => {
+    const { measure } = setUp();
+    measure.addPoint(v(0, 0, 0));
+    measure.setMode('angle');
+    assert.deepEqual([measure.mode, measure.points.length], ['angle', 0]);
+  });
+
+  test('d cycles length, area, angle and off, and says which', () => {
+    const scene = new SceneView(model());
+    const seen = [];
+    for (let i = 0; i < 4; i += 1) {
+      key('d').run({ view: scene, refresh: () => undefined });
+      seen.push([scene.state.measuring, key('d').badge(scene)]);
+    }
+    assert.deepEqual(seen, [['length', 'Length'], ['area', 'Area'], ['angle', 'Angle'], [null, undefined]]);
   });
 });

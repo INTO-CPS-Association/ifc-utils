@@ -36,3 +36,4 @@ export {
 } from './assets.js';
 export { objectsOf, type BimObject } from './scene.js';
 export { exportGlb } from './exportGlb.js';
+export { SavedViews, type SavedViewsProps } from './SavedViews.js';
