@@ -24,7 +24,7 @@ import {
   type DirectionalLight,
   Mesh,
   type Object3D,
-  PCFSoftShadowMap,
+  PCFShadowMap,
   Plane,
   PlaneGeometry,
   PMREMGenerator,
@@ -73,7 +73,9 @@ export const ROOM_LIGHT = 0.5;
  */
 export function prepareRenderer(renderer: WebGLRenderer): void {
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PCFSoftShadowMap;
+  // PCF and not PCF soft: three.js 0.186 no longer has the soft one, falls
+  // back to this and warns about it on every load.
+  renderer.shadowMap.type = PCFShadowMap;
 }
 
 /**
