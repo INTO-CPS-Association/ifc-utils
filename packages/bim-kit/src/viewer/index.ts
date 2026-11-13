@@ -21,6 +21,13 @@ export {
 export {
   createFlight, ease, prefersReducedMotion, FLIGHT_MS, type Flight, type Steered,
 } from './flight.js';
+export {
+  createViewCube, cubeViewport, directionAt, CUBE_SIZE_PX, CUBE_MARGIN_PX, CUBE_EDGE, CUBE_FACES,
+  type ViewCube,
+} from './viewCube.js';
+export {
+  setParallel, backOff, PERSPECTIVE_FOV, PARALLEL_FOV, type Orbit,
+} from './projection.js';
 export { createMeasure, distanceText, END_DOT_PX, type Measure } from './measure.js';
 export {
   prepareRenderer, lightFromRoom, castShadows, createSection, createFinish,
@@ -30,7 +37,7 @@ export { createGlow, GLOW_MARGIN_M, type Glow } from './glow.js';
 export { buildField, sourceAt, planAngle, toGrid, fromGrid, CELL_M, CUT_M, BLOCKS, OPENS, SEARCH_CELLS, type Field } from './field.js';
 export { createFieldSheet, type FieldSheet } from './fieldSheet.js';
 export {
-  frame, frameObject, LOOK_FROM, NEAR_PLANE, FAR_PLANE, MIN_FRAME_RADIUS_M, type Target,
+  frame, frameFrom, frameObject, LOOK_FROM, NEAR_PLANE, FAR_PLANE, MIN_FRAME_RADIUS_M, type Target,
 } from './framing.js';
 export {
   createMarkers, markerScale, markerColour, labelText, worldPerPixel, pulseFactor, PULSE_MS, PULSE_GROWTH,

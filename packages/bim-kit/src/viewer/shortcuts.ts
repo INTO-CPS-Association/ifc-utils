@@ -108,6 +108,20 @@ export const SHORTCUTS: Shortcut[] = [
     on: (view) => view.state.measuring,
   },
   {
+    key: 'o',
+    label: 'Parallel View, For Plans And Elevations',
+    icon: 'parallel',
+    run: ({ view, refresh }) => { view.state.parallel = !view.state.parallel; refresh(); },
+    on: (view) => view.state.parallel,
+  },
+  {
+    key: 'l',
+    label: 'Shadows',
+    icon: 'shadows',
+    run: ({ view, refresh }) => { view.state.shadows = !view.state.shadows; refresh(); },
+    on: (view) => view.state.shadows,
+  },
+  {
     key: 'h',
     label: 'Hover Highlight',
     icon: 'hover',

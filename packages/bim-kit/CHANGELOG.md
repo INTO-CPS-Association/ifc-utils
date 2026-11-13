@@ -15,6 +15,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `scripts/check-reexport.mjs`, which resolves every binding of a manifest against another export of the same building and prints which survive and which do not, with the reason.
 - `valueText`, from the package root, which prints a reading as the card and the marker label show it.
 - The model is lit from a small built-in room as well as by the sun, throws shadows on itself and on a ground under it, and has ambient occlusion in its creases, so faces of one colour still differ and a wall reads as standing on a slab. All of it comes from three.js itself, which is already a peer dependency, so nothing is added to the package. `prepareRenderer`, `lightFromRoom`, `castShadows`, `createSection` and `createFinish` are exported from `./viewer`.
+- A view cube in the bottom right corner, turned with the model. A click on a face looks from that side, near an edge from between two faces and near a corner from between three, twenty six directions in all, and the camera flies there. `createViewCube`, `cubeViewport`, `directionAt` and `frameFrom` are exported from `./viewer`.
+- The `o` shortcut, Parallel View, draws with parallel lines for reading plans and elevations: the lens narrows to 1.5 degrees and the camera backs off by as much, so the same thing stays in shot. `setParallel` and `backOff` are exported from `./viewer`.
+- The `l` shortcut, Shadows, turns the sun's shadows off and on.
 - Picking a sensor, on its card or with a key, flies the camera to it over 600 ms instead of jumping, and its marker grows once and settles back so the eye goes to it. The views, Fit and Reset fly too. Grabbing the view mid-flight stops it, and a system set to reduce motion gets the jump and no pulse. `createFlight`, `ease`, `prefersReducedMotion` and `pulseFactor` are exported from `./viewer`.
 - A grid of metres under the model, a stronger line every five, sized to the model and laid under its lowest object. The `g` shortcut turns it off and on. `createGrid` and `gridSpan` are exported from `./viewer`.
 - The `d` shortcut, Measure A Distance: each click puts a point on the surface under the cursor, the second draws a line with its length in metres and the third starts a new measurement. Each end has a dot, so the first click shows that a measurement has begun. `createMeasure` and `distanceText` are exported from `./viewer`.
@@ -24,6 +27,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - A click no longer picks an object above the section, which is not drawn.
+- The far plane of a framed view never cuts the model itself. It stayed at 5 km at most, which would cut the far side of a large site seen through the parallel view.
 
 - A sensor marker is at least 14 pixels across on screen whatever the distance. It has a dark ring and takes the colour of its current value on the ramp. The selected marker is at least 24 pixels across, in the selection colour, with its label outlined and bold. It was a grey sphere sized as a share of the model, a few pixels on a whole building. The selected one could not be told from the rest.
 - A card whose reading has no unit prints the value alone. It printed `undefined` after the number.

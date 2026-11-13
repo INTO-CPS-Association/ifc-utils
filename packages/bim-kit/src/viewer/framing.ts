@@ -64,7 +64,11 @@ function place(
   // The far plane also reaches across the whole model, so framing one small
   // object does not clip the building behind it.
   camera.near = Math.max(distance / 1000, NEAR_PLANE);
-  camera.far = Math.min(Math.max(distance * 10, distance + 2 * depth), FAR_PLANE);
+  // The ceiling never cuts the model itself: the parallel view stands thirty
+  // times farther back, and a large site seen through it would lose its far
+  // side to a fixed ceiling.
+  const reach = distance + 2 * depth;
+  camera.far = Math.min(Math.max(distance * 10, reach), Math.max(FAR_PLANE, reach));
   camera.updateProjectionMatrix();
   controls.target.copy(centre);
   controls.update();
@@ -87,9 +91,27 @@ export function frame(
   model: Object3D,
   from: keyof typeof LOOK_FROM = 'corner',
 ): number {
+  return frameFrom(camera, controls, model, new Vector3(...LOOK_FROM[from]));
+}
+
+/**
+ * Put the whole model in shot looking from any direction, such as a face, an
+ * edge or a corner of the view cube, and return its radius.
+ *
+ * Straight up or down is tilted by a hair, because orbit controls looking
+ * exactly along the up axis cannot tell which way the screen's top is.
+ */
+export function frameFrom(
+  camera: PerspectiveCamera,
+  controls: Target,
+  model: Object3D,
+  direction: Vector3,
+): number {
   const sphere = sphereOf(model);
   if (!sphere) return 1;
-  place(camera, controls, sphere.centre, sphere.radius, new Vector3(...LOOK_FROM[from]), sphere.radius);
+  const along = direction.lengthSq() === 0 ? new Vector3(...LOOK_FROM.corner) : direction.clone();
+  if (along.x === 0 && along.z === 0) along.z = 0.0001;
+  place(camera, controls, sphere.centre, sphere.radius, along, sphere.radius);
   return sphere.radius;
 }
 

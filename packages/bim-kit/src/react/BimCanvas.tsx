@@ -37,7 +37,8 @@ import { exportGlb } from './exportGlb.js';
 import { objectsOf } from './scene.js';
 import {
   FAR_PLANE, NEAR_PLANE, SceneView, addOutlines, castShadows, createFieldSheet, createFinish,
-  createFlight, createGizmo, createGlow, createGrid, createMarkers, createMeasure, createSection, frame,
+  createFlight, createGizmo, createGlow, createGrid, createMarkers, createMeasure, createSection,
+  createViewCube, frame, frameFrom, setParallel,
   frameObject, lightFromRoom,
   prepareRenderer, type MarkerSet, type PropertyTree,
 } from '../viewer/index.js';
@@ -238,6 +239,9 @@ function BimCanvas({
     // The axes indicator. Built once and drawn after the model on every frame,
     // so it sits over the view instead of in it.
     const gizmo = createGizmo();
+    // The view cube, bottom right: a click on a face, an edge or a corner
+    // looks at the model from there.
+    const cube = createViewCube();
 
     const resize = () => {
       const { clientWidth, clientHeight } = parent;
@@ -265,6 +269,7 @@ function BimCanvas({
     // so a toggle or a change of floor takes effect on the next one.
     let cutHeight: () => number | null = () => null;
     let shadows = false;
+    let wantsShadows = () => true;
     // Set once a model is shown: the grid and the measurement follow the
     // view's state on every frame.
     let followState: (() => void) | null = null;
@@ -279,7 +284,7 @@ function BimCanvas({
       section.set(cut);
       // The shadow map is drawn without the cut, so with a cut on, the roof
       // that is not drawn would still throw its shadow into the rooms.
-      sun.castShadow = shadows && cut === null;
+      sun.castShadow = shadows && cut === null && wantsShadows();
       followState?.();
       finish.render();
       // The cut is in world coordinates and the axes indicator is not in the
@@ -287,6 +292,7 @@ function BimCanvas({
       const planes = renderer.clippingPlanes;
       renderer.clippingPlanes = [];
       gizmo.draw(renderer, camera);
+      cube.draw(renderer, camera);
       renderer.clippingPlanes = planes;
       globalThis.requestAnimationFrame(tick);
     };
@@ -330,7 +336,9 @@ function BimCanvas({
       cleanUp.push(() => grid.dispose());
       const measure = createMeasure(scene, overlay);
       cleanUp.push(() => measure.dispose());
+      wantsShadows = () => view.state.shadows;
       followState = () => {
+        setParallel(camera, controls, view.state.parallel);
         grid.setVisible(view.state.grid);
         // Leaving the measuring mode takes the last measurement away with it.
         if (!view.state.measuring && measure.points.length > 0) measure.clear();
@@ -378,6 +386,12 @@ function BimCanvas({
         onHover?.(globalId);
       };
       const click = (event: PointerEvent) => {
+        const box = parent.getBoundingClientRect();
+        const from = cube.pick(event.clientX - box.left, event.clientY - box.top, box.width, box.height);
+        if (from) {
+          flight.fly(() => frameFrom(camera, controls, model, from));
+          return;
+        }
         if (view.state.measuring) {
           const hit = hitAt(event);
           if (hit) measure.addPoint(hit.point);
@@ -475,6 +489,7 @@ function BimCanvas({
       running = false;
       for (const undo of cleanUp) undo();
       finish.dispose();
+      cube.dispose();
       dropRoomLight();
       overlay.remove();
       observer.disconnect();

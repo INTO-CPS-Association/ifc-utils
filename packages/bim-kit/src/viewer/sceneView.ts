@@ -71,6 +71,10 @@ export interface ViewState {
   isolated: string | null;
   /** Whether a click measures a distance instead of selecting. */
   measuring: boolean;
+  /** Whether the view draws with parallel lines, for reading plans and elevations. */
+  parallel: boolean;
+  /** Whether the sun throws shadows. */
+  shadows: boolean;
 }
 
 /** Roofs, slabs and ceilings: the lid that stops a floor being seen into. */
@@ -119,6 +123,8 @@ export class SceneView {
     grid: true,
     isolated: null,
     measuring: false,
+    parallel: false,
+    shadows: true,
   };
 
   constructor(model: Group, private readonly tree: PropertyTree = {}) {
@@ -479,6 +485,8 @@ export class SceneView {
       grid: true,
       isolated: null,
       measuring: false,
+      parallel: false,
+      shadows: true,
     };
     this.zones = null;
     this.refresh();

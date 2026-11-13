@@ -30,6 +30,8 @@ import ContentCutIcon from '@mui/icons-material/ContentCut';
 import GridOnIcon from '@mui/icons-material/GridOn';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import CenterFocusWeakIcon from '@mui/icons-material/CenterFocusWeak';
+import ViewQuiltIcon from '@mui/icons-material/ViewQuilt';
+import WbSunnyIcon from '@mui/icons-material/WbSunny';
 
 const ICONS: Record<string, ReactElement> = {
   heatmap: <ThermostatIcon fontSize="small" />,
@@ -39,6 +41,8 @@ const ICONS: Record<string, ReactElement> = {
   grid: <GridOnIcon fontSize="small" />,
   isolate: <CenterFocusWeakIcon fontSize="small" />,
   measure: <StraightenIcon fontSize="small" />,
+  parallel: <ViewQuiltIcon fontSize="small" />,
+  shadows: <WbSunnyIcon fontSize="small" />,
   hover: <HighlightAltIcon fontSize="small" />,
   hide: <VisibilityOffIcon fontSize="small" />,
   restore: <UndoIcon fontSize="small" />,
