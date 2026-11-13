@@ -157,7 +157,28 @@ The SDK and `react-router-dom` are optional peers, needed only by a host that im
 
 Each sensor is a dot at the centre of its object, drawn over the walls in front of it, with a label that gives its short tag and its current value. A dot is at least 14 pixels across however far away the camera is. It takes the colour of its value on the manifest's ramp while the reading is current and is grey otherwise. The selected sensor is at least 24 pixels across and in the selection colour. Its label is outlined and bold. The labels take their colours from the host's theme, so they read in a light and in a dark theme.
 
-Clicking a sensor card selects its object and frames it, keeping the direction the camera looks from. The `s` key, Frame The Selection in the shortcut list, does the same for whatever is selected. `f` still fits the whole model.
+Clicking a sensor card selects its object and flies the camera to it in 600 ms, keeping the direction the camera looks from, and the sensor's dot grows once and settles back so the eye goes to it. The `s` key, Frame The Selection in the shortcut list, does the same for whatever is selected. `f` still fits the whole model. A system set to reduce motion gets the jump and no pulse.
+
+## Looking at the Model
+
+The model is lit from a small built-in room as well as by the sun, throws shadows on itself and on a ground under it, and has ambient occlusion in its creases. All of it comes from three.js, which is a peer dependency already, so the package adds nothing. Every tool has a key, a button on the toolbar and a line in the help, all from one table in `viewer/shortcuts.ts`:
+
+| Key | Tool |
+| --- | --- |
+| `x` | Cut the floor in view at chest height, where the heatmap's plan is cut |
+| `v` | Cut through the middle along X, then along Z, then not at all |
+| `j`, `k` | Move the vertical cut, or the horizontal one, by 0.25 m |
+| `g` | The grid of metres under the model |
+| `i` | Show the selected object alone |
+| `d` | Measure a length, an area or an angle |
+| `o` | The parallel view, for plans and elevations |
+| `l` | The sun's shadows |
+| `u` | Walk at eye height with the arrow keys |
+| `n` | Draw on the view with a pen, an arrow or a box |
+| `y` | Paint the model in one colour, by class or as a wireframe |
+| `z` | The background: light, dim, slate or ink |
+
+The view cube in the bottom right corner looks at the model from the face, edge or corner clicked. Beside the floor picker, saved views keep the camera, the floor, the lens and the cuts in the browser's own storage, one list per model. Under the object panel, the model tree lists the objects by floor or by class and finds them by any word of their name, class, GlobalId or property values.
 
 ## Checking a Re-Export
 
