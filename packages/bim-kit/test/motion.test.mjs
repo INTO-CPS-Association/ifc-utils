@@ -141,3 +141,63 @@ describe('the pulse of a picked marker', () => {
     assert.ok(dot('b').scale.x > resting);
   });
 });
+
+describe('going to a sensor from the view', () => {
+  function scene(onPick) {
+    const model = new Group();
+    const objects = ['a', 'b'].map((globalId, i) => {
+      const node = new Mesh(new BoxGeometry(1, 1, 1));
+      node.position.set(i * 10, 0, 0);
+      model.add(node);
+      return {
+        binding: {
+          selector: { globalId }, id: `S${i}`, label: `S${i}`,
+          source: { live: { transport: 'mqtt', topic: `t/${i}` } }, display: { unit: '°C' },
+        },
+        object: { node },
+      };
+    });
+    model.updateMatrixWorld(true);
+    const overlay = document.createElement('div');
+    const set = createMarkers(model, objects, overlay, 60, onPick);
+    const camera = new PerspectiveCamera(45, 1.5, 0.1, 5000);
+    camera.position.set(5, 0, 40);
+    camera.lookAt(5, 0, 0);
+    camera.updateMatrixWorld();
+    set.place(camera, 900, 600, null, () => true, 0);
+    model.updateMatrixWorld(true);
+    return { set, camera, overlay, model };
+  }
+
+  test('a click on a label picks its sensor and goes no further', () => {
+    const picked = [];
+    const { overlay } = scene((id) => picked.push(id));
+    const label = [...overlay.querySelectorAll('[data-bim-label]')].find((el) => el.title === 'S1');
+    assert.equal(label.style.pointerEvents, 'auto');
+    let reachedViewer = false;
+    overlay.addEventListener('click', () => { reachedViewer = true; });
+    label.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    assert.deepEqual(picked, ['b']);
+    assert.equal(reachedViewer, false);
+  });
+
+  test('a label stays out of the way when nothing goes to the sensor', () => {
+    const { overlay } = scene(undefined);
+    const label = overlay.querySelector('[data-bim-label]');
+    assert.notEqual(label.style.pointerEvents, 'auto');
+  });
+
+  test('a ray through a dot picks that sensor, a ray past them picks none', async () => {
+    const { Raycaster, Vector2 } = await import('three');
+    const { set, camera } = scene(() => undefined);
+    const ray = new Raycaster();
+    const through = (x, y, z) => {
+      const point = new Vector3(x, y, z).project(camera);
+      ray.setFromCamera(new Vector2(point.x, point.y), camera);
+      return set.pick(ray);
+    };
+    assert.equal(through(10, 0, 0), 'b');
+    assert.equal(through(0, 0, 0), 'a');
+    assert.equal(through(5, 8, 0), null);
+  });
+});

@@ -44,10 +44,6 @@ export {
   groupEntries, matches, readableClass, NO_FLOOR, type TreeEntry, type TreeGroup, type GroupBy,
 } from './modelTree.js';
 export {
-  createViewStore, isSavedView, nextViewName, snapshot, MAX_SAVED_VIEWS,
-  type SavedView, type ViewStore, type KeyValueStore,
-} from './savedViews.js';
-export {
   createMeasure, distanceText, polygonArea, angleAt, measureText, END_DOT_PX, MAX_POINTS, CLOSE_M,
   type Measure, type MeasureMode,
 } from './measure.js';

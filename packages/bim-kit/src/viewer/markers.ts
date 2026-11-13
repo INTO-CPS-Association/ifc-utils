@@ -11,6 +11,7 @@
 import {
   Box3, Mesh, MeshBasicMaterial, SphereGeometry, Vector3,
   type Object3D, type PerspectiveCamera,
+  type Raycaster,
 } from 'three';
 import { valueText } from '../alerts.js';
 import { displayOf, idOf, objectOf, type Binding } from '../binding.js';
@@ -99,7 +100,6 @@ export interface MarkerSet {
   readonly count: number;
   /** Recolour the dots and rewrite the labels from the latest readings. */
   showReadings: (readings: Map<string, Reading>, feed: FeedState, staleAfter?: number) => void;
-  /** Size the dots and move the labels for this frame. `shown` says whether a sensor's object is visible. */
   /**
    * Size the dots and move the labels for this frame. `shown` says whether a
    * sensor's object is visible. `now` drives the pulse of a newly picked
@@ -109,12 +109,15 @@ export interface MarkerSet {
     camera: PerspectiveCamera, width: number, height: number,
     selected: string | null, shown: (globalId: string) => boolean, now?: number,
   ) => void;
+  /** The object of the sensor whose dot the ray hits first, or null. */
+  pick: (ray: Raycaster) => string | null;
   dispose: () => void;
 }
 
 /** One dot, its ring and its label, at the centre of its object. */
 function buildMarker(
   model: Object3D, binding: Binding, node: Object3D, shape: SphereGeometry, overlay: HTMLElement,
+  onPick?: (globalId: string) => void,
 ): Marker {
   // Drawn over the geometry they sit on, or a sensor inside a wall is
   // invisible from outside, which defeats the purpose of a marker. The ring is
@@ -130,6 +133,17 @@ function buildMarker(
   model.add(ring, dot);
   const label = createLabel(overlay.ownerDocument, binding.label);
   label.textContent = labelText(binding, undefined);
+  const globalId = objectOf(binding);
+  // A label is a place a person clicks to go to the sensor, as on its card.
+  // The overlay lets clicks through everywhere else.
+  if (onPick && globalId !== undefined) {
+    label.style.pointerEvents = 'auto';
+    label.style.cursor = 'pointer';
+    label.addEventListener('click', (event) => {
+      event.stopPropagation();
+      onPick(globalId);
+    });
+  }
   overlay.appendChild(label);
   return {
     binding, globalId: objectOf(binding), dot, ring, label, live: false, colour: NO_READING_COLOUR,
@@ -179,10 +193,12 @@ export function createMarkers(
   resolved: ReadonlyArray<{ binding: Binding; object: { node: Object3D } }>,
   overlay: HTMLElement,
   modelRadius: number,
+  onPick?: (globalId: string) => void,
 ): MarkerSet {
   const radius = Math.max(modelRadius * MARKER_SHARE_OF_MODEL, MIN_RADIUS_M);
   const shape = new SphereGeometry(radius, 16, 12);
-  const markers = resolved.map(({ binding, object }) => buildMarker(model, binding, object.node, shape, overlay));
+  const markers = resolved.map(({ binding, object }) =>
+    buildMarker(model, binding, object.node, shape, overlay, onPick));
   // The pulse starts when the selection changes to a sensor, whatever picked
   // it: a click on the model, a card or a key.
   let lastSelected: string | null = null;
@@ -208,6 +224,11 @@ export function createMarkers(
         placeOne(marker, radius, camera, { width, height }, picked,
           id === undefined || shown(id), picked ? pulse : 1);
       }
+    },
+    pick(ray) {
+      const shown = markers.filter((marker) => marker.dot.visible && marker.globalId !== undefined);
+      const hit = ray.intersectObjects(shown.map((marker) => marker.dot), false)[0];
+      return shown.find((marker) => marker.dot === hit?.object)?.globalId ?? null;
     },
     dispose() {
       for (const marker of markers) disposeMarker(marker);

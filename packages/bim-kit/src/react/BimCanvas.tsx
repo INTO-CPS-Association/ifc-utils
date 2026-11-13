@@ -42,7 +42,7 @@ import {
   createViewCube, frame, frameFrom, setParallel, BACKDROPS, startWalking, stepWalk, walkKeyOf,
   createSketch,
   frameObject, lightFromRoom,
-  prepareRenderer, snapshot, type MarkerSet, type PropertyTree, type SavedView,
+  prepareRenderer, type MarkerSet, type PropertyTree,
 } from '../viewer/index.js';
 
 // The same near-white the viewer this was taken from uses. A lighter one
@@ -68,9 +68,12 @@ function plural(word: string, count: number): string {
  * markers where the manifest asked for six is worse than one that says which
  * two are missing.
  */
-function addMarkers(model: Object3D, bindings: Binding[], radius: number, overlay: HTMLElement) {
+function addMarkers(
+  model: Object3D, bindings: Binding[], radius: number, overlay: HTMLElement,
+  onPick: (globalId: string) => void,
+) {
   const { resolved, unresolved } = resolveBindings(bindings, objectsOf(model));
-  const markers = createMarkers(model, resolved, overlay, radius);
+  const markers = createMarkers(model, resolved, overlay, radius, onPick);
   return { markers, placed: resolved.length, missing: unresolved };
 }
 
@@ -153,10 +156,6 @@ export interface ViewerHandle {
   frameSelection?: () => void;
   /** Recolour the markers and rewrite their labels from the latest readings. */
   showReadings?: (readings: Map<string, Reading>, feed: FeedState, staleAfter?: number) => void;
-  /** The view on screen, under a name, to save and come back to. */
-  captureView?: (name: string) => SavedView;
-  /** Put back the floor, lens and cuts of a saved view and fly to its camera. */
-  showView?: (saved: SavedView) => void;
 }
 
 /** Size every marker and move every label for the frame about to be drawn. */
@@ -315,13 +314,25 @@ function BimCanvas({
       if (!running) return;
       scene.add(model);
       const radius = frame(camera, controls, model);
-      const { markers, placed, missing } = addMarkers(model, bindings, radius, overlay);
+      // Set once the view exists, below: a click on a sensor's dot or label
+      // picks its object and flies there, as a click on its card does.
+      let pickSensor = (_globalId: string) => undefined as void;
+      const { markers, placed, missing } = addMarkers(
+        model, bindings, radius, overlay, (globalId) => pickSensor(globalId),
+      );
       cleanUp.push(() => markers.dispose());
 
       // Everything the page drives the viewer through. The page owns the
       // interface and this owns the scene, and this is the only line between
       // them.
       const view = new SceneView(model as never, tree);
+      pickSensor = (globalId) => {
+        view.state.selected = globalId;
+        view.refreshMaterials();
+        onSelect?.(globalId);
+        const mesh = view.meshes.get(globalId);
+        if (mesh) flight.fly(() => frameObject(camera, controls, mesh, model));
+      };
       // The field's sheet lives beside the model, not in it: it is a reading
       // laid over the floor and not part of the building.
       const sheet = createFieldSheet(scene);
@@ -410,28 +421,18 @@ function BimCanvas({
           if (mesh) flight.fly(() => frameObject(camera, controls, mesh, model));
         },
         showReadings: (readings, feed, staleAfter) => markers.showReadings(readings, feed, staleAfter),
-        captureView: (name) => snapshot(name, camera.position, controls.target, view.state),
-        showView: (saved) => {
-          const { name: _name, position, target, ...state } = saved;
-          Object.assign(view.state, state);
-          view.refresh();
-          // The lens first, so the flight ends where the view was saved and
-          // the next frame finds the lens already right.
-          setParallel(camera, controls, saved.parallel);
-          flight.fly(() => {
-            camera.position.set(...position);
-            controls.target.set(...target);
-            controls.update();
-          });
-        },
       });
 
-      /** The first visible surface under the pointer, or undefined. */
-      const hitAt = (event: PointerEvent) => {
+      /** Point the ray through the pointer. */
+      const aim = (event: PointerEvent) => {
         const box = parent.getBoundingClientRect();
         pointer.x = ((event.clientX - box.left) / box.width) * 2 - 1;
         pointer.y = -((event.clientY - box.top) / box.height) * 2 + 1;
         ray.setFromCamera(pointer, camera);
+      };
+      /** The first visible surface under the pointer, or undefined. */
+      const hitAt = (event: PointerEvent) => {
+        aim(event);
         // Only what is visible: a floor filter that hides a wall must also
         // stop that wall being clicked through the floor above it.
         const hits = ray.intersectObjects([...view.meshes.values()].filter((m) => m.visible), false);
@@ -461,6 +462,16 @@ function BimCanvas({
         if (from) {
           flight.fly(() => frameFrom(camera, controls, model, from));
           return;
+        }
+        // A sensor's dot is drawn over the walls, so it is picked before
+        // whatever object lies behind it.
+        if (!view.state.measuring) {
+          aim(event);
+          const sensor = markers.pick(ray);
+          if (sensor) {
+            pickSensor(sensor);
+            return;
+          }
         }
         if (view.state.measuring) {
           const hit = hitAt(event);

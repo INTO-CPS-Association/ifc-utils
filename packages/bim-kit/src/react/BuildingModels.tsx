@@ -42,9 +42,7 @@ import {
 } from '../readings.js';
 import { handleKey, type PropertyTree, type SceneView } from '../viewer/index.js';
 import FloorPicker from './FloorPicker.js';
-import SavedViews from './SavedViews.js';
 import ModelTree from './ModelTree.js';
-import { createViewStore, nextViewName, type SavedView } from '../viewer/savedViews.js';
 import HelpPanel from './HelpPanel.js';
 import ObjectPanel from './ObjectPanel.js';
 import SensorCards from './SensorCards.js';
@@ -320,18 +318,6 @@ export function BuildingModels({
   const [sourceSha256, setSourceSha256] = useState<string | null>(null);
   const [tree, setTree] = useState<PropertyTree | null>(null);
   const [handle, setHandle] = useState<ViewerHandle | null>(null);
-  const [views, setViews] = useState<SavedView[]>([]);
-  // One list of saved views per model, in this browser only.
-  const viewStore = useMemo(() => {
-    let storage: Storage | undefined;
-    try {
-      storage = globalThis.localStorage;
-    } catch {
-      // A browser that blocks storage: views last for this visit only.
-    }
-    return createViewStore(storage, `bim-kit:views:${libraryUrl}${chosen?.ifcPath ?? ''}`);
-  }, [libraryUrl, chosen]);
-  useEffect(() => setViews(viewStore.list()), [viewStore]);
   // The objects of the model for the tree, read once per model.
   const entries = useMemo(() => handle?.view.entries() ?? [], [handle]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -638,18 +624,7 @@ export function BuildingModels({
                   bump((n) => n + 1);
                 }}
               />
-              <SavedViews
-                views={views}
-                onSave={() => {
-                  const view = handle.captureView?.(nextViewName(views));
-                  if (view) setViews(viewStore.save(view));
-                }}
-                onShow={(view) => {
-                  handle.showView?.(view);
-                  bump((n) => n + 1);
-                }}
-                onRemove={(name) => setViews(viewStore.remove(name))}
-              />
+
             </Box>
           )}
           {tooLarge && (
