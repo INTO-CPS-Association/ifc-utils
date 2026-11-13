@@ -37,7 +37,7 @@ import { exportGlb } from './exportGlb.js';
 import { objectsOf } from './scene.js';
 import {
   FAR_PLANE, NEAR_PLANE, SceneView, addOutlines, castShadows, createFieldSheet, createFinish,
-  createGizmo, createGlow, createGrid, createMarkers, createMeasure, createSection, frame,
+  createFlight, createGizmo, createGlow, createGrid, createMarkers, createMeasure, createSection, frame,
   frameObject, lightFromRoom,
   prepareRenderer, type MarkerSet, type PropertyTree,
 } from '../viewer/index.js';
@@ -230,6 +230,10 @@ function BimCanvas({
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    // A change of shot asked for by a button, a key or a sensor card flies
+    // there. A person who grabs the view mid-flight takes it over at once.
+    const flight = createFlight(camera, controls);
+    controls.addEventListener('start', () => flight.cancel());
 
     // The axes indicator. Built once and drawn after the model on every frame,
     // so it sits over the view instead of in it.
@@ -268,6 +272,7 @@ function BimCanvas({
     let running = true;
     const tick = () => {
       if (!running) return;
+      flight.step(performance.now());
       controls.update();
       placeMarkers?.();
       const cut = cutHeight();
@@ -336,12 +341,12 @@ function BimCanvas({
       placeMarkers = () => placeAll(markers, view, camera, parent);
       onReady?.({
         view,
-        frame: () => frame(camera, controls, model),
-        look: (from) => frame(camera, controls, model, from),
+        frame: () => flight.fly(() => frame(camera, controls, model)),
+        look: (from) => flight.fly(() => frame(camera, controls, model, from)),
         drawField: () => sheet.draw(view),
         frameSelection: () => {
           const mesh = view.state.selected ? view.meshes.get(view.state.selected) : undefined;
-          if (mesh) frameObject(camera, controls, mesh, model);
+          if (mesh) flight.fly(() => frameObject(camera, controls, mesh, model));
         },
         showReadings: (readings, feed, staleAfter) => markers.showReadings(readings, feed, staleAfter),
       });

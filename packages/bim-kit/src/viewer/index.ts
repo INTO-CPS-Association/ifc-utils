@@ -18,6 +18,9 @@ export {
   createGrid, gridSpan, GRID_CELL_M, GRID_MAJOR_EVERY, GRID_MIN_SPAN_M, GRID_MARGIN, GRID_DROP_M,
   type Grid,
 } from './grid.js';
+export {
+  createFlight, ease, prefersReducedMotion, FLIGHT_MS, type Flight, type Steered,
+} from './flight.js';
 export { createMeasure, distanceText, END_DOT_PX, type Measure } from './measure.js';
 export {
   prepareRenderer, lightFromRoom, castShadows, createSection, createFinish,
@@ -30,7 +33,7 @@ export {
   frame, frameObject, LOOK_FROM, NEAR_PLANE, FAR_PLANE, MIN_FRAME_RADIUS_M, type Target,
 } from './framing.js';
 export {
-  createMarkers, markerScale, markerColour, labelText, worldPerPixel,
+  createMarkers, markerScale, markerColour, labelText, worldPerPixel, pulseFactor, PULSE_MS, PULSE_GROWTH,
   MARKER_MIN_PX, SELECTED_MARKER_MIN_PX, NO_READING_COLOUR, type MarkerSet,
 } from './markers.js';
 export { toScreen, LABEL_OFFSET_PX, type ScreenPoint } from './markerLabels.js';

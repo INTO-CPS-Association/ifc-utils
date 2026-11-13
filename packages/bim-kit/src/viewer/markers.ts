@@ -18,6 +18,7 @@ import { rampColour } from '../ramp.js';
 import { isLive, DEFAULT_STALE_AFTER_S, type FeedState, type Reading } from '../readings.js';
 import { SELECTED_COLOUR } from './appearance.js';
 import { createLabel, placeLabel, styleLabel, toScreen } from './markerLabels.js';
+import { prefersReducedMotion } from './flight.js';
 
 /** Pixels across a marker at its smallest. */
 export const MARKER_MIN_PX = 14;
@@ -28,6 +29,21 @@ export const SELECTED_MARKER_MIN_PX = 24;
  * be mistaken for a value and the same grey the card uses for a stale one.
  */
 export const NO_READING_COLOUR = 0x9aa3ad;
+
+/** How long the selected marker pulses after it is picked, in milliseconds. */
+export const PULSE_MS = 900;
+
+/** How much larger the marker grows at the height of its pulse. */
+export const PULSE_GROWTH = 0.6;
+
+/**
+ * The size of a pulsing marker against its resting size, `elapsedMs` after it
+ * was picked: it grows once and settles back, so the eye goes to it.
+ */
+export function pulseFactor(elapsedMs: number): number {
+  if (!(elapsedMs >= 0) || elapsedMs >= PULSE_MS) return 1;
+  return 1 + PULSE_GROWTH * Math.sin(Math.PI * (elapsedMs / PULSE_MS));
+}
 /** A dark ring around every dot, so a pale value still shows against a pale wall. */
 const RING_COLOUR = 0x1f2933;
 const RING_SCALE = 1.3;
@@ -84,9 +100,14 @@ export interface MarkerSet {
   /** Recolour the dots and rewrite the labels from the latest readings. */
   showReadings: (readings: Map<string, Reading>, feed: FeedState, staleAfter?: number) => void;
   /** Size the dots and move the labels for this frame. `shown` says whether a sensor's object is visible. */
+  /**
+   * Size the dots and move the labels for this frame. `shown` says whether a
+   * sensor's object is visible. `now` drives the pulse of a newly picked
+   * marker and is `performance.now()` unless a test passes its own clock.
+   */
   place: (
     camera: PerspectiveCamera, width: number, height: number,
-    selected: string | null, shown: (globalId: string) => boolean,
+    selected: string | null, shown: (globalId: string) => boolean, now?: number,
   ) => void;
   dispose: () => void;
 }
@@ -134,11 +155,12 @@ function disposeMarker(marker: Marker): void {
 /** Size, colour and label one marker for this frame. */
 function placeOne(
   marker: Marker, radius: number, camera: PerspectiveCamera,
-  size: { width: number; height: number }, selected: boolean, shown: boolean,
+  size: { width: number; height: number }, selected: boolean, shown: boolean, pulse = 1,
 ): void {
   const where = marker.dot.getWorldPosition(new Vector3());
   const minPx = selected ? SELECTED_MARKER_MIN_PX : MARKER_MIN_PX;
-  const scale = markerScale(radius, camera.position.distanceTo(where), camera.fov, size.height, minPx);
+  const scale = pulse
+    * markerScale(radius, camera.position.distanceTo(where), camera.fov, size.height, minPx);
   marker.dot.scale.setScalar(scale);
   marker.ring.scale.setScalar(scale * RING_SCALE);
   marker.dot.visible = shown;
@@ -161,19 +183,30 @@ export function createMarkers(
   const radius = Math.max(modelRadius * MARKER_SHARE_OF_MODEL, MIN_RADIUS_M);
   const shape = new SphereGeometry(radius, 16, 12);
   const markers = resolved.map(({ binding, object }) => buildMarker(model, binding, object.node, shape, overlay));
+  // The pulse starts when the selection changes to a sensor, whatever picked
+  // it: a click on the model, a card or a key.
+  let lastSelected: string | null = null;
+  let pulseFrom = Number.NEGATIVE_INFINITY;
+  const reduced = prefersReducedMotion();
   return {
     count: markers.length,
     showReadings(readings, feed, staleAfter = DEFAULT_STALE_AFTER_S) {
       for (const marker of markers) readMarker(marker, readings, feed, staleAfter);
     },
-    place(camera, width, height, selected, shown) {
+    place(camera, width, height, selected, shown, now = performance.now()) {
+      if (selected !== lastSelected) {
+        lastSelected = selected;
+        pulseFrom = reduced ? Number.NEGATIVE_INFINITY : now;
+      }
+      const pulse = pulseFactor(now - pulseFrom);
       // The labels are projected with the camera of this frame and not the
       // one the last render left behind, or they trail the model as it turns.
       camera.updateMatrixWorld();
       for (const marker of markers) {
         const id = marker.globalId;
-        placeOne(marker, radius, camera, { width, height }, id !== undefined && id === selected,
-          id === undefined || shown(id));
+        const picked = id !== undefined && id === selected;
+        placeOne(marker, radius, camera, { width, height }, picked,
+          id === undefined || shown(id), picked ? pulse : 1);
       }
     },
     dispose() {
