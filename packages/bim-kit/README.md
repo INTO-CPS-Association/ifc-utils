@@ -174,7 +174,7 @@ The model is lit from a small built-in room as well as by the sun, throws shadow
 | `o` | The parallel view, for plans and elevations |
 | `l` | The sun's shadows |
 | `u` | Walk at eye height with the arrow keys |
-| `n` | Draw on the view with a pen, an arrow or a box |
+| `n` | Draw on the view with a pen, an arrow, a box or a line of text |
 | `y` | Paint the model in one colour, by class or as a wireframe |
 | `z` | The background: light, dim, slate or ink |
 

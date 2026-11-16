@@ -49,6 +49,7 @@ const SKETCH_LABELS: Record<SketchTool, string> = {
   pen: 'Pen',
   arrow: 'Arrow',
   box: 'Box',
+  text: 'Text',
 };
 
 const STYLE_LABELS: Record<ModelStyle, string> = {
@@ -193,7 +194,7 @@ export const SHORTCUTS: Shortcut[] = [
     label: 'Draw On The View',
     icon: 'sketch',
     run: ({ view, refresh }) => {
-      const order = [null, 'pen', 'arrow', 'box'] as const;
+      const order = [null, 'pen', 'arrow', 'box', 'text'] as const;
       view.state.sketching = order[(order.indexOf(view.state.sketching) + 1) % order.length];
       refresh();
     },

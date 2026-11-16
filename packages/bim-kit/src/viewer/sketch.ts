@@ -1,6 +1,6 @@
 /**
- * Drawing on the view: a pen, an arrow and a box, to point something out
- * in a screenshot or while sharing the screen.
+ * Drawing on the view: a pen, an arrow, a box and a line of text, to point
+ * something out in a screenshot or while sharing the screen.
  *
  * The drawing lies on a transparent canvas over the model, in screen pixels,
  * so it marks what is on screen now and does not follow the model when the
@@ -8,7 +8,7 @@
  * does not turn under the pen. Putting the tools away wipes the drawing.
  */
 
-export type SketchTool = 'pen' | 'arrow' | 'box';
+export type SketchTool = 'pen' | 'arrow' | 'box' | 'text';
 
 export interface Point {
   x: number;
@@ -18,7 +18,12 @@ export interface Point {
 export interface Stroke {
   tool: SketchTool;
   points: Point[];
+  /** What a text stroke says. The other tools leave it out. */
+  text?: string;
 }
+
+/** The type a note on the view is written in. Bold, so it reads over a busy model. */
+export const SKETCH_FONT = '600 16px system-ui, sans-serif';
 
 /** The colour of the drawing: the accent the labels use, so it reads on any background. */
 export const SKETCH_COLOUR = '#d6336c';
@@ -48,15 +53,28 @@ export interface Pen {
   stroke(): void;
   clearRect(x: number, y: number, width: number, height: number): void;
   setTransform?(a: number, b: number, c: number, d: number, e: number, f: number): void;
+  fillText(text: string, x: number, y: number): void;
+  font: string;
+  fillStyle: string | CanvasGradient | CanvasPattern;
   strokeStyle: string | CanvasGradient | CanvasPattern;
   lineWidth: number;
   lineCap: CanvasLineCap;
   lineJoin: CanvasLineJoin;
 }
 
-/** Draw one stroke. A pen line follows its points, an arrow and a box use the first and the last. */
+/**
+ * Draw one stroke. A pen line follows its points, an arrow and a box use the
+ * first and the last, and a text starts at its one point.
+ */
 export function drawStroke(pen: Pen, stroke: Stroke): void {
   const { points } = stroke;
+  if (stroke.tool === 'text') {
+    if (!stroke.text || points.length === 0) return;
+    pen.font = SKETCH_FONT;
+    pen.fillStyle = SKETCH_COLOUR;
+    pen.fillText(stroke.text, points[0].x, points[0].y);
+    return;
+  }
   if (points.length < 2) return;
   const first = points[0];
   const last = points[points.length - 1];
@@ -121,8 +139,45 @@ export function createSketch(overlay: HTMLElement): Sketch {
     const box = canvas.getBoundingClientRect();
     return { x: event.clientX - box.left, y: event.clientY - box.top };
   };
+  // The box a note is typed into, while one is being written.
+  let typing: HTMLInputElement | null = null;
+  const write = (point: Point) => {
+    const input = overlay.ownerDocument.createElement('input');
+    input.setAttribute('aria-label', 'Note On The View');
+    input.setAttribute('style', `position:absolute;left:${point.x}px;top:${point.y - 20}px;z-index:5;`
+      + `font:${SKETCH_FONT};color:${SKETCH_COLOUR};border:1px solid ${SKETCH_COLOUR};padding:2px 4px`);
+    overlay.appendChild(input);
+    typing = input;
+    let done = false;
+    // Enter or leaving the box keeps the note, Escape drops it.
+    const finish = (keep: boolean) => {
+      if (done) return;
+      done = true;
+      const text = input.value.trim();
+      if (keep && text) strokes.push({ tool: 'text', points: [point], text });
+      input.remove();
+      if (typing === input) typing = null;
+      redraw();
+    };
+    input.addEventListener('keydown', (event) => {
+      // The viewer's own shortcuts would otherwise act on every letter typed.
+      event.stopPropagation();
+      if (event.key === 'Enter') finish(true);
+      if (event.key === 'Escape') finish(false);
+    });
+    input.addEventListener('blur', () => finish(true));
+    input.focus();
+  };
   const down = (event: PointerEvent) => {
     if (!tool) return;
+    if (tool === 'text') {
+      // A click elsewhere while typing ends that note first, through its blur.
+      typing?.blur();
+      write(at(event));
+      // Kept from turning into a focus change that would close the new box.
+      event.preventDefault();
+      return;
+    }
     current = { tool, points: [at(event)] };
     strokes.push(current);
     canvas.setPointerCapture?.(event.pointerId);
@@ -149,6 +204,8 @@ export function createSketch(overlay: HTMLElement): Sketch {
       canvas.style.pointerEvents = next ? 'auto' : 'none';
       canvas.style.cursor = next ? 'crosshair' : '';
       if (next === null) {
+        typing?.remove();
+        typing = null;
         strokes.length = 0;
         current = null;
         redraw();

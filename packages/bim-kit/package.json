@@ -85,7 +85,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "node scripts/inline-wasm.mjs && tsc -p tsconfig.esm.json && node scripts/stubs.mjs",
+    "build": "node scripts/clean.mjs && node scripts/inline-wasm.mjs && tsc -p tsconfig.esm.json && node scripts/stubs.mjs",
     "pretest": "npm run build",
     "test": "node --test --experimental-test-module-mocks 'test/*.test.mjs'",
     "prepublishOnly": "npm run build",

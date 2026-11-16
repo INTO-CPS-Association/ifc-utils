@@ -12,6 +12,8 @@ import {
   Table, TableBody, TableCell, TableRow, Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DoneIcon from '@mui/icons-material/Done';
 import { displayOf, idOf, topicOf, type Binding } from '../binding.js';
 import type { ObjectFacts } from '../viewer/index.js';
 
@@ -57,15 +59,46 @@ function metres(size: { x: number; y: number; z: number }): string {
 }
 
 /** A row of the table, skipped when there is nothing to say. */
+/**
+ * Copy a text to the clipboard. Answers whether it worked: a browser refuses
+ * outside a secure page or without a click, and the row then says nothing
+ * instead of claiming a copy that did not happen.
+ */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await globalThis.navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** How long a row shows that it was copied, in milliseconds. */
+const COPIED_MS = 1500;
+
 function Row({ name, value }: Readonly<{ name: string; value: unknown }>) {
+  const [copied, setCopied] = useState(false);
   if (value === undefined || value === null || value === '') return null;
+  const text = String(value);
+  // A GlobalId or a fire rating is copied into an issue, a query or an
+  // e-mail far more often than it is retyped.
+  const copy = async () => {
+    if (!(await copyText(text))) return;
+    setCopied(true);
+    setTimeout(() => setCopied(false), COPIED_MS);
+  };
   return (
     <TableRow>
       <TableCell sx={{ width: 160, color: 'text.secondary', border: 0, py: 0.3 }}>
         {name}
       </TableCell>
       <TableCell sx={{ border: 0, py: 0.3, wordBreak: 'break-word' }}>
-        {String(value)}
+        {text}
+      </TableCell>
+      <TableCell sx={{ border: 0, py: 0, width: 40 }}>
+        <IconButton size="small" aria-label={copied ? `${name} Copied` : `Copy ${name}`} onClick={copy}>
+          {copied ? <DoneIcon fontSize="inherit" /> : <ContentCopyIcon fontSize="inherit" />}
+        </IconButton>
       </TableCell>
     </TableRow>
   );

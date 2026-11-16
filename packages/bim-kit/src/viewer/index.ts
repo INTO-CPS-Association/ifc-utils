@@ -30,7 +30,7 @@ export {
   type ViewCube,
 } from './viewCube.js';
 export {
-  createSketch, drawStroke, arrowHead, SKETCH_COLOUR, SKETCH_WIDTH_PX, ARROW_HEAD_PX,
+  createSketch, drawStroke, arrowHead, SKETCH_COLOUR, SKETCH_FONT, SKETCH_WIDTH_PX, ARROW_HEAD_PX,
   type Sketch, type SketchTool, type Stroke, type Point, type Pen,
 } from './sketch.js';
 export {

@@ -10,7 +10,9 @@ import './support/dom.mjs';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ARROW_HEAD_PX, SHORTCUTS, SceneView, arrowHead, createSketch, drawStroke } from '../dist/esm/viewer/index.js';
+import {
+  ARROW_HEAD_PX, SHORTCUTS, SKETCH_COLOUR, SKETCH_FONT, SceneView, arrowHead, createSketch, drawStroke,
+} from '../dist/esm/viewer/index.js';
 import { Group } from 'three';
 
 function recordingPen() {
@@ -24,6 +26,7 @@ function recordingPen() {
     strokeRect: record('rect'),
     stroke: record('stroke'),
     clearRect: record('clear'),
+    fillText: (text, x, y) => calls.push(['text', text, x, y]),
   };
 }
 
@@ -56,6 +59,14 @@ describe('drawStroke', () => {
     drawStroke(pen, { tool: 'arrow', points: [{ x: 0, y: 0 }, { x: 100, y: 0 }] });
     assert.equal(pen.calls.filter(([name]) => name === 'line').length, 3);
     assert.deepEqual(pen.calls[2], ['line', 100, 0]);
+  });
+
+  test('a note is written at its one point in the drawing colour', () => {
+    const pen = recordingPen();
+    drawStroke(pen, { tool: 'text', points: [{ x: 12, y: 30 }], text: 'Leak here' });
+    assert.deepEqual(pen.calls, [['text', 'Leak here', 12, 30]]);
+    assert.equal(pen.font, SKETCH_FONT);
+    assert.equal(pen.fillStyle, SKETCH_COLOUR);
   });
 
   test('a single point draws nothing', () => {
@@ -109,6 +120,33 @@ describe('createSketch', () => {
     assert.equal(sketch.strokes.length, 0);
   });
 
+  test('a click with the text tool opens a box, Enter keeps the note and Escape drops it', () => {
+    const { overlay, sketch, canvas } = surface();
+    sketch.setTool('text');
+    canvas.dispatchEvent(pointer('pointerdown', 40, 50));
+    let input = overlay.querySelector('input');
+    assert.ok(input);
+    input.value = 'Check this valve';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    assert.deepEqual(sketch.strokes.map((s) => [s.tool, s.text]), [['text', 'Check this valve']]);
+    assert.equal(overlay.querySelector('input'), null);
+    canvas.dispatchEvent(pointer('pointerdown', 10, 10));
+    input = overlay.querySelector('input');
+    input.value = 'Dropped';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    assert.equal(sketch.strokes.length, 1);
+  });
+
+  test('letters typed in a note do not reach the viewer shortcuts', () => {
+    const { overlay, sketch, canvas } = surface();
+    sketch.setTool('text');
+    canvas.dispatchEvent(pointer('pointerdown', 40, 50));
+    let reached = false;
+    overlay.addEventListener('keydown', () => { reached = true; });
+    overlay.querySelector('input').dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true }));
+    assert.equal(reached, false);
+  });
+
   test('goes away on dispose', () => {
     const { overlay, sketch } = surface();
     sketch.dispose();
@@ -117,15 +155,15 @@ describe('createSketch', () => {
 });
 
 describe('the n key', () => {
-  test('cycles pen, arrow, box and off, names each, and reset puts the tools away', () => {
+  test('cycles pen, arrow, box, text and off, names each, and reset puts the tools away', () => {
     const view = new SceneView(new Group());
     const n = SHORTCUTS.find((shortcut) => shortcut.key === 'n');
     const seen = [];
-    for (let i = 0; i < 4; i += 1) {
+    for (let i = 0; i < 5; i += 1) {
       n.run({ view, refresh: () => undefined });
       seen.push([view.state.sketching, n.badge(view)]);
     }
-    assert.deepEqual(seen, [['pen', 'Pen'], ['arrow', 'Arrow'], ['box', 'Box'], [null, undefined]]);
+    assert.deepEqual(seen, [['pen', 'Pen'], ['arrow', 'Arrow'], ['box', 'Box'], ['text', 'Text'], [null, undefined]]);
     n.run({ view, refresh: () => undefined });
     view.reset();
     assert.equal(view.state.sketching, null);
