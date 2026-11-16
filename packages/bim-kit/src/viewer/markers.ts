@@ -34,6 +34,14 @@ export const NO_READING_COLOUR = 0x9aa3ad;
 /** How long the selected marker pulses after it is picked, in milliseconds. */
 export const PULSE_MS = 900;
 
+/**
+ * The layer the dots and rings are drawn on. The canvas draws this layer in
+ * a pass of its own without the cuts, so a dot on a wall the plan cuts
+ * through is not cut away with the top of the wall, and the occlusion pass,
+ * which draws layer 0, does not darken the space around a dot.
+ */
+export const MARKER_LAYER = 1;
+
 /** How much larger the marker grows at the height of its pulse. */
 export const PULSE_GROWTH = 0.6;
 
@@ -126,6 +134,8 @@ function buildMarker(
   const dot = new Mesh(shape, new MeshBasicMaterial({ color: NO_READING_COLOUR, depthTest: false }));
   ring.renderOrder = 2;
   dot.renderOrder = 3;
+  ring.layers.set(MARKER_LAYER);
+  dot.layers.set(MARKER_LAYER);
   dot.name = `marker:${idOf(binding)}`;
   const at = new Box3().setFromObject(node).getCenter(new Vector3());
   dot.position.copy(at);
@@ -139,7 +149,19 @@ function buildMarker(
   if (onPick && globalId !== undefined) {
     label.style.pointerEvents = 'auto';
     label.style.cursor = 'pointer';
+    // A button to the keyboard and to a screen reader as well, so a person
+    // who does not use a mouse can reach a sensor the same way.
+    label.setAttribute('role', 'button');
+    label.tabIndex = 0;
+    label.setAttribute('aria-label', `Go To ${binding.label}`);
     label.addEventListener('click', (event) => {
+      event.stopPropagation();
+      onPick(globalId);
+    });
+    label.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      // Kept from the viewer's own shortcuts, which a space would otherwise reach.
+      event.preventDefault();
       event.stopPropagation();
       onPick(globalId);
     });
@@ -227,7 +249,11 @@ export function createMarkers(
     },
     pick(ray) {
       const shown = markers.filter((marker) => marker.dot.visible && marker.globalId !== undefined);
+      // The dots are on their own layer, which a ray does not see unless asked.
+      const layers = ray.layers.mask;
+      ray.layers.enable(MARKER_LAYER);
       const hit = ray.intersectObjects(shown.map((marker) => marker.dot), false)[0];
+      ray.layers.mask = layers;
       return shown.find((marker) => marker.dot === hit?.object)?.globalId ?? null;
     },
     dispose() {

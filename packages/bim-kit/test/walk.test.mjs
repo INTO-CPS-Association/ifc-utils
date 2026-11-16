@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, PerspectiveCamera, Vector3 } from 'three';
 import {
-  EYE_HEIGHT_M, LOOK_AHEAD_M, SHORTCUTS, SceneView, TURN_SPEED_DEG_S, WALK_SPEED_M_S,
+  CUT_M, EYE_HEIGHT_M, LOOK_AHEAD_M, NEAR_PLANE, SHORTCUTS, SceneView, TURN_SPEED_DEG_S, WALK_SPEED_M_S,
   startWalking, stepWalk, walkKeyOf,
 } from '../dist/esm/viewer/index.js';
 
@@ -21,6 +21,13 @@ function rig() {
 }
 
 describe('startWalking', () => {
+  test('brings the near plane in, so a wall a person walks up to is not cut away', () => {
+    const { camera, controls } = rig();
+    camera.near = 2;
+    startWalking(camera, controls, 0);
+    assert.equal(camera.near, NEAR_PLANE);
+  });
+
   test('stands at eye height on the floor, looking straight ahead the way the camera looked', () => {
     const { camera, controls } = rig();
     startWalking(camera, controls, 3);
@@ -119,5 +126,25 @@ describe('floorLevel', () => {
     assert.ok(Math.abs(view.floorLevel() - 0) < 1e-6);
     view.state.storey = 'L1';
     assert.ok(Math.abs(view.floorLevel() - 3.0) < 1e-6);
+  });
+
+  test('holds on a model far too large for Math.min over a spread array', () => {
+    const geometry = new BoxGeometry(1, 1, 1);
+    const material = new MeshStandardMaterial();
+    const group = new Group();
+    for (let i = 0; i < 200000; i += 1) {
+      const mesh = new Mesh(geometry, material);
+      mesh.position.set(i % 500, 1 + (i % 7), Math.floor(i / 500));
+      mesh.userData.globalId = `o${i}`;
+      mesh.userData.ifcClass = i % 2 ? 'IfcWall' : 'IfcSlab';
+      group.add(mesh);
+    }
+    group.updateMatrixWorld(true);
+    const view = new SceneView(group);
+    // Each box has its base at 1 + (i % 7) - 0.5, and walls (odd i, such as
+    // i = 7) reach i % 7 = 0, so the lowest wall stands at 0.5.
+    assert.ok(Math.abs(view.floorLevel() - 0.5) < 1e-6);
+    view.state.sectioned = true;
+    assert.ok(Math.abs(view.cutHeight() - (0.5 + CUT_M)) < 1e-6);
   });
 });

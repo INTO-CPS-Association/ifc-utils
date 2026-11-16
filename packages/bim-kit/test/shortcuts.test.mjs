@@ -156,3 +156,9 @@ test('the selection key frames the selection and is listed with the others', () 
   assert.equal(entry.label, 'Frame The Selection');
   assert.equal(entry.on, undefined, 'framing is an action, so its button never lights up');
 });
+
+test('4 and 5 look from behind and from below, the faces of the view cube 1 to 3 do not reach', () => {
+  const scene = view();
+  assert.deepEqual(press('4', scene).calls, ['look:back']);
+  assert.deepEqual(press('5', scene).calls, ['look:below']);
+});

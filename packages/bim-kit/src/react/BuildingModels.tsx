@@ -40,7 +40,7 @@ import { displayOf, type Binding } from '../binding.js';
 import {
   zonesOf, DEFAULT_STALE_AFTER_S, type FeedState, type Reading,
 } from '../readings.js';
-import { handleKey, type PropertyTree, type SceneView } from '../viewer/index.js';
+import { handleKey, type LookFrom, type PropertyTree, type SceneView } from '../viewer/index.js';
 import FloorPicker from './FloorPicker.js';
 import ModelTree from './ModelTree.js';
 import HelpPanel from './HelpPanel.js';
@@ -496,7 +496,7 @@ export function BuildingModels({
     refresh: () => repaint(view),
     frame: () => handle?.frame(),
     frameSelection: () => handle?.frameSelection?.(),
-    look: (from: 'top' | 'front' | 'side' | 'corner') => handle?.look(from),
+    look: (from: LookFrom) => handle?.look(from),
     hovered: () => hovered.current,
     toggleHelp: () => setHelpOpen((open) => !open),
     toggleFullscreen: () => {

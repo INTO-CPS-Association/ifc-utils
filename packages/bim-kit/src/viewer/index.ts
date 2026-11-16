@@ -23,7 +23,7 @@ export {
   type Grid,
 } from './grid.js';
 export {
-  createFlight, ease, prefersReducedMotion, FLIGHT_MS, type Flight, type Steered,
+  createFlight, ease, movedBeyond, prefersReducedMotion, FLIGHT_MS, type Flight, type Steered,
 } from './flight.js';
 export {
   createViewCube, cubeViewport, directionAt, CUBE_SIZE_PX, CUBE_MARGIN_PX, CUBE_EDGE, CUBE_FACES,
@@ -55,10 +55,10 @@ export { createGlow, GLOW_MARGIN_M, type Glow } from './glow.js';
 export { buildField, outsideOf, MIN_ROOM_CELLS, OUTSIDE, sourceAt, planAngle, toGrid, fromGrid, CELL_M, CUT_M, BLOCKS, OPENS, SEARCH_CELLS, type Field } from './field.js';
 export { createFieldSheet, type FieldSheet } from './fieldSheet.js';
 export {
-  frame, frameFrom, frameObject, LOOK_FROM, NEAR_PLANE, FAR_PLANE, MIN_FRAME_RADIUS_M, type Target,
+  frame, frameFrom, frameObject, LOOK_FROM, NEAR_PLANE, FAR_PLANE, MIN_FRAME_RADIUS_M, type Target, type LookFrom,
 } from './framing.js';
 export {
-  createMarkers, markerScale, markerColour, labelText, worldPerPixel, pulseFactor, PULSE_MS, PULSE_GROWTH,
+  createMarkers, markerScale, markerColour, labelText, worldPerPixel, pulseFactor, PULSE_MS, PULSE_GROWTH, MARKER_LAYER,
   MARKER_MIN_PX, SELECTED_MARKER_MIN_PX, NO_READING_COLOUR, type MarkerSet,
 } from './markers.js';
 export { toScreen, LABEL_OFFSET_PX, type ScreenPoint } from './markerLabels.js';

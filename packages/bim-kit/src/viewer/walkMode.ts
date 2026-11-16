@@ -4,13 +4,16 @@
  * Looking at a model from outside does not tell a person what a room is like
  * to stand in. Walking puts the camera at eye height on the floor in view and
  * moves it with the arrow keys: up and down to walk forward and back, left
- * and right to turn. The mouse still looks around, because the orbit target
- * is kept a short step in front of the eye, so orbiting turns the head.
+ * and right to turn. The mouse still looks around: the orbit target is kept
+ * half a metre in front of the eye, so dragging swings the eye on a small
+ * circle around it, which reads as turning the head.
  *
  * The arrow keys are used and not W, A, S and D, which are shortcuts already.
  */
 
-import { Vector3, type Camera } from 'three';
+import { Vector3, type Camera, type PerspectiveCamera } from 'three';
+
+import { NEAR_PLANE } from './framing.js';
 
 /** How high the eye is above the floor, in metres. */
 export const EYE_HEIGHT_M = 1.6;
@@ -50,9 +53,13 @@ function heading(camera: Camera, controls: WalkControls): Vector3 {
  * Stand at eye height above `floorY`, where the camera is now, looking
  * straight ahead in the direction it was looking.
  */
-export function startWalking(camera: Camera, controls: WalkControls, floorY: number): void {
+export function startWalking(camera: PerspectiveCamera, controls: WalkControls, floorY: number): void {
   const ahead = heading(camera, controls);
   camera.position.y = floorY + EYE_HEIGHT_M;
+  // Framing a large site sets the near plane metres out, which would cut
+  // away a wall a person walks up to.
+  camera.near = NEAR_PLANE;
+  camera.updateProjectionMatrix();
   controls.target.copy(camera.position).addScaledVector(ahead, LOOK_AHEAD_M);
   controls.update();
 }

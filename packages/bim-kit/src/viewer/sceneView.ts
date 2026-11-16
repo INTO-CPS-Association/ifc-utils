@@ -194,8 +194,13 @@ export class SceneView {
 
   /** The floors a person can choose, one entry per distinct band. */
   get storeys(): string[] {
-    return this.bands.map((band) => band.names[0]);
+    // The same array every time, so a component that keys a memo on it does
+    // not redo its work on every render.
+    this.storeyNames ??= this.bands.map((band) => band.names[0]);
+    return this.storeyNames;
   }
+
+  private storeyNames: string[] | null = null;
 
   /**
    * The heat scopes worth offering for a set of bindings.
@@ -228,8 +233,7 @@ export class SceneView {
 
   classColours(): Map<string, string> {
     if (this.state.style === 'classes') {
-      const order = [...this.classCounts().keys()].sort();
-      return new Map(order.map((ifcClass, index) => [
+      return new Map(this.classesSorted().map((ifcClass, index) => [
         ifcClass, `#${CLASS_COLOURS[index % CLASS_COLOURS.length].toString(16).padStart(6, '0')}`,
       ]));
     }
@@ -405,6 +409,11 @@ export class SceneView {
   /** The sorted classes of the model, so each keeps its colour in the colour by class style. */
   private classOrder: string[] | null = null;
 
+  private classesSorted(): string[] {
+    this.classOrder ??= [...this.classCounts().keys()].sort();
+    return this.classOrder;
+  }
+
   /** What an object is painted with in the style in force, before heat, highlight or ghost. */
   private styled(globalId: string, mesh: Mesh) {
     const own = this.palette.baseOf(globalId);
@@ -413,10 +422,8 @@ export class SceneView {
         return this.palette.mono;
       case 'wireframe':
         return this.palette.wireOf(own);
-      case 'classes': {
-        this.classOrder ??= [...this.classCounts().keys()].sort();
-        return this.palette.classAt(this.classOrder.indexOf(String(mesh.userData.ifcClass ?? '')));
-      }
+      case 'classes':
+        return this.palette.classAt(this.classesSorted().indexOf(String(mesh.userData.ifcClass ?? '')));
       default:
         return own;
     }
@@ -460,7 +467,11 @@ export class SceneView {
   private glow: Glow | null = null;
 
   /** Paint everything. Called by anything that changes appearance. */
+  /** Counts the repaints, so the canvas knows a still frame has to be drawn again. */
+  materialsRevision = 0;
+
   refreshMaterials(): void {
+    this.materialsRevision += 1;
     for (const [globalId, mesh] of this.meshes) {
       const material = this.materialFor(globalId, mesh);
       if (material) mesh.material = material;
@@ -481,7 +492,14 @@ export class SceneView {
    *
    * Three things hide an object and they have to agree: the chosen floor, the lid toggle, and anything hidden by hand. Each writing separately meant the floor filter could bring back a slab the lid toggle had just removed.
    */
+  /**
+   * Counts the changes of visibility, so the canvas redraws the shadows,
+   * which depend on what is shown and on nothing else, only when it moves.
+   */
+  visibilityRevision = 0;
+
   refreshVisibility(): void {
+    this.visibilityRevision += 1;
     const band = this.state.storey ? bandOf(this.bands, this.state.storey) : undefined;
     const box = new Box3();
 
@@ -531,11 +549,32 @@ export class SceneView {
     // A model without storeys is cut above the lowest wall, since walls stand
     // on the floor. The lowest object is often the terrain or a foundation a
     // metre down, and a cut above that shows only the stubs of the walls.
-    const walls = [...this.base].filter(([globalId]) =>
-      String(this.meshes.get(globalId)?.userData.ifcClass ?? '').startsWith('IfcWall'));
-    const bases = (walls.length > 0 ? walls : [...this.base]).map(([, base]) => base);
-    const lowest = Math.min(...bases);
-    return Number.isFinite(lowest) ? lowest + CUT_M + this.state.heightShift : null;
+    const lowest = this.lowestWall() ?? this.lowestBase();
+    return lowest === undefined ? null : lowest + CUT_M + this.state.heightShift;
+  }
+
+  /** The lowest base of the walls in `band`, or in the whole model, measured once per band. */
+  private readonly wallBases = new Map<Band | undefined, number | undefined>();
+
+  private lowestWall(band?: Band): number | undefined {
+    if (this.wallBases.has(band)) return this.wallBases.get(band);
+    // A loop and not Math.min over a spread array, which overflows the call
+    // stack on a model of a few hundred thousand objects.
+    let lowest: number | undefined;
+    for (const [globalId, base] of this.base) {
+      if (band && !(base >= band.from && base < band.to)) continue;
+      if (!String(this.meshes.get(globalId)?.userData.ifcClass ?? '').startsWith('IfcWall')) continue;
+      if (lowest === undefined || base < lowest) lowest = base;
+    }
+    this.wallBases.set(band, lowest);
+    return lowest;
+  }
+
+  /** The lowest base of any object, or undefined for an empty model. */
+  private lowestBase(): number | undefined {
+    let lowest: number | undefined;
+    for (const base of this.base.values()) if (lowest === undefined || base < lowest) lowest = base;
+    return lowest;
   }
 
   /**
@@ -550,14 +589,10 @@ export class SceneView {
   floorLevel(): number {
     const band = this.state.storey ? bandOf(this.bands, this.state.storey) : undefined;
     const floor = band ?? this.bands[0];
-    const isWall = (globalId: string) =>
-      String(this.meshes.get(globalId)?.userData.ifcClass ?? '').startsWith('IfcWall');
-    const inFloor = (base: number) => !floor || (base >= floor.from && base < floor.to);
-    const walls = [...this.base].filter(([globalId, base]) => isWall(globalId) && inFloor(base));
-    if (walls.length > 0) return Math.min(...walls.map(([, base]) => base));
+    const wall = this.lowestWall(floor);
+    if (wall !== undefined) return wall;
     if (floor) return floor.from + FLOOR_MARGIN_M;
-    const lowest = Math.min(...this.base.values());
-    return Number.isFinite(lowest) ? lowest : 0;
+    return this.lowestBase() ?? 0;
   }
 
   /**
@@ -568,17 +603,29 @@ export class SceneView {
    * building as a long section and one along Z as a cross section.
    */
   cutPlanes(): Plane[] {
-    const planes: Plane[] = [];
     const height = this.cutHeight();
-    if (height !== null) planes.push(new Plane(new Vector3(0, -1, 0), height));
     const { vertical, depthShift } = this.state;
+    // Asked for on every frame and again for every marker, so the planes are
+    // built again only when a cut actually changes.
+    const key = `${height}|${vertical}|${depthShift}`;
+    if (key === this.cutKey) return this.cuts;
+    const planes: Plane[] = [];
+    if (height !== null) planes.push(new Plane(new Vector3(0, -1, 0), height));
     if (vertical === 'x') planes.push(new Plane(new Vector3(-1, 0, 0), this.middle.x + depthShift));
     if (vertical === 'z') planes.push(new Plane(new Vector3(0, 0, -1), this.middle.z + depthShift));
+    this.cutKey = key;
+    this.cuts = planes;
     return planes;
   }
 
+  private cutKey = '';
+  private cuts: Plane[] = [];
+
   /** The box around each object, measured once, since the objects do not move. */
   private readonly boxes = new Map<string, Box3>();
+
+  /** Reused for every corner `isShown` tests, so a frame allocates nothing. */
+  private readonly corner = new Vector3();
 
   /**
    * Whether an object is drawn: visible and, when a cut is in force, with some
@@ -600,7 +647,7 @@ export class SceneView {
     const { min, max } = box;
     // The corner of the box farthest along each plane's normal is the one
     // most on the kept side. If even that one is beyond the plane, all of it is.
-    return planes.every((plane) => plane.distanceToPoint(new Vector3(
+    return planes.every((plane) => plane.distanceToPoint(this.corner.set(
       plane.normal.x >= 0 ? max.x : min.x,
       plane.normal.y >= 0 ? max.y : min.y,
       plane.normal.z >= 0 ? max.z : min.z,

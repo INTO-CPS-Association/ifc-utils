@@ -28,10 +28,15 @@ export const MIN_FRAME_RADIUS_M = 1.5;
  * Named instead of written into each shortcut, so adding a fourth is a line
  * here and not a change to the table of keys.
  */
-export const LOOK_FROM: Record<string, [number, number, number]> = {
+/** The named views a key or a button can ask for. */
+export type LookFrom = 'top' | 'front' | 'side' | 'back' | 'below' | 'corner';
+
+export const LOOK_FROM: Record<LookFrom, [number, number, number]> = {
   top: [0, 1, 0.0001],
   front: [0, 0, 1],
   side: [1, 0, 0],
+  back: [0, 0, -1],
+  below: [0, -1, 0.0001],
   corner: [1, 0.6, 1],
 };
 
@@ -89,7 +94,7 @@ export function frame(
   camera: PerspectiveCamera,
   controls: Target,
   model: Object3D,
-  from: keyof typeof LOOK_FROM = 'corner',
+  from: LookFrom = 'corner',
 ): number {
   return frameFrom(camera, controls, model, new Vector3(...LOOK_FROM[from]));
 }

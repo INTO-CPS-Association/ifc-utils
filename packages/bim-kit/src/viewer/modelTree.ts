@@ -35,12 +35,19 @@ export function readableClass(ifcClass: string): string {
   return ifcClass.replace(/^Ifc/, '').replace(/([a-z])([A-Z])/g, '$1 $2') || ifcClass;
 }
 
+/** The text a search looks through for each entry, built once per entry and not once per keystroke. */
+const haystacks = new WeakMap<TreeEntry, string>();
+
 /** Whether an object matches every word of a query, in any of its texts. */
 export function matches(entry: TreeEntry, query: string): boolean {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (words.length === 0) return true;
-  const haystack = [entry.name, entry.ifcClass, readableClass(entry.ifcClass), entry.globalId,
-    entry.storey ?? '', ...entry.values].join('\n').toLowerCase();
+  let haystack = haystacks.get(entry);
+  if (haystack === undefined) {
+    haystack = [entry.name, entry.ifcClass, readableClass(entry.ifcClass), entry.globalId,
+      entry.storey ?? '', ...entry.values].join('\n').toLowerCase();
+    haystacks.set(entry, haystack);
+  }
   return words.every((word) => haystack.includes(word));
 }
 
@@ -59,7 +66,9 @@ export function groupEntries(
   for (const entry of entries) {
     if (!matches(entry, query)) continue;
     const title = by === 'class' ? readableClass(entry.ifcClass) : (entry.storey ?? NO_FLOOR);
-    groups.set(title, [...(groups.get(title) ?? []), entry]);
+    const group = groups.get(title);
+    if (group) group.push(entry);
+    else groups.set(title, [entry]);
   }
   const rank = (title: string) => {
     if (by === 'class') return 0;

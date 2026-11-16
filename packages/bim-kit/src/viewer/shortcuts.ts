@@ -12,6 +12,7 @@ import type { Backdrop, SceneView } from './sceneView.js';
 import type { ModelStyle } from './appearance.js';
 import type { SketchTool } from './sketch.js';
 import type { MeasureMode } from './measure.js';
+import type { LookFrom } from './framing.js';
 
 /** What a shortcut needs from the page to do its work. */
 export interface ShortcutContext {
@@ -25,7 +26,7 @@ export interface ShortcutContext {
   /** Put the selected object in shot. Does nothing when none is selected. */
   frameSelection: () => void;
   /** Look from one of the six axes, or from the default corner. */
-  look: (from: 'top' | 'front' | 'side' | 'corner') => void;
+  look: (from: LookFrom) => void;
   /** What the cursor is over, so it can be hidden. */
   hovered: () => string | null;
   toggleHelp: () => void;
@@ -252,6 +253,10 @@ export const SHORTCUTS: Shortcut[] = [
   { key: '1', label: 'Look From Above', icon: 'top', run: ({ look }) => look('top') },
   { key: '2', label: 'Look From The Front', icon: 'front', run: ({ look }) => look('front') },
   { key: '3', label: 'Look From The Side', icon: 'side', run: ({ look }) => look('side') },
+  // The back and the underside, so every face of the view cube can also be
+  // reached from the keyboard.
+  { key: '4', label: 'Look From Behind', icon: 'back', run: ({ look }) => look('back') },
+  { key: '5', label: 'Look From Below', icon: 'below', run: ({ look }) => look('below') },
   { key: 'f', label: 'Fit The Whole Model', icon: 'fit', run: ({ frame }) => frame() },
   {
     key: 's',

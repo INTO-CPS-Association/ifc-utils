@@ -147,6 +147,28 @@ describe('what the plan cut keeps', () => {
   });
 });
 
+describe('cutPlanes', () => {
+  test('hands back the same planes until a cut changes, so a frame builds none', () => {
+    const group = new Group();
+    const mesh = new Mesh(new BoxGeometry(1, 3, 1), new MeshStandardMaterial());
+    mesh.position.set(0, 1.5, 0);
+    mesh.userData.globalId = 'w';
+    mesh.userData.ifcClass = 'IfcWall';
+    group.add(mesh);
+    group.updateMatrixWorld(true);
+    const view = new SceneView(group);
+    assert.deepEqual(view.cutPlanes(), []);
+    view.state.sectioned = true;
+    const first = view.cutPlanes();
+    assert.equal(first.length, 1);
+    assert.equal(view.cutPlanes(), first);
+    view.shiftCut(1);
+    const moved = view.cutPlanes();
+    assert.notEqual(moved, first);
+    assert.ok(Math.abs(moved[0].constant - first[0].constant - CUT_STEP_M) < 1e-9);
+  });
+});
+
 describe('createSection with planes', () => {
   test('puts every plane on the renderer and takes them away with an empty list', () => {
     const renderer = { clippingPlanes: [] };

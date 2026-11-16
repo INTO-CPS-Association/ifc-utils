@@ -9,10 +9,10 @@
  * three.js itself, so this file adds no dependency:
  *
  * - a soft light from every side, from a small built-in room, so the faces of
- *   one colour still differ;
- * - shadows from the sun on the model and on a ground under it;
- * - ambient occlusion, which darkens the creases where a wall meets a slab;
- * - a horizontal cut, which opens a floor to be read like a plan.
+ *   one colour still differ
+ * - shadows from the sun on the model and on a ground under it
+ * - ambient occlusion, which darkens the creases where a wall meets a slab
+ * - a horizontal cut, which opens a floor to be read like a plan
  *
  * The parts that need a graphics context (the room light and the passes) are
  * kept thin. The arithmetic, which is what goes wrong, runs in Node.
@@ -76,6 +76,11 @@ export function prepareRenderer(renderer: WebGLRenderer): void {
   // PCF and not PCF soft: three.js 0.186 no longer has the soft one, falls
   // back to this and warns about it on every load.
   renderer.shadowMap.type = PCFShadowMap;
+  // The model does not move and the sun is fitted to it once, so the shadow
+  // map changes only when what is shown changes. The canvas asks for a new
+  // one then, and every other frame reuses it.
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
 }
 
 /**
@@ -169,35 +174,16 @@ export interface Clipped {
 }
 
 /**
- * A horizontal cut: everything above the height is not drawn.
+ * The cuts: everything on the far side of any plane is not drawn.
  *
  * Set on the renderer and not on each material, so the heatmap, the ghost
  * and the highlight materials, which are swapped in and out, are cut the
  * same way without each having to remember to.
  */
 export function createSection(renderer: Clipped) {
-  // A plane keeps what is on the side its normal points to. Pointing down
-  // keeps everything below the height.
-  const plane = new Plane(new Vector3(0, -1, 0), 0);
-  let current: number | null = null;
   return {
-    /** Cut at this height in metres, or take the cut away with null. */
-    set(height: number | null): void {
-      if (height === current) return;
-      current = height;
-      if (height === null) {
-        renderer.clippingPlanes = [];
-        return;
-      }
-      plane.constant = height;
-      renderer.clippingPlanes = [plane];
-    },
-    get height(): number | null {
-      return current;
-    },
     /** Cut with any set of planes, such as a horizontal and a vertical cut together. */
     setPlanes(planes: Plane[]): void {
-      current = null;
       renderer.clippingPlanes = planes;
     },
   };
@@ -215,12 +201,23 @@ export function createFinish(renderer: WebGLRenderer, scene: Scene, camera: Came
   composer.addPass(new RenderPass(scene, camera));
   const occlusion = new GTAOPass(scene, camera);
   composer.addPass(occlusion);
-  composer.addPass(new OutputPass());
+  const output = new OutputPass();
+  composer.addPass(output);
   return {
-    render: () => composer.render(),
+    /**
+     * Draw a frame. While the camera moves the occlusion is left out: it
+     * costs a pass over the whole scene and a moving eye does not see it, so
+     * a large model turns smoothly and the creases come back when it stops.
+     */
+    render: (occluded = true) => {
+      if (occluded) composer.render();
+      else renderer.render(scene, camera);
+    },
     setSize: (width: number, height: number) => composer.setSize(width, height),
     dispose: () => {
+      // The composer does not dispose its passes.
       occlusion.dispose();
+      output.dispose();
       composer.dispose();
     },
   };

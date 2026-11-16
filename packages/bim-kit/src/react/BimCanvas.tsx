@@ -23,6 +23,7 @@ import {
   Vector2,
   Color,
   DirectionalLight,
+  Matrix4,
   Object3D,
   type Plane,
   PerspectiveCamera,
@@ -39,10 +40,10 @@ import { objectsOf } from './scene.js';
 import {
   FAR_PLANE, NEAR_PLANE, SceneView, addOutlines, castShadows, createFieldSheet, createFinish,
   createFlight, createGizmo, createGlow, createGrid, createMarkers, createMeasure, createSection,
-  createViewCube, frame, frameFrom, setParallel, BACKDROPS, startWalking, stepWalk, walkKeyOf,
-  createSketch,
+  createViewCube, frame, frameFrom, movedBeyond, setParallel, PARALLEL_FOV, PERSPECTIVE_FOV, BACKDROPS, startWalking, stepWalk, walkKeyOf,
+  createSketch, MARKER_LAYER,
   frameObject, lightFromRoom,
-  prepareRenderer, type MarkerSet, type PropertyTree,
+  prepareRenderer, type LookFrom, type MarkerSet, type PropertyTree,
 } from '../viewer/index.js';
 
 // The same near-white the viewer this was taken from uses. A lighter one
@@ -53,6 +54,28 @@ const AMBIENT_LIGHT = 0.25;
 const SUN_LIGHT = 1.8;
 
 const FIELD_OF_VIEW = 45;
+
+/** How long the camera has to rest before the occlusion pass is drawn again, in milliseconds. */
+const STILL_MS = 150;
+
+/** A step of the camera smaller than this, relative to the view, is too small to see. */
+const SETTLE_TOLERANCE = 2e-4;
+
+/** How far the pointer may move between press and release and still count as a click, in pixels. */
+const DRAG_PX = 4;
+
+/**
+ * How long the view keeps drawing every frame after a person did something,
+ * in milliseconds: long enough for a hover, a pulse or a flight to finish.
+ */
+const AWAKE_MS = 1000;
+
+/**
+ * How often a view nobody touches is drawn, in milliseconds. Drawing a large
+ * model every frame while nothing moves kept a core busy for nothing. Once a
+ * second still catches anything that changed without saying so.
+ */
+const IDLE_REDRAW_MS = 1000;
 
 /** "1 sensor", "2 sensors". Written out because "1 sensors" reads as a bug. */
 function plural(word: string, count: number): string {
@@ -143,7 +166,7 @@ export interface ViewerHandle {
   /** Put the whole model back in shot. */
   frame: () => void;
   /** Look from one of three axes, or from the default corner. */
-  look: (from: 'top' | 'front' | 'side' | 'corner') => void;
+  look: (from: LookFrom) => void;
   /**
    * Redraw the sheet the Per Sensor scope lays over the floor.
    *
@@ -249,6 +272,10 @@ function BimCanvas({
     // looks at the model from there.
     const cube = createViewCube();
 
+    // Until when the view draws every frame, because a person just did something.
+    let awakeUntil = 0;
+    const wake = () => { awakeUntil = performance.now() + AWAKE_MS; };
+
     const resize = () => {
       const { clientWidth, clientHeight } = parent;
       if (clientWidth === 0 || clientHeight === 0) return;
@@ -260,8 +287,13 @@ function BimCanvas({
       camera.updateProjectionMatrix();
     };
     resize();
-    const observer = new ResizeObserver(resize);
+    const observer = new ResizeObserver(() => { resize(); wake(); });
     observer.observe(parent);
+    // Anything a person does may change the picture, so the view draws every
+    // frame for a moment after it. Listened for on the page and not only on
+    // the canvas, since the toolbar and the cards change the view too.
+    const inputs = ['pointerdown', 'pointermove', 'wheel', 'keydown', 'keyup'] as const;
+    for (const name of inputs) globalThis.addEventListener(name, wake, { passive: true });
 
     // Torn down in the order they were set up, whatever the model turned out
     // to be, so a page that switches models does not leak a listener a visit.
@@ -279,11 +311,43 @@ function BimCanvas({
     // Set once a model is shown: the grid and the measurement follow the
     // view's state on every frame.
     let followState: (() => void) | null = null;
+    // Set once a model is shown: counts the changes of what is visible, which
+    // is all the shadow map depends on.
+    let visibility = () => 0;
+    // Set once a model is shown: changes whenever the view repaints or
+    // shows something else, so a still view knows it has to be drawn again.
+    let revision = () => '';
+    // Set once a model is shown: the edges of every object, left out while
+    // the camera moves since they double the number of things drawn.
+    let showOutlines = (_shown: boolean) => undefined as void;
+    let outlinesShown = true;
+    let lastDraw = 0;
+    let lastFull = false;
+    let lastRevision = '';
+    /** Draw the sensor dots over the frame just drawn. */
+    const drawMarkers = () => {
+      const { autoClear, background } = { autoClear: renderer.autoClear, background: scene.background };
+      renderer.autoClear = false;
+      scene.background = null;
+      camera.layers.set(MARKER_LAYER);
+      renderer.render(scene, camera);
+      camera.layers.set(0);
+      scene.background = background;
+      renderer.autoClear = autoClear;
+    };
+
+    // Where the camera was on the last frame and when it last moved, so the
+    // occlusion pass is left out while it moves and comes back when it stops.
+    const lastView = new Matrix4();
+    let lastFov = camera.fov;
+    let stillSince = 0;
+    let shadowKey = '';
 
     let running = true;
     const tick = () => {
       if (!running) return;
-      flight.step(performance.now());
+      const now = performance.now();
+      flight.step(now);
       controls.update();
       placeMarkers?.();
       const cuts = cutPlanes();
@@ -292,14 +356,52 @@ function BimCanvas({
       // that is not drawn would still throw its shadow into the rooms.
       sun.castShadow = shadows && cuts.length === 0 && wantsShadows();
       followState?.();
-      finish.render();
-      // The cut is in world coordinates and the axes indicator is not in the
-      // world, so the indicator is drawn without it.
-      const planes = renderer.clippingPlanes;
-      renderer.clippingPlanes = [];
-      gizmo.draw(renderer, camera);
-      cube.draw(renderer, camera);
-      renderer.clippingPlanes = planes;
+      const key = `${sun.castShadow}|${visibility()}`;
+      if (key !== shadowKey) {
+        shadowKey = key;
+        renderer.shadowMap.needsUpdate = true;
+      }
+      camera.updateMatrixWorld();
+      if (movedBeyond(lastView, camera.matrixWorld) || camera.fov !== lastFov) {
+        // The damping slows the camera by a share of its speed each frame, so
+        // on a slow frame rate it creeps on for many seconds. Once a step is
+        // too small to see, the remaining speed is dropped and the view rests.
+        if (!flight.flying && !movedBeyond(lastView, camera.matrixWorld, SETTLE_TOLERANCE)) {
+          controls.enableDamping = false;
+          controls.update();
+          controls.enableDamping = true;
+          camera.updateMatrixWorld();
+        }
+        lastView.copy(camera.matrixWorld);
+        lastFov = camera.fov;
+        stillSince = now;
+      }
+      const still = now - stillSince > STILL_MS;
+      const changed = revision();
+      // Drawn when the camera moves, when a person did something lately, when
+      // the view changed, when the first still frame after a move is due, and
+      // once a second otherwise.
+      const draw = !still || now < awakeUntil || changed !== lastRevision
+        || (still && !lastFull) || now - lastDraw > IDLE_REDRAW_MS;
+      if (draw) {
+        if (still !== outlinesShown) {
+          outlinesShown = still;
+          showOutlines(still);
+        }
+        finish.render(still);
+        lastDraw = now;
+        lastFull = still;
+        lastRevision = changed;
+        // The cut is in world coordinates and the axes indicator is not in
+        // the world, so the indicator is drawn without it, and so are the
+        // sensor dots, which have their own layer for this.
+        const planes = renderer.clippingPlanes;
+        renderer.clippingPlanes = [];
+        drawMarkers();
+        gizmo.draw(renderer, camera);
+        cube.draw(renderer, camera);
+        renderer.clippingPlanes = planes;
+      }
       globalThis.requestAnimationFrame(tick);
     };
     tick();
@@ -326,12 +428,29 @@ function BimCanvas({
       // interface and this owns the scene, and this is the only line between
       // them.
       const view = new SceneView(model as never, tree);
+      visibility = () => view.visibilityRevision;
+      revision = () => `${view.visibilityRevision}|${view.materialsRevision}|${cutPlanes().length}`
+        + `|${renderer.clippingPlanes.map((plane) => plane.constant).join(',')}`
+        + `|${view.state.backdrop}|${view.state.grid}|${measure.points.length}|${view.state.measuring}`;
+      /** The lens the state asks for. Walking always looks through the ordinary one. */
+      const lens = () => setParallel(camera, controls, view.state.parallel && !view.state.walking);
+      /**
+       * Fly to a new shot. Walking stops, since the shot is not at eye height,
+       * and the lens is set first, so the shot is worked out for the lens it
+       * is seen through and a change of lens cannot pull the camera away.
+       */
+      const flyTo = (change: () => void) => {
+        view.state.walking = false;
+        lens();
+        flight.fly(change);
+      };
       pickSensor = (globalId) => {
+        wake();
         view.state.selected = globalId;
         view.refreshMaterials();
         onSelect?.(globalId);
         const mesh = view.meshes.get(globalId);
-        if (mesh) flight.fly(() => frameObject(camera, controls, mesh, model));
+        if (mesh) flyTo(() => frameObject(camera, controls, mesh, model));
       };
       // The field's sheet lives beside the model, not in it: it is a reading
       // laid over the floor and not part of the building.
@@ -348,6 +467,9 @@ function BimCanvas({
       // the teardown that walks the scene disposes them along with everything
       // else.
       addOutlines(view.meshes.values());
+      const edges = [...view.meshes.values()].flatMap((mesh) =>
+        mesh.children.filter((child) => child.name === 'outline'));
+      showOutlines = (shown) => { for (const edge of edges) edge.visible = shown; };
       cleanUp.push(castShadows(model, sun, scene));
       shadows = true;
       const grid = createGrid(scene, model);
@@ -362,9 +484,19 @@ function BimCanvas({
       const held = { forward: false, back: false, left: false, right: false };
       let wasWalking = false;
       let lastStep = performance.now();
+      const letGo = () => {
+        held.forward = false;
+        held.back = false;
+        held.left = false;
+        held.right = false;
+      };
       const onArrow = (down: boolean) => (event: KeyboardEvent) => {
         const which = walkKeyOf(event.key);
         if (!which || !view.state.walking) return;
+        // An arrow in a search box moves the caret and not the person.
+        const target = event.target as HTMLElement | null;
+        if (down && target && (target.isContentEditable
+          || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
         held[which] = down;
         // The page would scroll on an arrow key otherwise.
         event.preventDefault();
@@ -373,9 +505,15 @@ function BimCanvas({
       const arrowUp = onArrow(false);
       globalThis.addEventListener('keydown', arrowDown);
       globalThis.addEventListener('keyup', arrowUp);
+      // A key let go while the window is not in front never sends its keyup,
+      // and the person would keep walking.
+      globalThis.addEventListener('blur', letGo);
+      globalThis.document?.addEventListener('visibilitychange', letGo);
       cleanUp.push(() => {
         globalThis.removeEventListener('keydown', arrowDown);
         globalThis.removeEventListener('keyup', arrowUp);
+        globalThis.removeEventListener('blur', letGo);
+        globalThis.document?.removeEventListener('visibilitychange', letGo);
       });
       const walkFrame = () => {
         const now = performance.now();
@@ -385,6 +523,7 @@ function BimCanvas({
           flight.cancel();
           startWalking(camera, controls, view.floorLevel());
         }
+        if (!view.state.walking && wasWalking) letGo();
         wasWalking = view.state.walking;
         // Zoom and pan would carry the eye through walls and off the floor.
         controls.enableZoom = !view.state.walking;
@@ -398,7 +537,13 @@ function BimCanvas({
           sketching = view.state.sketching;
           sketch.setTool(view.state.sketching);
         }
-        setParallel(camera, controls, view.state.parallel);
+        const wanted = view.state.parallel && !view.state.walking ? PARALLEL_FOV : PERSPECTIVE_FOV;
+        if (camera.fov !== wanted) {
+          // A flight was worked out for the old lens and would pull the
+          // camera back to where that lens needed it.
+          flight.cancel();
+          lens();
+        }
         (scene.background as Color).setHex(BACKDROPS[view.state.backdrop]);
         grid.setVisible(view.state.grid);
         // Leaving the measuring mode takes the last measurement away with it,
@@ -413,14 +558,14 @@ function BimCanvas({
       placeMarkers = () => placeAll(markers, view, camera, parent);
       onReady?.({
         view,
-        frame: () => flight.fly(() => frame(camera, controls, model)),
-        look: (from) => flight.fly(() => frame(camera, controls, model, from)),
-        drawField: () => sheet.draw(view),
+        frame: () => flyTo(() => frame(camera, controls, model)),
+        look: (from) => flyTo(() => frame(camera, controls, model, from)),
+        drawField: () => { sheet.draw(view); wake(); },
         frameSelection: () => {
           const mesh = view.state.selected ? view.meshes.get(view.state.selected) : undefined;
-          if (mesh) flight.fly(() => frameObject(camera, controls, mesh, model));
+          if (mesh) flyTo(() => frameObject(camera, controls, mesh, model));
         },
-        showReadings: (readings, feed, staleAfter) => markers.showReadings(readings, feed, staleAfter),
+        showReadings: (readings, feed, staleAfter) => { markers.showReadings(readings, feed, staleAfter); wake(); },
       });
 
       /** Point the ray through the pointer. */
@@ -455,12 +600,20 @@ function BimCanvas({
         view.refreshMaterials();
         onHover?.(globalId);
       };
+      // Where the button went down, so a drag that turned the view does not
+      // also count as a click when the button comes up.
+      const pressedAt = { x: 0, y: 0 };
+      const press = (event: PointerEvent) => {
+        pressedAt.x = event.clientX;
+        pressedAt.y = event.clientY;
+      };
       const click = (event: PointerEvent) => {
         if (view.state.sketching) return;
+        if (Math.hypot(event.clientX - pressedAt.x, event.clientY - pressedAt.y) > DRAG_PX) return;
         const box = parent.getBoundingClientRect();
         const from = cube.pick(event.clientX - box.left, event.clientY - box.top, box.width, box.height);
         if (from) {
-          flight.fly(() => frameFrom(camera, controls, model, from));
+          flyTo(() => frameFrom(camera, controls, model, from));
           return;
         }
         // A sensor's dot is drawn over the walls, so it is picked before
@@ -484,9 +637,11 @@ function BimCanvas({
         onSelect?.(globalId);
       };
       parent.addEventListener('pointermove', move);
+      parent.addEventListener('pointerdown', press);
       parent.addEventListener('click', click as EventListener);
       cleanUp.push(() => {
         parent.removeEventListener('pointermove', move);
+        parent.removeEventListener('pointerdown', press);
         parent.removeEventListener('click', click as EventListener);
         view.dispose();
       });
@@ -574,6 +729,7 @@ function BimCanvas({
       dropRoomLight();
       overlay.remove();
       observer.disconnect();
+      for (const name of inputs) globalThis.removeEventListener(name, wake);
       controls.dispose();
       scene.traverse((object) => {
         const mesh = object as { geometry?: { dispose: () => void }; material?: unknown };

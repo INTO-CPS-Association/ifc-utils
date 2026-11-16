@@ -26,6 +26,18 @@ const ENTRIES = [
   entry('s1', 'Site', 'IfcSite', null),
 ];
 
+describe('groupEntries on a large model', () => {
+  test('groups forty thousand objects of one class in well under a second', () => {
+    const many = Array.from({ length: 40000 }, (_, i) => entry(`g${i}`, `Wall ${i}`, 'IfcWall', 'L1'));
+    const started = performance.now();
+    const groups = groupEntries(many, 'class', 'wall');
+    const took = performance.now() - started;
+    assert.equal(groups[0].entries.length, 40000);
+    // The copy-per-entry grouping took 1.7 s here. Linear grouping takes tens of milliseconds.
+    assert.ok(took < 500, `took ${took} ms`);
+  });
+});
+
 describe('readableClass', () => {
   test('drops Ifc and splits the words', () => {
     assert.equal(readableClass('IfcWallStandardCase'), 'Wall Standard Case');

@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 
 import { BoxGeometry, Group, Mesh, PerspectiveCamera, Vector3 } from 'three';
 import {
-  FLIGHT_MS, PULSE_GROWTH, PULSE_MS, createFlight, createMarkers, ease, pulseFactor,
+  FLIGHT_MS, PULSE_GROWTH, PULSE_MS, createFlight, createMarkers, ease, movedBeyond, pulseFactor,
 } from '../dist/esm/viewer/index.js';
 
 function rig() {
@@ -82,6 +82,28 @@ describe('createFlight', () => {
     const flight = createFlight(camera, controls, FLIGHT_MS, false);
     flight.fly(() => undefined, 0);
     assert.equal(flight.flying, false);
+  });
+
+  test('a shot that is already in view stops the flight under way', () => {
+    const { camera, controls } = rig();
+    const flight = createFlight(camera, controls, FLIGHT_MS, false);
+    flight.fly(moveTo(camera, controls), 0);
+    flight.step(FLIGHT_MS / 2);
+    const there = camera.position.clone();
+    flight.fly(() => undefined, FLIGHT_MS / 2);
+    assert.equal(flight.flying, false);
+    assert.equal(flight.step(FLIGHT_MS), false);
+    assert.ok(camera.position.equals(there));
+  });
+});
+
+describe('movedBeyond', () => {
+  test('ignores the last tiny steps of the damping and sees a real move', async () => {
+    const { Matrix4 } = await import('three');
+    const before = new Matrix4().makeTranslation(10, 5, 20);
+    assert.equal(movedBeyond(before, new Matrix4().makeTranslation(10 + 1e-7, 5, 20)), false);
+    assert.equal(movedBeyond(before, new Matrix4().makeTranslation(10.01, 5, 20)), true);
+    assert.equal(movedBeyond(before, new Matrix4().makeRotationY(0.01).setPosition(10, 5, 20)), true);
   });
 });
 
@@ -179,6 +201,19 @@ describe('going to a sensor from the view', () => {
     label.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     assert.deepEqual(picked, ['b']);
     assert.equal(reachedViewer, false);
+  });
+
+  test('a label is a button the keyboard reaches, and Enter or Space goes to the sensor', () => {
+    const picked = [];
+    const { overlay } = scene((id) => picked.push(id));
+    const label = [...overlay.querySelectorAll('[data-bim-label]')].find((el) => el.title === 'S1');
+    assert.equal(label.getAttribute('role'), 'button');
+    assert.equal(label.tabIndex, 0);
+    assert.equal(label.getAttribute('aria-label'), 'Go To S1');
+    label.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    label.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    label.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+    assert.deepEqual(picked, ['b', 'b']);
   });
 
   test('a label stays out of the way when nothing goes to the sensor', () => {

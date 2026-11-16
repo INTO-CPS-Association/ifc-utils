@@ -15,6 +15,7 @@ import {
 } from 'three';
 import {
   GROUND_DROP_M, SHADOW_MAP_PX, SHORTCUTS, SceneView, castShadows, createSection, CUT_M,
+  prepareRenderer,
 } from '../dist/esm/viewer/index.js';
 
 /** A box of the given size with its base at `y`, carrying an identity. */
@@ -81,25 +82,25 @@ describe('castShadows', () => {
 });
 
 describe('createSection', () => {
-  test('cuts at the height asked for and keeps what is below', () => {
+  test('puts the planes it is given on the renderer and takes them away with none', async () => {
+    const { Plane } = await import('three');
     const renderer = { clippingPlanes: [] };
     const section = createSection(renderer);
-    section.set(3.2);
-    assert.equal(renderer.clippingPlanes.length, 1);
-    const [plane] = renderer.clippingPlanes;
-    // A point below the cut is on the kept side, one above it is not.
-    assert.ok(plane.distanceToPoint(new Vector3(0, 3, 0)) > 0);
-    assert.ok(plane.distanceToPoint(new Vector3(0, 3.4, 0)) < 0);
-    assert.equal(section.height, 3.2);
-  });
-
-  test('takes the cut away with null', () => {
-    const renderer = { clippingPlanes: [] };
-    const section = createSection(renderer);
-    section.set(3.2);
-    section.set(null);
+    const plane = new Plane(new Vector3(0, -1, 0), 3.2);
+    section.setPlanes([plane]);
+    assert.deepEqual(renderer.clippingPlanes, [plane]);
+    section.setPlanes([]);
     assert.deepEqual(renderer.clippingPlanes, []);
-    assert.equal(section.height, null);
+  });
+});
+
+describe('prepareRenderer', () => {
+  test('draws the shadow map once and then only when the canvas asks', () => {
+    const renderer = { shadowMap: { enabled: false, type: 0, autoUpdate: true, needsUpdate: false } };
+    prepareRenderer(renderer);
+    assert.equal(renderer.shadowMap.enabled, true);
+    assert.equal(renderer.shadowMap.autoUpdate, false);
+    assert.equal(renderer.shadowMap.needsUpdate, true);
   });
 });
 

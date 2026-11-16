@@ -24,6 +24,8 @@ import UndoIcon from '@mui/icons-material/Undo';
 import ViewInArIcon from '@mui/icons-material/ViewInAr';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
+import VerticalAlignBottomIcon from '@mui/icons-material/VerticalAlignBottom';
+import FlipCameraAndroidIcon from '@mui/icons-material/FlipCameraAndroid';
 import CropSquareIcon from '@mui/icons-material/CropSquare';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import ContentCutIcon from '@mui/icons-material/ContentCut';
@@ -63,6 +65,8 @@ const ICONS: Record<string, ReactElement> = {
   top: <VerticalAlignTopIcon fontSize="small" />,
   front: <CropSquareIcon fontSize="small" />,
   side: <BlurOnIcon fontSize="small" />,
+  back: <FlipCameraAndroidIcon fontSize="small" />,
+  below: <VerticalAlignBottomIcon fontSize="small" />,
   fit: <CenterFocusStrongIcon fontSize="small" />,
   focus: <FilterCenterFocusIcon fontSize="small" />,
   reset: <RestartAltIcon fontSize="small" />,

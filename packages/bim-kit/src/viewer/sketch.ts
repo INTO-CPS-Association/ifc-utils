@@ -47,6 +47,7 @@ export interface Pen {
   strokeRect(x: number, y: number, width: number, height: number): void;
   stroke(): void;
   clearRect(x: number, y: number, width: number, height: number): void;
+  setTransform?(a: number, b: number, c: number, d: number, e: number, f: number): void;
   strokeStyle: string | CanvasGradient | CanvasPattern;
   lineWidth: number;
   lineCap: CanvasLineCap;
@@ -98,9 +99,17 @@ export function createSketch(overlay: HTMLElement): Sketch {
 
   const redraw = () => {
     if (!pen) return;
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
-    pen.clearRect(0, 0, canvas.width, canvas.height);
+    // Sized to the device pixels, so a line is sharp on a retina screen, and
+    // only when the box changed, since resizing a canvas reallocates it.
+    const ratio = globalThis.devicePixelRatio || 1;
+    const width = Math.round(canvas.clientWidth * ratio);
+    const height = Math.round(canvas.clientHeight * ratio);
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+    pen.setTransform?.(ratio, 0, 0, ratio, 0, 0);
+    pen.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
     pen.strokeStyle = SKETCH_COLOUR;
     pen.lineWidth = SKETCH_WIDTH_PX;
     pen.lineCap = 'round';
@@ -121,7 +130,7 @@ export function createSketch(overlay: HTMLElement): Sketch {
   const move = (event: PointerEvent) => {
     if (!current) return;
     const point = at(event);
-    // A pen keeps every point; an arrow and a box only need where they end.
+    // A pen keeps every point, while an arrow and a box only need where they end.
     if (current.tool === 'pen') current.points.push(point);
     else current.points[1] = point;
     redraw();

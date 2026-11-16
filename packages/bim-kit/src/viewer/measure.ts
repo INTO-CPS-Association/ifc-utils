@@ -118,7 +118,7 @@ function labelElement(overlay: HTMLElement): HTMLElement {
   label.setAttribute('style', [
     'position:absolute', 'left:0', 'top:0', 'pointer-events:none', 'display:none',
     'padding:2px 6px', 'border-radius:4px', 'font:600 12px/1.4 system-ui,sans-serif',
-    'background:var(--bim-label-background,#ffffff)', 'color:var(--bim-label-text,#1f2a33)',
+    'background:var(--bim-label-bg,#ffffff)', 'color:var(--bim-label-fg,#1f2a33)',
     'border:2px solid var(--bim-label-accent,#1565c0)', 'white-space:nowrap', 'z-index:3',
   ].join(';'));
   overlay.appendChild(label);

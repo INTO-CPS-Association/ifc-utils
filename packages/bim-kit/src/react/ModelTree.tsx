@@ -6,7 +6,7 @@
  * ten thousand objects would otherwise fill the page.
  */
 
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import {
   Box, List, ListItemButton, ListItemText, ListSubheader, TextField, ToggleButton,
   ToggleButtonGroup, Typography,
@@ -27,7 +27,10 @@ export const MAX_ROWS = 300;
 export function ModelTree({ entries, floors, selected, onPick }: Readonly<ModelTreeProps>) {
   const [by, setBy] = useState<GroupBy>('storey');
   const [query, setQuery] = useState('');
-  const groups = useMemo(() => groupEntries(entries, by, query, floors), [entries, by, query, floors]);
+  // The search runs on the deferred query, so typing stays quick on a model
+  // of tens of thousands of objects while the list catches up.
+  const search = useDeferredValue(query);
+  const groups = useMemo(() => groupEntries(entries, by, search, floors), [entries, by, search, floors]);
   const found = groups.reduce((total, group) => total + group.entries.length, 0);
   let budget = MAX_ROWS;
 

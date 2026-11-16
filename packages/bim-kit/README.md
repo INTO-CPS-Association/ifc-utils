@@ -161,7 +161,7 @@ Clicking a sensor card, or a sensor's dot or label in the view, selects its obje
 
 ## Looking at the Model
 
-The model is lit from a small built-in room as well as by the sun, throws shadows on itself and on a ground under it, and has ambient occlusion in its creases. All of it comes from three.js, which is a peer dependency already, so the package adds nothing. Every tool has a key, a button on the toolbar and a line in the help, all from one table in `viewer/shortcuts.ts`:
+The model is lit from a small built-in room as well as by the sun, throws shadows on itself and on a ground under it, and has ambient occlusion in its creases. The occlusion is drawn when the camera rests and the shadows only when what is shown changes, so a large model still turns smoothly. All of it comes from three.js, which is a peer dependency already, so the package adds nothing. Every tool has a key, a button on the toolbar and a line in the help, all from one table in `viewer/shortcuts.ts`:
 
 | Key | Tool |
 | --- | --- |
@@ -178,7 +178,7 @@ The model is lit from a small built-in room as well as by the sun, throws shadow
 | `y` | Paint the model in one colour, by class or as a wireframe |
 | `z` | The background: light, dim, slate or ink |
 
-The view cube in the bottom right corner looks at the model from the face, edge or corner clicked. Under the object panel, the model tree lists the objects by floor or by class and finds them by any word of their name, class, GlobalId or property values.
+The view cube in the bottom right corner looks at the model from the face, edge or corner clicked, and the keys `1` to `5` reach five of its six faces from the keyboard (above, front, side, behind and below). A sensor's label can also be reached with Tab and opened with Enter. Under the object panel, the model tree lists the objects by floor or by class and finds them by any word of their name, class, GlobalId or property values.
 
 ## Checking a Re-Export
 

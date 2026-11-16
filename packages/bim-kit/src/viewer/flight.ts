@@ -11,7 +11,7 @@
  * asked their system to reduce motion gets the jump.
  */
 
-import { type Camera, Vector3 } from 'three';
+import { type Camera, type Matrix4, Vector3 } from 'three';
 
 /** How long a flight takes, in milliseconds. */
 export const FLIGHT_MS = 600;
@@ -73,7 +73,11 @@ export function createFlight(
       }
       to.position.copy(camera.position);
       to.target.copy(controls.target);
-      if (from.position.equals(to.position) && from.target.equals(to.target)) return;
+      // Already there: any flight under way stops too, since this shot replaces it.
+      if (from.position.equals(to.position) && from.target.equals(to.target)) {
+        active = false;
+        return;
+      }
       // Back to where it was, so the first frame of the flight starts there.
       put(from.position, from.target);
       start = now;
@@ -96,4 +100,19 @@ export function createFlight(
       return active;
     },
   };
+}
+
+/**
+ * Whether the camera moved by more than a person could see. The damping of
+ * the orbit controls keeps moving the camera by ever smaller amounts for
+ * seconds after a drag, and an exact comparison would keep the view drawing
+ * every frame all that time.
+ */
+export function movedBeyond(before: Matrix4, after: Matrix4, tolerance = 1e-5): boolean {
+  const a = before.elements;
+  const b = after.elements;
+  for (let i = 0; i < 16; i += 1) {
+    if (Math.abs(a[i] - b[i]) > tolerance * (1 + Math.abs(b[i]))) return true;
+  }
+  return false;
 }
