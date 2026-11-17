@@ -23,7 +23,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Picking a sensor, on its card, on its dot or label in the view, or with a key, flies the camera to it over 600 ms instead of jumping, and its marker grows once and settles back so the eye goes to it. The views, Fit and Reset fly too. Grabbing the view mid-flight stops it, and a system set to reduce motion gets the jump and no pulse. `createFlight`, `ease`, `prefersReducedMotion` and `pulseFactor` are exported from `./viewer`, `createMarkers` takes an `onPick` callback and a marker set has `pick(ray)`.
 - A grid of metres under the model, a stronger line every five, sized to the model and laid under its lowest object. The `g` shortcut turns it off and on. `createGrid` and `gridSpan` are exported from `./viewer`.
 - The `d` shortcut measures a length, an area or an angle, one more press for each and a fourth to stop. A length takes two clicks, an angle three with the corner in the middle, and an area as many as its outline needs, updated with each point and closed by a click back on the first. Each point has a dot and the result a label. `createMeasure`, `distanceText`, `polygonArea`, `angleAt` and `measureText` are exported from `./viewer`.
-- The `n` shortcut, Draw On The View, takes up a pen, then an arrow, then a box, and puts them away on the fourth press, which wipes the drawing. The drawing lies on a canvas over the model in screen pixels, and while a tool is up the mouse draws instead of turning, hovering or picking. `createSketch`, `drawStroke` and `arrowHead` are exported from `./viewer`.
+- The `n` shortcut, Draw On The View, takes up a pen, then an arrow, then a box, then text. The fifth press puts them away and wipes the drawing. With text, a click opens a box where the note is typed, Enter or a click elsewhere keeps it and Escape drops it. The drawing lies on a canvas over the model in screen pixels. While a tool is up the mouse draws instead of turning, hovering or picking. `createSketch`, `drawStroke`, `arrowHead` and `SKETCH_FONT` are exported from `./viewer`.
 - The `u` shortcut, Walk Through, puts the eye 1.6 m above the floor in view and walks with the arrow keys, up and down to go forward and back at 1.4 m/s, left and right to turn. The mouse still looks around, and zoom and pan are off while walking. `startWalking`, `stepWalk` and `walkKeyOf` are exported from `./viewer`, and `SceneView` has `floorLevel()`.
 - The `y` shortcut, Style, paints the model in one pale colour, then each class in a colour of its own from the Okabe and Ito set, then as a wireframe, then as it came. The legend shows the class colours in that style. A selection, a highlight and a heatmap still win over any style. `MONO_COLOUR`, `CLASS_COLOURS` and the `ModelStyle` type are exported from `./viewer`.
 - The `z` shortcut, Background, changes the background from light to dim, slate and ink. `BACKDROPS` is exported from `./viewer`.
@@ -31,6 +31,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The `i` shortcut, Show The Selection Alone, shows only the selected object and everything again on the second press. `SceneView` has `toggleIsolation()` and `state.isolated`.
 - The `x` shortcut, Cut The Floor At Chest Height, cuts the floor in view at the height the heatmap's plan is cut at, so the rooms read like a plan. `SceneView` has `state.sectioned` and `cutHeight()`.
 
+- The `4` and `5` shortcuts look from behind and from below, so every face of the view cube can also be reached from the keyboard. The `LookFrom` type is exported from `./viewer`.
+- Each row of the object panel has a button that copies its value and says so for a moment once copied.
+- A sensor label is a button to the keyboard and to a screen reader: Tab reaches it and Enter or Space flies to the sensor.
 ### Changed
 
 - Choosing a heat scope or a floor draws the heatmap at once. The zones were worked out again only when a reading came, so a sensor that reports once a minute left the heatmap blank for up to a minute after `m`.
@@ -44,6 +47,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - A sensor marker is at least 14 pixels across on screen whatever the distance. It has a dark ring and takes the colour of its current value on the ramp. The selected marker is at least 24 pixels across, in the selection colour, with its label outlined and bold. It was a grey sphere sized as a share of the model, a few pixels on a whole building. The selected one could not be told from the rest.
 - A card whose reading has no unit prints the value alone. It printed `undefined` after the number.
 
+- The canvas draws only when something changed: the camera, a repaint of the model, a cut, the measure, the backdrop or the grid. It also draws once a second. The outlines and the ambient occlusion are left out while the camera moves and come back once it stops. The shadow map is drawn again only when what is shown changes. The damping stops once its steps are too small to see. On a model of 9569 objects a frame takes about 67 ms while the camera moves, against 85 ms for 0.2.0, which also drew every frame at rest. `movedBeyond` is exported from `./viewer`.
+- The sensor dots are drawn in a pass of their own without the cuts, so a dot on a wall the plan cuts through is not cut away with the top of the wall. `MARKER_LAYER` is exported from `./viewer`.
+- The section takes only planes, through `setPlanes()`.
+- The build empties `dist/` first, so a file removed from the source is not published from an earlier build.
 ### Fixed
 
 - On the Per Sensor heatmap, the floor of an open room is split halfway between its sensors. The walk stepped along rows and columns only, so the split ran along 45-degree lines and along rows, and about one point in twenty of an open room went to a farther sensor. It now steps along the diagonals as well, at their true length, which leaves under one point in a hundred off, and a diagonal step never passes between two walls that meet at a corner.
@@ -52,6 +59,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The alerts accept the DTaaS channel `measured` as well as the payload kind `sample` as a measured value and compare units after mapping SenML codes, so a payload in `Cel` raises no unit alert against a manifest in `°C`.
 - On the Buildings page of `./dtaas`, a simulated value is marked as simulated on its card. The channel was dropped on the way to the card, so a simulated value read as measured.
 - `npm test` builds before it runs the suite, since the tests import from `dist/`.
+- In the parallel view, Reset and a flight under way left the view empty. The lens is now set before a flight and a change of lens stops it.
+- The walking arrow keys acted inside the search box. A key held when the window lost focus kept walking.
+- The model tree grouped its entries in quadratic time and built the search text on every keystroke and reading. A search over 40000 objects took 1.7 s.
+- The lowest wall was worked out over every object on each frame with a section, which on a model of 200000 objects stopped the page.
+- Turning the view with the mouse while measuring added a point.
+- The measurement label kept light colours on a dark theme.
+- The drawing on the view was blurred on a high-density screen.
 
 ## [0.2.0]
 
