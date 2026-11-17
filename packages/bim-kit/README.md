@@ -142,7 +142,7 @@ The SDK and `react-router-dom` are optional peers, needed only by a host that im
 
 ## Alerts
 
-`alertsOf` lists what is wrong with one sensor, most urgent first, and the sensor cards show each alert as a chip. Every alert comes from data that already arrived. The range comes from the manifest and the unit and the kind come from the payload.
+`alertsOf` lists what is wrong with one sensor, most urgent first. The sensor cards show each alert as a chip. Every alert comes from data that already arrived. The range comes from the manifest and the unit and the kind come from the payload.
 
 - A reading counts as current while it is younger than the stale threshold and the feed is live. The threshold is `DEFAULT_STALE_AFTER_S`, 30 seconds. `alertsOf`, `isLive` and `ageText` take another value as their `staleAfter` argument. A host sets it for the whole page through the `staleAfter` prop of `BuildingModels`, in seconds. The cards, the markers and the heatmap all use it. On DTaaS the setting is `REACT_APP_EXT_BIM_STALE_AFTER_S`. An installation whose controller stamps its readings about 55 seconds late, as the first one does, sets it above that, for example to 90, or every reading arrives already stale.
 - A current value outside the manifest's `ramp` raises `Above Range` or `Below Range`.
@@ -157,11 +157,11 @@ The SDK and `react-router-dom` are optional peers, needed only by a host that im
 
 Each sensor is a dot at the centre of its object, drawn over the walls in front of it, with a label that gives its short tag and its current value. A dot is at least 14 pixels across however far away the camera is. It takes the colour of its value on the manifest's ramp while the reading is current and is grey otherwise. The selected sensor is at least 24 pixels across and in the selection colour. Its label is outlined and bold. The labels take their colours from the host's theme, so they read in a light and in a dark theme.
 
-Clicking a sensor card, or a sensor's dot or label in the view, selects its object and flies the camera to it in 600 ms, keeping the direction the camera looks from, and the sensor's dot grows once and settles back so the eye goes to it. The `s` key, Frame The Selection in the shortcut list, does the same for whatever is selected. `f` still fits the whole model. A system set to reduce motion gets the jump and no pulse.
+Clicking a sensor card, or a sensor's dot or label in the view, selects its object and flies the camera to it in 600 ms, keeping the direction the camera looks from. The sensor's dot grows once and settles back so the eye goes to it. The `s` key, Frame The Selection in the shortcut list, does the same for whatever is selected. `f` still fits the whole model. A system set to reduce motion gets the jump and no pulse.
 
 ## Looking at the Model
 
-The model is lit from a small built-in room as well as by the sun, throws shadows on itself and on a ground under it, and has ambient occlusion in its creases. The occlusion is drawn when the camera rests and the shadows only when what is shown changes, so a large model still turns smoothly. The occlusion is left out while the shell is transparent. The shadows are left out while a cut is on, which the shadows button says. All of it comes from three.js, which is a peer dependency already, so the package adds nothing. Every tool has a key, a button on the toolbar and a line in the help, all from one table in `viewer/shortcuts.ts`:
+The model is lit from a small built-in room as well as by the sun, throws shadows on itself and on a ground under it. It has ambient occlusion in its creases. The occlusion is drawn when the camera rests and the shadows only when what is shown changes, so a large model still turns smoothly. The occlusion is left out while the shell is transparent. The shadows are left out while a cut is on, which the shadows button says. All of it comes from three.js, which is a peer dependency already, so the package adds nothing. Every tool has a key, a button on the toolbar and a line in the help, all from one table in `viewer/shortcuts.ts`:
 
 | Key | Tool |
 | --- | --- |
@@ -178,7 +178,7 @@ The model is lit from a small built-in room as well as by the sun, throws shadow
 | `y` | Paint the model in one colour, by class or as a wireframe |
 | `z` | The background: light, dim, slate or ink |
 
-The view cube in the bottom right corner looks at the model from the face, edge or corner clicked, and the keys `1` to `5` reach five of its six faces from the keyboard (above, front, side, behind and below). A sensor's label can also be reached with Tab and opened with Enter. Under the object panel, the model tree lists the objects by floor or by class and finds them by any word of their name, class, GlobalId or property values.
+The view cube in the bottom right corner looks at the model from the face, edge or corner clicked. The keys `1` to `5` reach five of its six faces from the keyboard (above, front, side, behind and below). A sensor's label can also be reached with Tab and opened with Enter. Under the object panel, the model tree lists the objects by floor or by class and finds them by any word of their name, class, GlobalId or property values.
 
 ## Checking a Re-Export
 
