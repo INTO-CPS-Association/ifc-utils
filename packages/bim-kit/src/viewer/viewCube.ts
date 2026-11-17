@@ -101,6 +101,10 @@ export interface ViewCube {
   dispose(): void;
 }
 
+/** The colour of a face with no name on it and of the cube's edges. */
+const CUBE_FACE_COLOUR = 0xf4f6f7;
+const CUBE_EDGE_COLOUR = 0x8a9aa4;
+
 export function createViewCube(): ViewCube {
   const scene = new Scene();
   const camera = new OrthographicCamera(
@@ -108,12 +112,13 @@ export function createViewCube(): ViewCube {
   );
   const materials: Material[] = CUBE_FACES.map((name) => {
     const map = faceTexture(name);
-    return new MeshBasicMaterial({ color: map ? 0xffffff : 0xf4f6f7, map });
+    // White leaves a face's drawn texture as it is.
+    return new MeshBasicMaterial({ color: map ? 0xffffff : CUBE_FACE_COLOUR, map });
   });
   const geometry = new BoxGeometry(1, 1, 1);
   const cube = new Mesh(geometry, materials);
   scene.add(cube);
-  const edges = new LineSegments(new EdgesGeometry(geometry), new LineBasicMaterial({ color: 0x8a9aa4 }));
+  const edges = new LineSegments(new EdgesGeometry(geometry), new LineBasicMaterial({ color: CUBE_EDGE_COLOUR }));
   scene.add(edges);
 
   const direction = new Vector3();

@@ -96,7 +96,14 @@ function Row({ name, value }: Readonly<{ name: string; value: unknown }>) {
         {text}
       </TableCell>
       <TableCell sx={{ border: 0, py: 0, width: 40 }}>
-        <IconButton size="small" aria-label={copied ? `${name} Copied` : `Copy ${name}`} onClick={copy}>
+        <IconButton
+          size="small"
+          aria-label={copied ? `${name} Copied` : `Copy ${name}`}
+          onClick={copy}
+          // A finger needs a larger target than a pointer does, and the
+          // table stays compact where a mouse is used.
+          sx={{ '@media (pointer: coarse)': { minWidth: 44, minHeight: 44 } }}
+        >
           {copied ? <DoneIcon fontSize="inherit" /> : <ContentCopyIcon fontSize="inherit" />}
         </IconButton>
       </TableCell>
