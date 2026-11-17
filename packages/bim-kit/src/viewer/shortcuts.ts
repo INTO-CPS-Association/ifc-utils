@@ -181,6 +181,10 @@ export const SHORTCUTS: Shortcut[] = [
     icon: 'shadows',
     run: ({ view, refresh }) => { view.state.shadows = !view.state.shadows; refresh(); },
     on: (view) => view.state.shadows,
+    // The canvas draws no shadows while a cut is on, since the shadow map
+    // would still hold the roof the cut took away. The button says so instead
+    // of looking as if the shadows were there.
+    badge: (view) => (view.state.shadows && view.cutPlanes().length > 0 ? 'Paused By The Cut' : undefined),
   },
   {
     key: 'u',

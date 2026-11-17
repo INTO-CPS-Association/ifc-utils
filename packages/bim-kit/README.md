@@ -161,7 +161,7 @@ Clicking a sensor card, or a sensor's dot or label in the view, selects its obje
 
 ## Looking at the Model
 
-The model is lit from a small built-in room as well as by the sun, throws shadows on itself and on a ground under it, and has ambient occlusion in its creases. The occlusion is drawn when the camera rests and the shadows only when what is shown changes, so a large model still turns smoothly. All of it comes from three.js, which is a peer dependency already, so the package adds nothing. Every tool has a key, a button on the toolbar and a line in the help, all from one table in `viewer/shortcuts.ts`:
+The model is lit from a small built-in room as well as by the sun, throws shadows on itself and on a ground under it, and has ambient occlusion in its creases. The occlusion is drawn when the camera rests and the shadows only when what is shown changes, so a large model still turns smoothly. The occlusion is left out while the shell is transparent. The shadows are left out while a cut is on, which the shadows button says. All of it comes from three.js, which is a peer dependency already, so the package adds nothing. Every tool has a key, a button on the toolbar and a line in the help, all from one table in `viewer/shortcuts.ts`:
 
 | Key | Tool |
 | --- | --- |

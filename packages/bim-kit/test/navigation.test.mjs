@@ -173,4 +173,18 @@ describe('the o and l keys', () => {
     view.reset();
     assert.deepEqual([view.state.parallel, view.state.shadows], [false, true]);
   });
+
+  test('the shadows button says the shadows are paused while a cut is on', () => {
+    const group = new Group();
+    const mesh = new Mesh(new BoxGeometry(1, 1, 1));
+    mesh.userData.globalId = 'g1';
+    group.add(mesh);
+    group.updateMatrixWorld(true);
+    const view = new SceneView(group);
+    assert.equal(key('l').badge(view), undefined);
+    view.state.vertical = 'x';
+    assert.equal(key('l').badge(view), 'Paused By The Cut');
+    view.state.shadows = false;
+    assert.equal(key('l').badge(view), undefined);
+  });
 });

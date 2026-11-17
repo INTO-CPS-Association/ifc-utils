@@ -308,6 +308,10 @@ function BimCanvas({
     let cutPlanes: () => Plane[] = () => [];
     let shadows = false;
     let wantsShadows = () => true;
+    // The occlusion pass draws every mesh as solid, a see-through wall too,
+    // so with the shell made transparent it would darken the space around
+    // the walls. It is left out while the shell is see-through.
+    let wantsOcclusion = () => true;
     // Set once a model is shown: the grid and the measurement follow the
     // view's state on every frame.
     let followState: (() => void) | null = null;
@@ -388,7 +392,7 @@ function BimCanvas({
           outlinesShown = still;
           showOutlines(still);
         }
-        finish.render(still);
+        finish.render(still && wantsOcclusion());
         lastDraw = now;
         lastFull = still;
         lastRevision = changed;
@@ -479,6 +483,7 @@ function BimCanvas({
       const sketch = createSketch(overlay);
       cleanUp.push(() => sketch.dispose());
       wantsShadows = () => view.state.shadows;
+      wantsOcclusion = () => !view.state.transparent;
       // Walking: the arrow keys held, and whether the last frame was walking,
       // so the camera is set at eye height once, on the frame walking starts.
       const held = { forward: false, back: false, left: false, right: false };

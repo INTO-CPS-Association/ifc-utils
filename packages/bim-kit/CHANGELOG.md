@@ -50,6 +50,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The canvas draws only when something changed: the camera, a repaint of the model, a cut, the measure, the backdrop or the grid. It also draws once a second. The outlines and the ambient occlusion are left out while the camera moves and come back once it stops. The shadow map is drawn again only when what is shown changes. The damping stops once its steps are too small to see. On a model of 9569 objects a frame takes about 67 ms while the camera moves, against 85 ms for 0.2.0, which also drew every frame at rest. `movedBeyond` is exported from `./viewer`.
 - The sensor dots are drawn in a pass of their own without the cuts, so a dot on a wall the plan cuts through is not cut away with the top of the wall. `MARKER_LAYER` is exported from `./viewer`.
 - The section takes only planes, through `setPlanes()`.
+- While the shell is transparent (`t`) the ambient occlusion is left out. Its pass draws a see-through wall as solid, so it darkened the space around every wall.
+- While a cut is on and the shadows are paused, the Shadows button carries the badge Paused By The Cut. It stayed lit as if the shadows were drawn.
 - The build empties `dist/` first, so a file removed from the source is not published from an earlier build.
 ### Fixed
 
