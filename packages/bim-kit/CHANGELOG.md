@@ -32,7 +32,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The `x` shortcut, Cut The Floor At Chest Height, cuts the floor in view at the height the heatmap's plan is cut at, so the rooms read like a plan. `SceneView` has `state.sectioned` and `cutHeight()`.
 
 - The `4` and `5` shortcuts look from behind and from below, so every face of the view cube can also be reached from the keyboard. The `LookFrom` type is exported from `./viewer`.
-- Each row of the object panel has a button that copies its value and says so for a moment once copied.
+- Each row of the object panel has a button that copies its value and says so for a moment once copied. On a phone the name column narrows to 96 px, so the value keeps room beside the button.
 - A sensor label is a button to the keyboard and to a screen reader: Tab reaches it and Enter or Space flies to the sensor.
 ### Changed
 

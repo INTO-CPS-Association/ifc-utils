@@ -89,13 +89,15 @@ function Row({ name, value }: Readonly<{ name: string; value: unknown }>) {
   };
   return (
     <TableRow>
-      <TableCell sx={{ width: 160, color: 'text.secondary', border: 0, py: 0.3 }}>
+      {/* A fixed 160 px name column left a phone almost no room for the
+          value once the copy button took its share, so it narrows there. */}
+      <TableCell sx={{ width: { xs: 96, sm: 160 }, color: 'text.secondary', border: 0, py: 0.3 }}>
         {name}
       </TableCell>
       <TableCell sx={{ border: 0, py: 0.3, wordBreak: 'break-word' }}>
         {text}
       </TableCell>
-      <TableCell sx={{ border: 0, py: 0, width: 40 }}>
+      <TableCell sx={{ border: 0, py: 0, px: 0, width: 44 }}>
         <IconButton
           size="small"
           aria-label={copied ? `${name} Copied` : `Copy ${name}`}
