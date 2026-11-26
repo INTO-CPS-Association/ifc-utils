@@ -1,6 +1,6 @@
 # Architecture
 
-What these packages are, where each piece runs, and why the seams are where they are.
+What these packages are, where each piece runs, and why the seams are where they are. The Python packages live here. bim-kit, the browser half, lives in [`kits/bim-kit`](https://github.com/INTO-CPS-Association/dtaas-extensions/tree/main/kits/bim-kit) of the dtaas-extensions repository.
 
 ## The Problem
 
@@ -41,7 +41,7 @@ The **browser one** exists so a platform needs no conversion service. A person o
 
 The **Python one** is the reference and the batch tool. It is more faithful, it runs over a directory of models without a browser, and it is what says whether the other is right.
 
-They run against the same files in [`../fixtures`](../fixtures), because two implementations of one job are only comparable if they are asked the same questions. Measured on the same models: they agree on object count exactly, the browser one is about nine times faster, and it produces about two per cent fewer triangles because some solids defeat its kernel.
+They run against the same files in [`../fixtures`](../fixtures), of which bim-kit keeps a copy, because two implementations of one job are only comparable if they are asked the same questions. Measured on the same models: they agree on object count exactly, the browser one is about nine times faster, and it produces about two per cent fewer triangles because some solids defeat its kernel.
 
 Choose the browser one to look at a model now. Choose the Python one to prepare many, or when fidelity matters more than speed.
 
