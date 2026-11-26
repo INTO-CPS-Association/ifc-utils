@@ -8,16 +8,14 @@ Open an issue describing what is wrong or missing. A short description of the pr
 
 ## Working On A Package
 
-Each package under `packages/` is self-contained and uses the same three commands:
+Each package under `python/` is installed from its folder and tested with pytest:
 
 ```bash
-cd packages/<name>
-npm install
-npm run build     # ES modules and type declarations into dist/
-npm test          # typecheck, then the suite against dist/
+pip install -e "python/ifc-explorer[test]" -e "python/ifc-converter[test]"
+python -m pytest python/ifc-explorer python/ifc-converter
 ```
 
-The tests import from `dist/`, not from `src/`. A test that passes on the source and fails on the artifact is a test that did not do its job.
+The browser package bim-kit moved to [`kits/bim-kit`](https://github.com/INTO-CPS-Association/dtaas-extensions/tree/main/kits/bim-kit) of the dtaas-extensions repository. Changes to it go there.
 
 ## What A Change Should Carry
 
@@ -25,7 +23,7 @@ The tests import from `dist/`, not from `src/`. A test that passes on the source
 
 **A reason.** Comments say why, not what. A reader can see what the code does; what they cannot see is the case that made it necessary.
 
-**No new dependency without a reason that survives being said out loud.** The core of `bim-kit` imports nothing at all, and that is not an accident: it is what lets it be tested where WebGL, workers and WebAssembly do not exist. Heavy things are peer dependencies, so a host that already has React, MUI or three.js never receives a second copy.
+**No new dependency without a reason that survives being said out loud.** Every dependency is one more thing to keep current and one more place a supply chain attack can enter.
 
 **Nothing newer than ten days.** A dependency or a version published less than ten days ago is not accepted. Freshly published releases are the main vector for supply chain attacks, and most malicious versions are found and pulled within days. Pin exact versions.
 
@@ -35,8 +33,6 @@ Write for the person who joins in six months with no context. Prefer the direct 
 
 ## Releasing
 
-A release publishes. [The workflow](.github/workflows/npm.yml) builds, tests and publishes `bim-kit` when a GitHub release is published whose tag starts with `bim-kit-v`, and does not publish on a push or a pull request. It publishes to the organisation's GitHub Packages registry with the workflow's own token, and to npmjs with trusted publishing, so no npm token is stored in the repository and npm records where the package was built.
-
-Bump the version in the package's `package.json`, move the `Unreleased` entries of its `CHANGELOG.md` under the new version, merge, then publish a release tagged `bim-kit-v<version>`.
+A release is a GitHub release with a tag. Nothing is published to a package registry from this repository.
 
 Each release is also archived on Zenodo with a DOI, so a paper can cite the exact version it used. Zenodo takes the authors and the description from [CITATION.cff](CITATION.cff), and nothing else has to be kept in step with it. Archiving starts once an owner of the organisation turns the repository on in Zenodo's GitHub settings. Until then a release publishes to the registries and receives no DOI.
